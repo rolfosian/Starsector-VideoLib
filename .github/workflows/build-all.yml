@@ -230,7 +230,7 @@ jobs:
           JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
           OUT_DIR=$(cygpath -u "${{ github.workspace }}\ffmpeg-jni\bin\windows")
           mkdir -p "$OUT_DIR"
-          gcc -O2 -DNDEBUG -DWIN32_LEAN_AND_MEAN -DUNICODE -D_UNICODE -fPIC \
+          gcc -O2 -DNDEBUG -DWIN32_LEAN_AND_MEAN -DUNICODE -D_UNICODE \
             -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/win32" \
             -o "$OUT_DIR/ffmpegjni.dll" \
             -shared -static-libgcc \
@@ -242,8 +242,7 @@ jobs:
             "$PREFIX/lib/libavcodec.a" \
             "$PREFIX/lib/libavutil.a" \
             -lws2_32 -lwinmm -lbcrypt -lcrypt32 \
-            -Wl,-Bstatic -lbz2 -lz -liconv -Wl,-Bdynamic \
-            -lsecur32 -lole32 -luuid -lncrypt
+            -lbz2 -lz -lsecur32 -lole32 -luuid -lncrypt -liconv
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
@@ -252,5 +251,3 @@ jobs:
           path: |
             ffmpeg-static/windows
             ffmpeg-jni/bin/windows/ffmpegjni.dll
-
-
