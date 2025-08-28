@@ -66,6 +66,7 @@ public class NoSoundDecoder implements Decoder {
     private void decodeLoop() {
         print("NoSoundDecoder decodeLoop started");
 
+        outer:
         while (running) {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
@@ -74,8 +75,7 @@ public class NoSoundDecoder implements Decoder {
                         case LOOP:
                             while(!textureBuffer.isEmpty()) {
                                 if (!videoProjector.isPlaying()) {
-                                    sleep(1);
-                                    continue;
+                                    continue outer;
                                 }
                                 sleep(1);
                             }
@@ -91,8 +91,11 @@ public class NoSoundDecoder implements Decoder {
                         case PLAY_UNTIL_END:
                             while(!textureBuffer.isEmpty()) {
                                 if (!videoProjector.isPlaying()) {
-                                    sleep(1);
-                                    continue;
+                                    if (currentVideoPts != 0) {
+                                        seek(0);
+                                        currentVideoPts = 0;
+                                    }
+                                    continue outer;
                                 }
                                 sleep(1);
                             }
@@ -103,8 +106,7 @@ public class NoSoundDecoder implements Decoder {
                         case PAUSED:
                             while(!textureBuffer.isEmpty()) {
                                 if (!videoProjector.isPlaying()) {
-                                    sleep(1);
-                                    continue;
+                                    continue outer;
                                 }
                                 sleep(1);
                             }
@@ -114,8 +116,11 @@ public class NoSoundDecoder implements Decoder {
                         case STOPPED:
                             while(!textureBuffer.isEmpty()) {
                                 if (!videoProjector.isPlaying()) {
-                                    sleep(1);
-                                    continue;
+                                    if (currentVideoPts != 0) {
+                                        seek(0);
+                                        currentVideoPts = 0;
+                                    }
+                                    continue outer;
                                 }
                                 sleep(1);
                             }
