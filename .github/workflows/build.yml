@@ -1,0 +1,242 @@
+name: Build FFmpeg static and JNI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            autoconf automake build-essential pkg-config yasm nasm make git \
+            zlib1g-dev
+
+      - name: Fetch FFmpeg source
+        run: |
+          git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      - name: Build FFmpeg (static)
+        working-directory: ffmpeg-src
+        env:
+          PREFIX: ${{ github.workspace }}/ffmpeg-static/linux
+        run: |
+          ./configure \
+            --disable-everything --disable-doc --disable-programs --disable-debug \
+            --disable-ffplay --disable-ffprobe \
+            --enable-gpl --enable-static --disable-shared \
+            --prefix="$PREFIX" \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
+            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
+            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
+            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
+            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
+            --enable-protocol=file \
+            --enable-pic --extra-cflags="-fPIC" --extra-cxxflags="-fPIC"
+          make -j"$(nproc)"
+          make install
+
+      - name: Build JNI bridge (libffmpegjni.so)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+        run: |
+          set -euo pipefail
+          SRC=ffmpeg-jni/src/ffmpegjni.c
+          OUT_DIR=ffmpeg-jni/bin/linux
+          PREFIX=${{ github.workspace }}/ffmpeg-static/linux
+          mkdir -p "$OUT_DIR"
+          gcc -O2 -DNDEBUG -fPIC \
+            -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
+            -o "$OUT_DIR/ffmpegjni.so" \
+            -Wl -Bsymbolic -shared -static-libgcc \
+            "$SRC" \
+            -L"$PREFIX/lib" \
+            "$PREFIX/lib/libswscale.a" \
+            "$PREFIX/lib/libavformat.a" \
+            "$PREFIX/lib/libavcodec.a" \
+            "$PREFIX/lib/libavutil.a" \
+            "$PREFIX/lib/libswresample.a" \
+            -lpthread -ldl -lm -lz
+
+      - name: Upload artifacts (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            ffmpeg-static/linux
+            ffmpeg-jni/bin/linux/ffmpegjni.so
+
+  build-macos:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install build dependencies
+        run: |
+          brew update
+          brew install nasm yasm pkg-config
+
+      - name: Fetch FFmpeg source
+        run: |
+          git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      - name: Build FFmpeg (static)
+        working-directory: ffmpeg-src
+        env:
+          PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
+        run: |
+          ./configure \
+            --disable-everything --disable-doc --disable-programs --disable-debug \
+            --disable-ffplay --disable-ffprobe \
+            --enable-gpl --enable-static --disable-shared \
+            --prefix="$PREFIX" \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
+            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
+            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
+            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
+            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
+            --enable-protocol=file \
+            --enable-pic --extra-cflags="-fPIC" --extra-cxxflags="-fPIC"
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+
+      - name: Build JNI bridge (libffmpegjni.dylib)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+        run: |
+          set -euo pipefail
+          SRC=ffmpeg-jni/src/ffmpegjni.c
+          OUT_DIR=ffmpeg-jni/bin/mac
+          PREFIX=${{ github.workspace }}/ffmpeg-static/mac
+          mkdir -p "$OUT_DIR"
+          clang -O2 -DNDEBUG -fPIC \
+            -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" \
+            -o "$OUT_DIR/ffmpegjni.dylib" \
+            -dynamiclib -Wl,-undefined,error \
+            "$SRC" \
+            -L"$PREFIX/lib" \
+            "$PREFIX/lib/libswscale.a" \
+            "$PREFIX/lib/libavformat.a" \
+            "$PREFIX/lib/libavcodec.a" \
+            "$PREFIX/lib/libavutil.a" \
+            "$PREFIX/lib/libswresample.a" \
+            -lpthread -lm -lz
+
+      - name: Upload artifacts (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            ffmpeg-static/mac
+            ffmpeg-jni/bin/mac/ffmpegjni.dylib
+
+  build-windows:
+    name: Windows (MSYS2)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up MSYS2 with MinGW-w64
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            base-devel
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-nasm
+            mingw-w64-x86_64-yasm
+            mingw-w64-x86_64-zlib
+
+      - name: Fetch FFmpeg source
+        shell: msys2 {0}
+        run: |
+          git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      - name: Build FFmpeg (static)
+        shell: msys2 {0}
+        working-directory: ffmpeg-src
+        env:
+          PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
+        run: |
+          set -eo pipefail
+          PREFIX=$(cygpath -u "$PREFIX_WIN")
+          ./configure \
+            --disable-everything --disable-doc --disable-programs --disable-debug \
+            --disable-ffplay --disable-ffprobe \
+            --enable-gpl --enable-static --disable-shared \
+            --prefix="$PREFIX" \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
+            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
+            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
+            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
+            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
+            --enable-protocol=file
+          make -j$(nproc)
+          make install
+
+      - name: Build JNI bridge (ffmpegjni.dll)
+        shell: msys2 {0}
+        env:
+          PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
+          JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
+        run: |
+          set -eo pipefail
+          PREFIX=$(cygpath -u "$PREFIX_WIN")
+          JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
+          OUT_DIR=$(cygpath -u "${{ github.workspace }}\ffmpeg-jni\bin\windows")
+          mkdir -p "$OUT_DIR"
+          gcc -O2 -DNDEBUG -DWIN32_LEAN_AND_MEAN -DUNICODE -D_UNICODE -fPIC \
+            -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/win32" \
+            -o "$OUT_DIR/ffmpegjni.dll" \
+            -shared -static-libgcc \
+            "ffmpeg-jni/src/ffmpegjni.c" \
+            -L"$PREFIX/lib" \
+            "$PREFIX/lib/libswresample.a" \
+            "$PREFIX/lib/libswscale.a" \
+            "$PREFIX/lib/libavformat.a" \
+            "$PREFIX/lib/libavcodec.a" \
+            "$PREFIX/lib/libavutil.a" \
+            -lws2_32 -lwinmm -lbcrypt -lcrypt32 -lbz2 -lz -lsecur32 -lole32 -luuid -lncrypt -liconv
+
+      - name: Upload artifacts (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            ffmpeg-static/windows
+            ffmpeg-jni/bin/windows/ffmpegjni.dll
+
+
