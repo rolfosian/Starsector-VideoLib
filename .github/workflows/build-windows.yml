@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - ffmpeg-jni/src/ffmpegjni.c
   pull_request:
+    paths:
+      - ffmpeg-jni/src/ffmpegjni.c
 
 jobs:
   build-windows:
@@ -222,3 +226,17 @@ jobs:
           echo "Compiling ffmpegjni.dll..."
           $GCC $CFLAGS $INCLUDE_FLAGS -o "$OUT_DLL" $LDFLAGS "$SRC_FILE" $LIB_FLAGS
           echo "Build succeeded: $OUT_DLL"
+
+      - name: Upload ffmpegjni.dll artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpegjni-windows
+          path: ${{ github.workspace }}\ffmpeg-jni\bin\windows\ffmpegjni.dll
+          if-no-files-found: error
+
+      - name: Upload FFmpeg full output
+        uses: actions/upload-artifact@v4
+        with:
+          name: ffmpeg-static-windows
+          path: ${{ github.workspace }}\ffmpeg-static\windows\
+          if-no-files-found: error
