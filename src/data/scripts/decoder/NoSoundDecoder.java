@@ -180,9 +180,13 @@ public class NoSoundDecoder implements Decoder {
             }
 
             if (!switched) {
-                textureBuffer.convertSome(width, height, (int)(gameFps / videoFps));
-            } else if (gameFps <= videoFps) {
-                textureBuffer.convertFront(width, height);
+                
+                if (gameFps <= videoFps) {
+                    textureBuffer.convertFront(width, height);
+
+                } else {
+                    textureBuffer.convertSome(width, height, (int)(gameFps / videoFps));
+                }
             }
         }
 
