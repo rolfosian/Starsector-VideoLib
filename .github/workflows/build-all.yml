@@ -182,18 +182,18 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           update: true
-        install: >-
-          base-devel
-          git
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-gcc-libs
-          mingw-w64-x86_64-bzip2
-          mingw-w64-x86_64-libiconv
-          mingw-w64-x86_64-zlib
-          mingw-w64-x86_64-crt-git
-          mingw-w64-x86_64-winpthreads-git
-          mingw-w64-x86_64-openssl
-          mingw-w64-x86_64-expat
+          install: >-
+            base-devel
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gcc-libs
+            mingw-w64-x86_64-bzip2
+            mingw-w64-x86_64-libiconv
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-crt-git
+            mingw-w64-x86_64-winpthreads-git
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-expat
 
       - name: Fetch FFmpeg source
         shell: msys2 {0}
