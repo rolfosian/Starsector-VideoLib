@@ -11,7 +11,6 @@ jobs:
     runs-on: windows-latest
 
     env:
-      JAVA_HOME: C:\jdk-17
       MSYS2_PATH: C:\msys64\usr\bin
       REPO_ROOT: ${{ github.workspace }}
 
@@ -23,6 +22,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           update: true
+          msystem: MINGW64
           install: |
             base
             bash
@@ -165,20 +165,48 @@ jobs:
           java-version: 17
           architecture: x64
 
+      - name: Fetch FFmpeg source
+        shell: msys2 {0}
+        run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      - name: Build FFmpeg (static)
+        shell: msys2 {0}
+        working-directory: ffmpeg-src
+        env:
+          PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
+        run: |
+          set -eo pipefail
+          PREFIX=$(cygpath -u "$PREFIX_WIN")
+          ./configure \
+            --disable-everything --disable-doc --disable-programs --disable-debug \
+            --disable-ffplay --disable-ffprobe \
+            --enable-gpl --enable-static --disable-shared \
+            --prefix="$PREFIX" \
+            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
+            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
+            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
+            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
+            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
+            --enable-protocol=file
+          make -j$(nproc)
+          make install
+
       - name: Build ffmpegjni.dll
-        shell: bash
+        shell: msys2 {0}
         run: |
           set -e
-          REPO_ROOT="${GITHUB_WORKSPACE}"
+          REPO_ROOT_WIN="${GITHUB_WORKSPACE}"
+          REPO_ROOT=$(cygpath -u "$REPO_ROOT_WIN")
           FFMPEG_SDK_DIR="$REPO_ROOT/ffmpeg-static/windows"
-          SRC_FILE="$REPO_ROOT/ffmpegjni/ffmpegjni.c"
+          SRC_FILE="$REPO_ROOT/ffmpeg-jni/src/ffmpegjni.c"
           OUT_DIR="$REPO_ROOT/ffmpeg-jni/bin/windows"
           mkdir -p "$OUT_DIR"
           OUT_DLL="$OUT_DIR/ffmpegjni.dll"
 
           GCC="gcc"
 
-          INCLUDE_FLAGS="-I$FFMPEG_SDK_DIR/include -I$JAVA_HOME/include -I$JAVA_HOME/include/win32"
+          JAVA_HOME_UNIX=$(cygpath -u "$JAVA_HOME")
+          INCLUDE_FLAGS="-I$FFMPEG_SDK_DIR/include -I$JAVA_HOME_UNIX/include -I$JAVA_HOME_UNIX/include/win32"
           LIB_FLAGS="-L$FFMPEG_SDK_DIR/lib \
             $FFMPEG_SDK_DIR/lib/libswresample.a \
             $FFMPEG_SDK_DIR/lib/libswscale.a \
