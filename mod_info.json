@@ -1,0 +1,10 @@
+{
+    "id": "video_lib",
+    "name": "VideoLib",
+    "author": "rolfos",
+    "version": "0.0.1",
+    "description": "Panel plugin for custom ui panels to render video and images.",
+    "gameVersion": "0.98a-RC8",
+    "modPlugin": "data.scripts.VideoLibModPlugin",
+    "jars": ["jars/VideoLib.jar"]
+}

@@ -1,0 +1,14 @@
+prefix=/home/roflos/ffmpeg-static-linux
+exec_prefix=${prefix}
+libdir=/home/roflos/ffmpeg-static-linux/lib
+includedir=/home/roflos/ffmpeg-static-linux/include
+
+Name: libswscale
+Description: FFmpeg image rescaling library
+Version: 9.2.100
+Requires: libavutil >= 60.10.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lswscale -lm -latomic
+Libs.private: 
+Cflags: -I${includedir}

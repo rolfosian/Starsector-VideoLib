@@ -1,0 +1,14 @@
+prefix=/home/roflos/ffmpeg-static-linux
+exec_prefix=${prefix}
+libdir=/home/roflos/ffmpeg-static-linux/lib
+includedir=/home/roflos/ffmpeg-static-linux/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 62.13.101
+Requires: libavutil >= 60.10.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavcodec -pthread -lm -latomic -lz
+Libs.private: 
+Cflags: -I${includedir}
