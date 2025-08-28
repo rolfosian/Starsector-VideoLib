@@ -333,7 +333,7 @@ public class PlayerControlPanel {
                         continue;
                     }
 
-                    if (event.isMouseUpEvent()) {
+                    if (this.seeking && event.isMouseUpEvent()) {
                         this.seeking = false;
 
                         projector.setMode(oldProjectorMode);
