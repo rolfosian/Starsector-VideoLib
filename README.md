@@ -6,6 +6,7 @@
 - Protip: Do not use (loosely) variable framerate videos or else you will probably encounter issues; if they are very tight variables it probably won't matter
 
 #TODO
+- Github actions scripts for cross platform compilation of static FFmpeg binaries and JNI glue
 - Clean up variables, enums usage; create different sets of enums for beginning/playing/ending modes
 - Determine file path handling
 - Documentation, Examples
