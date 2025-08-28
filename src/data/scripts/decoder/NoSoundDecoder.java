@@ -147,14 +147,6 @@ public class NoSoundDecoder implements Decoder {
             }
         }
         print("NoSoundDecoder decodeLoop ended");
-
-        print("Joining NoSoundDecoder decoderLoop thread");
-        try {
-            decodeThread.join();
-        } catch(InterruptedException e) {
-            logger.error(e.getMessage(), e);
-            throw new RuntimeException(e);
-        }
     }
 
     public int requestCurrentVideoTextureId(float deltaTime) {
@@ -180,7 +172,7 @@ public class NoSoundDecoder implements Decoder {
             }
 
             if (!switched) {
-                
+
                 if (gameFps <= videoFps) {
                     textureBuffer.convertFront(width, height);
 
@@ -244,13 +236,20 @@ public class NoSoundDecoder implements Decoder {
         timeAccumulator = 0f;
         videoFps = 0f;
 
+        print("Joining NoSoundDecoder decoderLoop thread");
+        try {
+            decodeThread.join();
+        } catch(InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
         if (pipePtr != 0) {
             print("Closing FFmpeg pipe");
             FFmpeg.closePipe(pipePtr);
             pipePtr = 0;
         }
 
-        print("Clearing Video Buffer");
+        print("Clearing Texture/Video Buffer");
         textureBuffer.clear();
     }
 
