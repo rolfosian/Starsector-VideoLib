@@ -150,7 +150,7 @@ jobs:
             "$PREFIX/lib/libavcodec.a" \
             "$PREFIX/lib/libavutil.a" \
             "$PREFIX/lib/libswresample.a" \
-            -lpthread -lm -lz \
+            -lpthread -lm -lz -lbz2 -liconv \
             -framework CoreVideo \
             -framework VideoToolbox \
             -framework CoreMedia \
