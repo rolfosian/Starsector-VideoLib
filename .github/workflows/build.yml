@@ -64,7 +64,7 @@ jobs:
           gcc -O2 -DNDEBUG -fPIC \
             -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
             -o "$OUT_DIR/ffmpegjni.so" \
-            -Wl -Bsymbolic -shared -static-libgcc \
+            -Wl,-Bsymbolic -shared -static-libgcc \
             "$SRC" \
             -L"$PREFIX/lib" \
             "$PREFIX/lib/libswscale.a" \
@@ -144,7 +144,11 @@ jobs:
             "$PREFIX/lib/libavcodec.a" \
             "$PREFIX/lib/libavutil.a" \
             "$PREFIX/lib/libswresample.a" \
-            -lpthread -lm -lz
+            -lpthread -lm -lz \
+            -framework CoreVideo \
+            -framework VideoToolbox \
+            -framework CoreMedia \
+            -framework CoreFoundation
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
@@ -179,6 +183,8 @@ jobs:
             mingw-w64-x86_64-nasm
             mingw-w64-x86_64-yasm
             mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-bzip2
+            mingw-w64-x86_64-libiconv
 
       - name: Fetch FFmpeg source
         shell: msys2 {0}
