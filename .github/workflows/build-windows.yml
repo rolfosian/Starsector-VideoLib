@@ -46,6 +46,7 @@ jobs:
             gmp
             gnupg
             grep
+            git
             gzip
             heimdal-libs
             inetutils
@@ -138,6 +139,7 @@ jobs:
             msys2-launcher
             msys2-runtime
             nano
+            make
             ncurses
             nettle
             openssl
