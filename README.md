@@ -12,7 +12,6 @@
 - Documentation, Examples
 - Polish gui
 - Thorough testing
-- Set up github actions for cross platform compilation of static pic enabled FFmpeg binaries and JNI glue
 - Audio support coming soon™ hopefully, impl TBD
 
 ## Notes:
