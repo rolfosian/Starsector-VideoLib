@@ -204,7 +204,7 @@ jobs:
             mingw-w64-x86_64-nasm
 
       - name: Fetch FFmpeg source
-        shell: msys2 {0}
+        shell: msys2 {0} -mingw64
         run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
