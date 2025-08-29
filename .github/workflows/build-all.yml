@@ -217,16 +217,22 @@ jobs:
           set -eo pipefail
           PREFIX=$(cygpath -u "$PREFIX_WIN")
           ./configure \
-            --disable-everything --disable-doc --disable-programs --disable-debug \
-            --disable-ffplay --disable-ffprobe \
-            --enable-gpl --enable-static --disable-shared \
-            --prefix="$PREFIX" \
-            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
-            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
-            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
-            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
-            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
-            --enable-protocol=file --enable-protocol=https --enable-schannel
+            --disable-everything \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --enable-gpl \
+            --enable-static \
+            --disable-shared \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
+            --enable-demuxer=matroska,mov,image2,gif \
+            --enable-protocol=file,https,schannel \
+            --enable-w32threads \
+            --disable-posix \
+            --prefix="$PREFIX"
 
           mingw32-make -j$(nproc)
           mingw32-make install
