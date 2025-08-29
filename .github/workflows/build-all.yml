@@ -204,12 +204,12 @@ jobs:
             mingw-w64-x86_64-nasm
 
       - name: Fetch FFmpeg source
-        shell: msys2 {0} -mingw64
+        shell: C:\msys64\mingw64.exe {0}
         run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Build FFmpeg (static)
-        shell: msys2 {0} -mingw64
+        shell: C:\msys64\mingw64.exe {0}
         working-directory: ffmpeg-src
         env:
           PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
@@ -244,7 +244,7 @@ jobs:
           mingw32-make install
 
       - name: Build JNI bridge (ffmpegjni.dll)
-        shell: msys2 {0} -mingw64
+        shell: C:\msys64\mingw64.exe {0}
         env:
           PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
