@@ -9,6 +9,7 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 
 import data.scripts.VideoMode;
+import data.scripts.VideoPaths;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.NoSoundDecoder;
 
@@ -46,8 +47,8 @@ public class NoSoundVideoProjector extends VideoProjector {
     private int advancingValue = 0;
     private int checkAdvancing = 0;
 
-    public NoSoundVideoProjector(String videoFilePath, int width, int height, VideoMode mode) {
-        this.videoFilePath = videoFilePath;
+    public NoSoundVideoProjector(String videoFilename, int width, int height, VideoMode mode) {
+        this.videoFilePath = VideoPaths.map.get(videoFilename);
         this.MODE = mode;
 
         this.width = width;

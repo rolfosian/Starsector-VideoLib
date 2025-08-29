@@ -27,6 +27,7 @@ $dependencies = @(
     "../../starsector-core/starfarer_obf.jar",
     "../../starsector-core/fs.common_obf.jar",
     "../../starsector-core/fs.sound_obf.jar",
+    "../../starsector-core/json.jar",
     
     "../../starsector-core/jinput.jar",
     "../../starsector-core/log4j-1.2.9.jar",

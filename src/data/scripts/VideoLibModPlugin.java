@@ -1,5 +1,6 @@
 package data.scripts;
 
+
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
@@ -21,5 +22,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void onApplicationLoad() {
         FFmpeg.init();
+        VideoPaths.populate();
     }
+
 }
