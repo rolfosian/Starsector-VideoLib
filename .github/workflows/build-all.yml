@@ -198,6 +198,8 @@ jobs:
             mingw-w64-x86_64-winpthreads-git
             mingw-w64-x86_64-openssl
             mingw-w64-x86_64-expat
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-nasm
 
       - name: Fetch FFmpeg source
         shell: msys2 {0}
@@ -223,8 +225,8 @@ jobs:
             --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
             --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
             --enable-protocol=file
-          make -j$(nproc)
-          make install
+          mingw-w64-x86_64-make -j$(nproc)
+          mingw-w64-x86_64-make install
 
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: msys2 {0}
