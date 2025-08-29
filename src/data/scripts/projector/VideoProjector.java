@@ -11,8 +11,6 @@ import data.scripts.VideoMode;
 import data.scripts.decoder.Decoder;
 
 public abstract class VideoProjector implements CustomUIPanelPlugin {
-    public VideoProjector() {}
-
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
 
     public abstract void start();

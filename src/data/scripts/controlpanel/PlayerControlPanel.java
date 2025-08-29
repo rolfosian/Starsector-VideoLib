@@ -193,6 +193,7 @@ public class PlayerControlPanel {
         }
     }
 
+    // TODO Needs polish
     private class SeekBarPlugin extends BaseCustomUIPanelPlugin {
         private double durationSeconds; // seconds in 0.000 format
         private long currentVideoPts; // µs
@@ -304,7 +305,7 @@ public class PlayerControlPanel {
 
                 if (event.isMouseEvent()) {
 
-                    if (event.isMouseDownEvent() && !seeking && isInSeekLineBounds(event.getX(), event.getY())) {
+                    if (event.isMouseDownEvent() && !this.seeking && isInSeekLineBounds(event.getX(), event.getY())) {
                         this.seeking = true;
 
                         this.oldProjectorMode = projector.getMode();
@@ -340,6 +341,7 @@ public class PlayerControlPanel {
                         projector.getDecoder().setMode(oldDecoderMode);
                         seekButton.setEnabled(true);
                         if (!wasPaused) projector.unpause();
+
                         event.consume();
                         continue;
                     }
@@ -363,9 +365,13 @@ public class PlayerControlPanel {
             this.seekLineX = seekBarPanelPos.getX();
             this.seekLineY = seekBarPanelPos.getCenterY();
             
-            if (seekButton != null) this.seekButtonY = -seekButton.getPosition().getHeight() / 2; // relative to panel top
-        
             setSeekBarPanelBounds(seekBarPanelPos);
+
+            if (seekButton != null) {
+                this.seekButtonY = -seekButton.getPosition().getHeight() / 2; // relative to panel top
+            }
+
+            
         }
 
         public void init(PositionAPI seekBarPanelPos) {
@@ -391,7 +397,8 @@ public class PlayerControlPanel {
 
             seekBarPanel.addUIElement(seekBarTt).inTL(0f, 0f);
 
-            this.seekButtonY = -seekButton.getPosition().getHeight() / 2;//this.seekLineY - seekButton.getPosition().getHeight() / 2;
+            this.seekButtonY = -seekButton.getPosition().getHeight() / 2;
+            this.reset();
         }
 
         @Override
@@ -400,7 +407,7 @@ public class PlayerControlPanel {
             GL11.glDisable(GL11.GL_TEXTURE_2D);
         
             GL11.glColor4f(seekLineRed, seekLineGreen, seekLineBlue, alphaMult);
-            GL11.glLineWidth(2f);
+            GL11.glLineWidth(4f);
         
             GL11.glBegin(GL11.GL_LINES);
             GL11.glVertex2f(this.seekBarPanelLeftBound, this.seekLineY);
@@ -423,6 +430,7 @@ public class PlayerControlPanel {
             this.timeAccumulator = 0;
         
             this.seekX = getButtonXFromSeekPosition(0);
+            print(seekX);
             seekButton.getPosition().inTL(seekX, this.seekButtonY);
         }
     };
