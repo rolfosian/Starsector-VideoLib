@@ -209,7 +209,7 @@ jobs:
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Build FFmpeg (static)
-        shell: msys2 {0}
+        shell: msys2 {0} -mingw64
         working-directory: ffmpeg-src
         env:
           PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
@@ -217,6 +217,9 @@ jobs:
           set -eo pipefail
           PREFIX=$(cygpath -u "$PREFIX_WIN")
           ./configure \
+            --target-os=mingw32 \
+            --cross-prefix=x86_64-w64-mingw32- \
+            --arch=x86_64 \
             --disable-everything \
             --disable-doc \
             --disable-programs \
@@ -237,7 +240,7 @@ jobs:
           mingw32-make install
 
       - name: Build JNI bridge (ffmpegjni.dll)
-        shell: msys2 {0}
+        shell: msys2 {0} -mingw64
         env:
           PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
