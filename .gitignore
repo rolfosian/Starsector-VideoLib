@@ -4,3 +4,6 @@ build
 .vscode
 ffmpeg-master-latest-win64-gpl-shared
 FFmpeg.class
+ffmpeg-static
+buildwindows.ps1
+buildlinux.sh
