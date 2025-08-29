@@ -63,11 +63,10 @@ public class TextureBuffer {
                 createGLTextureFromFrame(videoFrames[head].buffer, width, height),
                 videoFrames[head].pts
             );
+            videoFrames[head] = null;
         }
-
         textures[head] = null;
-        videoFrames[head] = null;
-
+        
         head = (head + 1) % capacity;
         size--;
         return removed;
@@ -124,7 +123,7 @@ public class TextureBuffer {
                 GL11.glDeleteTextures(textures[idx].id);
                 textures[idx] = null;
             }
-            
+
             videoFrames[idx] = null;
             idx = (idx + 1) % capacity;
         }

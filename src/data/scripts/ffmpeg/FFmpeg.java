@@ -1,5 +1,6 @@
 package data.scripts.ffmpeg;
 
+import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 
 import org.apache.log4j.Logger;
@@ -14,6 +15,8 @@ public class FFmpeg {
         }
         logger.error(sb.toString());
     }
+
+    protected static final Cleaner cleaner = Cleaner.create();
 
     static {
         String osName = System.getProperty("os.name").toLowerCase();
@@ -38,11 +41,11 @@ public class FFmpeg {
         } else {
             throw new UnsupportedOperationException("Unsupported OS: " + osName);
         }
-        
     }
 
     // Native methods
     public static native void init(); // av_register_all / network init if needed
+    public static native void freeBuffer(ByteBuffer toFree);
 
     // jpeg, png, webp, gif (still frames)
     public static native long openImage(String filename, int width, int height);

@@ -31,6 +31,13 @@ JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     (*env)->DeleteLocalRef(env, objectClass);
 }
 
+JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jobject buffer) {
+    void *ptr = (*env)->GetDirectBufferAddress(env, buffer);
+    if (ptr != NULL) {
+        free(ptr);
+    }
+}
+
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz) {
     avformat_network_init();
 }

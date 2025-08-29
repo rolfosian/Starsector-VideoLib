@@ -236,7 +236,7 @@ jobs:
             --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-demuxer=matroska,mov,image2,gif \
-            --enable-protocol=file,https,schannel \
+            --enable-protocol=file \
             --enable-w32threads \
             --prefix="$PREFIX"
 
