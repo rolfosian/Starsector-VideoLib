@@ -225,8 +225,8 @@ jobs:
             --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
             --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
             --enable-protocol=file
-          mingw-w64-x86_64-make -j$(nproc)
-          mingw-w64-x86_64-make install
+          mingw32-make -j$(nproc)
+          mingw32-make install
 
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: msys2 {0}
