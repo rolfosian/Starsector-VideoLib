@@ -4,9 +4,11 @@ package data.scripts;
 public enum VideoMode {
     LOOP,
     PLAY_UNTIL_END,
+
     PAUSED,
     STOPPED,
     SEEKING,
+    
     PLAYING,
     FINISHED
 }
