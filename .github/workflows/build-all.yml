@@ -231,7 +231,6 @@ jobs:
             --enable-demuxer=matroska,mov,image2,gif \
             --enable-protocol=file,https,schannel \
             --enable-w32threads \
-            --disable-posix \
             --prefix="$PREFIX"
 
           mingw32-make -j$(nproc)
