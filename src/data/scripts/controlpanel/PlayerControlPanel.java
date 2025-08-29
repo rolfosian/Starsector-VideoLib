@@ -422,8 +422,8 @@ public class PlayerControlPanel {
             this.currentVideoPts = 0;
             this.timeAccumulator = 0;
         
-            float newX = getButtonXFromSeekPosition(0);
-            seekButton.getPosition().inTL(newX, this.seekButtonY);
+            this.seekX = getButtonXFromSeekPosition(0);
+            seekButton.getPosition().inTL(seekX, this.seekButtonY);
         }
     };
 
