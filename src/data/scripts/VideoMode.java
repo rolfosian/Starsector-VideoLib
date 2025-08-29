@@ -7,5 +7,6 @@ public enum VideoMode {
     PAUSED,
     STOPPED,
     SEEKING,
-    PLAYING
+    PLAYING,
+    FINISHED
 }

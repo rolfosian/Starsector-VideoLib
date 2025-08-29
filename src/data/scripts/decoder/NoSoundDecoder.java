@@ -70,7 +70,7 @@ public class NoSoundDecoder implements Decoder {
         while (running) {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
-                if (f == null) { // EOF/Error
+                if (f == null) { // EOF / Error
                     switch(this.MODE) {
                         case LOOP:
                             while(!textureBuffer.isEmpty()) {
@@ -136,6 +136,9 @@ public class NoSoundDecoder implements Decoder {
                         case SEEKING:
                             sleep(1);
                             continue;
+                        
+                        case FINISHED:
+                            break outer;
 
                         default:
                             throw new IllegalStateException("No mode set");
@@ -240,6 +243,7 @@ public class NoSoundDecoder implements Decoder {
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
+        MODE = VideoMode.FINISHED;
 
         print("Joining NoSoundDecoder decoderLoop thread");
         try {

@@ -253,8 +253,8 @@ jobs:
             -lws2_32 -lwinmm -lbcrypt -lcrypt32 -lncrypt \
             -lbz2 -lz -liconv \
             -lsecur32 -lole32 -luuid \
-            -luser32 -lgdi32 -lgdi32full -limm32 \
-            -lssp -lntasn1
+            -luser32 -lgdi32 -limm32 \
+            -lssp
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
