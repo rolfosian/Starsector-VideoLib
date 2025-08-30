@@ -16,17 +16,17 @@ public class VideoPaths {
     private static final Logger logger = Logger.getLogger(VideoPaths.class);
     
     public static boolean populated = false;
-    public static final Map<String, String> map = new HashMap<>();
+    public static Map<String, String> map;
 
     protected static void populate() {
         if (populated) return;
 
+        Map<String, String> mape = new HashMap<>();
         try {
             ModManagerAPI modManager = Global.getSettings().getModManager();
             JSONObject settings = Global.getSettings().getJSONObject("VideoLib");
             
-            Iterator<String> modIds = settings.keys();
-    
+            Iterator<String> modIds = settings.keys();            
             while (modIds.hasNext()) {
                 String modId = modIds.next();
                 ModSpecAPI modSpec = modManager.getModSpec(modId);
@@ -42,17 +42,19 @@ public class VideoPaths {
                 for (int i = 0; i < videoFilenames.length(); i++) {
                     String filename = videoFilenames.getString(i);
 
-                    if (map.containsKey(filename)) {
+                    if (mape.containsKey(filename)) {
                         throw new RuntimeException("Duplicate video filename already located at " + map.get(filename));
                     }
 
-                    map.put(filename, modPath + "/data/videos/" + filename);
+                    mape.put(filename, modPath + "/data/videos/" + filename);
                 }
             }
 
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+        
+        map = Collections.unmodifiableMap(mape);
         populated = true;
     }
 }
