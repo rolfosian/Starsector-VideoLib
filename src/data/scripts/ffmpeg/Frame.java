@@ -9,8 +9,6 @@ public abstract class Frame {
     protected Frame(ByteBuffer buffer, long pts) {
         this.pts = pts;
         this.buffer = buffer;
-
-        FFmpeg.cleaner.register(this, () -> FFmpeg.freeBuffer(buffer));
     }
 
     public final void freeBuffer() {

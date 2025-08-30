@@ -13,51 +13,6 @@
 #include <libavutil/audio_fifo.h>
 #include <pthread.h>
 
-int64_t get_final_video_frame_pts(AVFormatContext *fmt_ctx, AVCodecContext *dec_ctx) {
-    AVPacket *pkt = av_packet_alloc();
-    AVFrame *frame = av_frame_alloc();
-    if (!pkt || !frame) return AV_NOPTS_VALUE;
-
-    int video_stream_index = -1;
-    for (unsigned int i = 0; i < fmt_ctx->nb_streams; i++) {
-        if (fmt_ctx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            video_stream_index = i;
-            break;
-        }
-    }
-    if (video_stream_index < 0) goto fail;
-
-    int64_t duration = fmt_ctx->streams[video_stream_index]->duration;
-    if (duration <= 0) goto fail;
-
-    if (av_seek_frame(fmt_ctx, video_stream_index, duration - 1, AVSEEK_FLAG_BACKWARD) < 0) goto fail;
-    avcodec_flush_buffers(dec_ctx);
-
-    int64_t last_pts = AV_NOPTS_VALUE;
-
-    while (av_read_frame(fmt_ctx, pkt) >= 0) {
-        if (pkt->stream_index == video_stream_index) {
-            if (avcodec_send_packet(dec_ctx, pkt) == 0) {
-                while (avcodec_receive_frame(dec_ctx, frame) == 0) {
-                    last_pts = frame->pts;
-                }
-            }
-        }
-        av_packet_unref(pkt);
-    }
-
-    avcodec_send_packet(dec_ctx, NULL);
-    while (avcodec_receive_frame(dec_ctx, frame) == 0) {
-        last_pts = frame->pts;
-    }
-
-fail:
-    av_frame_free(&frame);
-    av_packet_free(&pkt);
-
-    return last_pts;
-}
-
 JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
     jmethodID mid = (*env)->GetStaticMethodID(env, cls, "print", "([Ljava/lang/Object;)V");
@@ -448,7 +403,6 @@ typedef struct {
     float fps;
     double duration_seconds;
     int64_t duration_us;
-    int64_t final_video_frame_pts;
 
     // audio
     int audio_stream_index;
@@ -602,8 +556,15 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
-
-    // ctx->final_video_frame_pts = get_final_video_frame_pts(fmt_ctx, codec_ctx);
+    
+    ctx->audio_ctx = NULL;
+    ctx->audio_frame = NULL;
+    ctx->swr_ctx = NULL;
+    ctx->audio_fifo = NULL;
+    ctx->audio_out_buffer = NULL;
+    ctx->audio_next_pts_us = -1;
+    ctx->audio_stream_index = -1;
+    memset(&ctx->out_ch_layout, 0, sizeof(AVChannelLayout));
     
     ctx->fmt_ctx = fmt_ctx;
     ctx->video_ctx = codec_ctx;
@@ -1059,7 +1020,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         return 0;
     }
     
-    // ctx->final_video_frame_pts = get_final_video_frame_pts(fmt_ctx, vctx);
     ctx->fmt_ctx = fmt_ctx;
 
     ctx->video_stream_index = video_stream_index;
@@ -1140,7 +1100,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jc
     }
     
     pthread_mutex_lock(&ctx->mutex);
-    pthread_mutex_destroy(&ctx->mutex);
 
     if (ctx->video_ctx) {
         avcodec_free_context(&ctx->video_ctx);
@@ -1178,6 +1137,8 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jc
     if (ctx->fmt_ctx) {
         avformat_close_input(&ctx->fmt_ctx);
     }
+
+    pthread_mutex_destroy(&ctx->mutex);
 
     free(ctx);
 }
@@ -1503,20 +1464,6 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *en
     
     pthread_mutex_lock(&ctx->mutex);
     int result = ctx->error_status;
-    pthread_mutex_unlock(&ctx->mutex);
-
-    return result;
-}
-
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getFinalVideoFramePts(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
-    if (!ctx) {
-        printe(env, "getFinalVideoFramePts: null context pointer");
-        return 42069;
-    }
-
-    pthread_mutex_lock(&ctx->mutex);
-    int result = ctx->final_video_frame_pts;
     pthread_mutex_unlock(&ctx->mutex);
 
     return result;

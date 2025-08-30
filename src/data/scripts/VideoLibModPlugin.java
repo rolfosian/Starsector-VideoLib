@@ -1,6 +1,5 @@
 package data.scripts;
 
-
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;

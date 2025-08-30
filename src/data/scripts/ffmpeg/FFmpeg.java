@@ -1,8 +1,6 @@
 package data.scripts.ffmpeg;
 
-import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
-
 import org.apache.log4j.Logger;
 
 public class FFmpeg {
@@ -15,8 +13,6 @@ public class FFmpeg {
         }
         logger.error(sb.toString());
     }
-
-    protected static final Cleaner cleaner = Cleaner.create();
 
     public static final int AVERROR_BSF_NOT_FOUND      = -1179861752;
     public static final int AVERROR_BUG                = -558323010;
@@ -152,7 +148,6 @@ public class FFmpeg {
 
     // general video functions compatible with both sound and no sound context pointers
     public static native int getErrorStatus(long ptr);
-    // public static native long getFinalVideoFramePts(long ptr);
     public static native float getVideoFps(long ptr);
     public static native double getDurationSeconds(long ptr);
     public static native long getDurationUs(long ptr);

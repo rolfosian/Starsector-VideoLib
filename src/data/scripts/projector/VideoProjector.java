@@ -19,7 +19,6 @@ public abstract class VideoProjector implements CustomUIPanelPlugin {
     public abstract void unpause();
     public abstract void stop();
     public abstract void restart();
-    public abstract void seek(double targetSecond);
     public abstract void finish();
 
     public abstract boolean paused();

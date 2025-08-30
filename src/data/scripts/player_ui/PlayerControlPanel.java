@@ -1,4 +1,4 @@
-package data.scripts.controlpanel;
+package data.scripts.player_ui;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
@@ -67,7 +67,7 @@ public class PlayerControlPanel {
         this.seekBarPlugin = new SeekBarPlugin();
         this.seekBarPanel = Global.getSettings().createCustom(width - 10, height / 3, seekBarPlugin);
         
-        controlPanel.addComponent(seekBarPanel).inMid().setYAlignOffset(-(height / 2) - 5f);
+        controlPanel.addComponent(seekBarPanel).inMid().setYAlignOffset(-(height / 2));
 
         CustomPanelAPI playPauseStopPanel = Global.getSettings().createCustom(width, height - height / 3 - 10f, new BaseCustomUIPanelPlugin() {
             @Override
@@ -103,7 +103,7 @@ public class PlayerControlPanel {
         pauseButton.getPosition().rightOfMid(playButton, 5f);
         stopButton.getPosition().rightOfMid(pauseButton, 5f);
 
-        controlPanel.addComponent(playPauseStopPanel).inBL(0f, 0f);//.belowLeft(seekBarPanel, 5f);
+        controlPanel.addComponent(playPauseStopPanel).inTL(0f, controlPanel.getPosition().getHeight());
         // if (withSound) {
 
         // }
@@ -276,6 +276,15 @@ public class PlayerControlPanel {
                    mouseY >= (this.seekLineY - seekbarPanelYBoundTolerance) && mouseY <= (this.seekLineY + seekbarPanelYBoundTolerance);
         }
 
+        private void seek() {
+            projector.getDecoder().seek(pendingSeekTarget);
+
+            this.hasSeeked = true;
+            this.oldSeekTarget = this.pendingSeekTarget;
+            this.timeAccumulator = 0;
+            this.currentVideoPts = this.pendingSeekTarget;
+        }
+
         @Override
         public void advance(float deltaTime) {
             this.currentVideoPts = projector.getDecoder().getCurrentVideoPts();
@@ -290,15 +299,9 @@ public class PlayerControlPanel {
                 timeAccumulator++;
                 if (timeAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
-                        projector.getDecoder().setMode(VideoMode.SEEKING);
-                        projector.getDecoder().seek(pendingSeekTarget);
-                        projector.setMode(VideoMode.SEEKING);
-                        this.hasSeeked = true;
+                        this.seek();
+                        projector.setCurrentTextureId(projector.getDecoder().getCurrentVideoTextureId());
                     }
-                    
-                    this.oldSeekTarget = this.pendingSeekTarget;
-                    this.timeAccumulator = 0;
-                    this.currentVideoPts = this.pendingSeekTarget;
                 }
         
             } else {
@@ -340,9 +343,17 @@ public class PlayerControlPanel {
                         this.wasPaused = projector.paused();
                         projector.pause();
                         projector.setMode(VideoMode.SEEKING);
+                        projector.getDecoder().setMode(VideoMode.SEEKING);
                         seekButton.setEnabled(false);
 
                         this.seekX = event.getX();
+                        this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
+                
+                        float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
+                        seekButton.getPosition().inTL(newX, this.seekButtonY);
+
+                        this.seek();
+
                         event.consume();
                         this.isAdvanced = false;
                         continue;
@@ -458,7 +469,6 @@ public class PlayerControlPanel {
             this.timeAccumulator = 0;
         
             this.seekX = getButtonXFromSeekPosition(0);
-            print(seekX);
             seekButton.getPosition().inTL(seekX, this.seekButtonY);
         }
     };

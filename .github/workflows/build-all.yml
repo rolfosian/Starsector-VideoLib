@@ -243,6 +243,13 @@ jobs:
           mingw32-make -j$(nproc)
           mingw32-make install
 
+      - name: Check FFmpeg install path
+        shell: C:\msys64\mingw64.exe {0}
+        run: |
+          echo "PREFIX_WIN = $PREFIX_WIN"
+          echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
+          ls -R "$(cygpath -u "$PREFIX_WIN")"
+
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: C:\msys64\mingw64.exe {0}
         env:
@@ -271,11 +278,16 @@ jobs:
             -luser32 -lgdi32 -limm32 \
             -lssp
 
+      - name: List build outputs
+        run: |
+          dir "${{ github.workspace }}\ffmpeg-static"
+          dir "${{ github.workspace }}\ffmpeg-jni\bin\windows"
+        shell: pwsh
+
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |
-            ffmpeg-static/windows
-            ffmpeg-jni/bin/windows/ffmpegjni.dll
-            
+            ${{ github.workspace }}\ffmpeg-static\windows
+            ${{ github.workspace }}\ffmpeg-jni\bin\windows\ffmpegjni.dll

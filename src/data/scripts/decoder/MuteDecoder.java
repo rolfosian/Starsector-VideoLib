@@ -2,7 +2,7 @@ package data.scripts.decoder;
 
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.VideoFrame;
-import data.scripts.projector.NoSoundVideoProjector;
+import data.scripts.projector.MuteVideoProjector;
 import data.scripts.VideoMode;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.buffers.TextureFrame;
@@ -11,8 +11,8 @@ import org.lwjgl.opengl.GL11;
 
 import org.apache.log4j.Logger;
 
-public class NoSoundDecoder implements Decoder {
-    private static final Logger logger = Logger.getLogger(NoSoundDecoder.class);
+public class MuteDecoder implements Decoder {
+    private static final Logger logger = Logger.getLogger(MuteDecoder.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < args.length; i++) {
@@ -26,8 +26,8 @@ public class NoSoundDecoder implements Decoder {
 
     private final Thread mainThread;
 
-    private volatile VideoMode MODE;
-    private volatile VideoMode OLD_MODE;
+    private VideoMode MODE;
+    private VideoMode OLD_MODE;
 
     private String videoFilePath;
     private volatile boolean running = false;
@@ -41,18 +41,20 @@ public class NoSoundDecoder implements Decoder {
     private double videoDurationSeconds = 0;
     private long videoDurationUs = 0;
 
-    private volatile int currentVideoTextureId = 0;
-    private volatile long currentVideoPts = 0;
-    private volatile long seekedTo = 0;
+    private int currentVideoTextureId = 0;
+    private long currentVideoPts = 0;
+    private long seekedTo = 0;
 
-    public final NoSoundVideoProjector videoProjector;
+    public final MuteVideoProjector videoProjector;
 
     private int width;
     private int height;
 
+    private int i = 0;
+
     private float timeAccumulator = 0f;
 
-    public NoSoundDecoder(NoSoundVideoProjector videoProjector, String videoFilePath, int width, int height, VideoMode mode) {
+    public MuteDecoder(MuteVideoProjector videoProjector, String videoFilePath, int width, int height, VideoMode mode) {
         print("Initializing NoSoundDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
@@ -161,7 +163,7 @@ public class NoSoundDecoder implements Decoder {
         print("NoSoundDecoder decodeLoop ended");
     }
 
-    public int requestCurrentVideoTextureId(float deltaTime) {
+    public int getCurrentVideoTextureId(float deltaTime) {
         gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
@@ -196,7 +198,7 @@ public class NoSoundDecoder implements Decoder {
         return currentVideoTextureId;
     }
 
-    public int requestCurrentVideoTextureId() {
+    public int getCurrentVideoTextureId() {
         while (textureBuffer.isEmpty()) {
             sleep(1);
         } 
@@ -224,7 +226,7 @@ public class NoSoundDecoder implements Decoder {
         print("Starting NoSoundDecoder for file", videoFilePath);
         running = true;
 
-        pipePtr = FFmpeg.openPipe(videoFilePath, width, height, 0);
+        pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, 0);
         print("Opened FFmpeg pipe, ptr =", pipePtr);
 
         videoDurationSeconds = FFmpeg.getDurationSeconds(pipePtr);
@@ -337,7 +339,11 @@ public class NoSoundDecoder implements Decoder {
         print("Setting Mode", newMode);
         this.OLD_MODE = this.MODE;
         this.MODE = newMode;
-    }    
+    }
+
+    public int getErrorStatus() {
+        return FFmpeg.getErrorStatus(pipePtr);
+    }
 
     private void sleep(long millis) {
         try {

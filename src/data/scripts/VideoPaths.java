@@ -25,7 +25,7 @@ public class VideoPaths {
             ModManagerAPI modManager = Global.getSettings().getModManager();
             JSONObject settings = Global.getSettings().getJSONObject("VideoLib");
             
-            Iterator<String> modIds = settings.keys();            
+            Iterator<String> modIds = settings.keys();
             while (modIds.hasNext()) {
                 String modId = modIds.next();
                 ModSpecAPI modSpec = modManager.getModSpec(modId);

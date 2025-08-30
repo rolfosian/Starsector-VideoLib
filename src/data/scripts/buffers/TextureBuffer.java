@@ -80,6 +80,7 @@ public class TextureBuffer {
                 createGLTextureFromFrame(videoFrames[head].buffer, width, height),
                 videoFrames[head].pts
             );
+            videoFrames[head].freeBuffer();
             videoFrames[head] = null;
         }
         textures[head] = null;
@@ -98,6 +99,7 @@ public class TextureBuffer {
                     videoFrames[idx].pts
                 );
                 
+                videoFrames[idx].freeBuffer();
                 videoFrames[idx] = null;
                 maxConversions--;
             }
@@ -115,6 +117,7 @@ public class TextureBuffer {
                     videoFrames[idx].pts
                 );
 
+                videoFrames[idx].freeBuffer();
                 videoFrames[idx] = null;
             }
             idx = (idx + 1) % capacity;
@@ -129,6 +132,7 @@ public class TextureBuffer {
                 videoFrames[head].pts
             );
 
+            videoFrames[head].freeBuffer();
             videoFrames[head] = null;
         }
     }
@@ -140,8 +144,11 @@ public class TextureBuffer {
                 GL11.glDeleteTextures(textures[idx].id);
                 textures[idx] = null;
             }
-
-            videoFrames[idx] = null;
+            if (videoFrames[idx] != null) {
+                videoFrames[idx].freeBuffer();
+                videoFrames[idx] = null;
+            }
+            
             idx = (idx + 1) % capacity;
         }
         

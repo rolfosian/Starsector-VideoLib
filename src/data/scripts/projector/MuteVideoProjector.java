@@ -13,14 +13,14 @@ import data.scripts.VideoMode;
 import data.scripts.VideoPaths;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.decoder.Decoder;
-import data.scripts.decoder.NoSoundDecoder;
+import data.scripts.decoder.MuteDecoder;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
 
-public class NoSoundVideoProjector extends VideoProjector {
+public class MuteVideoProjector extends VideoProjector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
@@ -37,30 +37,30 @@ public class NoSoundVideoProjector extends VideoProjector {
     private VideoMode OLD_MODE;
 
     private CustomPanelAPI panel;
-    private NoSoundDecoder decoder;
+    private MuteDecoder decoder;
 
     // private final int vboId;
     // private final FloatBuffer quadBuffer;
 
     // playback/texture state
     private int currentTextureId = 0;
-    private volatile boolean isPlaying = false;
+    private boolean isPlaying = false;
     private boolean paused = false;
 
     private float x = 0f;
     private float y = 0f;
 
-    private int advancingValue = 0;
+    public int advancingValue = 0;
     private int checkAdvancing = 0;
 
-    public NoSoundVideoProjector(String videoFilename, int width, int height, VideoMode mode) {
+    public MuteVideoProjector(String videoFilename, int width, int height, VideoMode mode) {
         this.videoFilePath = VideoPaths.map.get(videoFilename);
         this.MODE = mode;
 
         this.width = width;
         this.height = height;
 
-        this.decoder = new NoSoundDecoder(this, videoFilePath, width, height, mode);
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, mode);
         this.decoder.start();
 
         // this.vboId = textureBuffer.getVboId();
@@ -68,7 +68,7 @@ public class NoSoundVideoProjector extends VideoProjector {
 
         if (mode == VideoMode.PAUSED) {
             paused = true;
-            currentTextureId = decoder.requestCurrentVideoTextureId();
+            currentTextureId = decoder.getCurrentVideoTextureId();
             isPlaying = true;
             MODE = VideoMode.LOOP;
             decoder.setMode(VideoMode.LOOP);
@@ -124,12 +124,12 @@ public class NoSoundVideoProjector extends VideoProjector {
         advancingValue ^= 1;
         if (paused) {
             if (MODE == VideoMode.SEEKING) {
-                currentTextureId = decoder.requestCurrentVideoTextureId();
+                currentTextureId = decoder.getCurrentVideoTextureId();
                 MODE = OLD_MODE;
             }
             return;
         } 
-        currentTextureId = decoder.requestCurrentVideoTextureId(amount);
+        currentTextureId = decoder.getCurrentVideoTextureId(amount);
     }
 
     @Override

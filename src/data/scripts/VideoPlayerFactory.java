@@ -1,13 +1,19 @@
 package data.scripts;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
 
-import data.scripts.controlpanel.PlayerControlPanel;
+import data.scripts.player_ui.PlayerControlPanel;
+import data.scripts.player_ui.PlayerPanelPlugin;
+import data.scripts.player_ui.VideoPlayerWithControls;
+import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
 
 import java.util.*;
 import org.apache.log4j.Logger;
+import org.lwjgl.opengl.GL11;
 
 public class VideoPlayerFactory {
     private static final Logger logger = Logger.getLogger(VideoPlayerFactory.class);
@@ -20,17 +26,26 @@ public class VideoPlayerFactory {
         logger.info(sb.toString());
     }
 
-    public static VideoPlayerWithControls addControlPanel(VideoProjector projectorPlugin, CustomPanelAPI projectorPanel) {
-        float width = projectorPlugin.getWidth();
-        float height = projectorPlugin.getHeight();
+    // public static VideoPlayerWithControls addControlPanel(VideoProjector projectorPlugin, CustomPanelAPI projectorPanel) {
+    //     float width = projectorPlugin.getWidth();
+    //     float height = projectorPlugin.getHeight();
+
+        
+    //     return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
+    // }
+
+    public static VideoPlayerWithControls createMutePlayerWithControls(String filename, int width, int height, VideoMode startMode) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(filename, width, height, startMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = (int) (height / 100 * 6.5f);
-        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, null);
+        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, (int) width, controlsHeight, false);
         masterPanel.addComponent(controlPanel.getControlPanel()).belowMid(projectorPanel, 5f);
-        
-        return new VideoPlayerWithControls(masterPanel, controlPanel);
+
+        return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
 }
