@@ -215,11 +215,12 @@ jobs:
         run: |
           set -eo pipefail
           cd ffmpeg-src
-          PREFIX=$(cygpath -m "$PREFIX_WIN")
+          PREFIX=$(cygpath -u "$PREFIX_WIN")
           export CC=x86_64-w64-mingw32-gcc
           export CXX=x86_64-w64-mingw32-g++
           export AR=x86_64-w64-mingw32-ar
           export RANLIB=x86_64-w64-mingw32-ranlib
+          mkdir -p "$PREFIX"
 
           ./configure \
             --target-os=mingw32 \
@@ -247,8 +248,8 @@ jobs:
         shell: C:\msys64\mingw64.exe {0}
         run: |
           echo "PREFIX_WIN = $PREFIX_WIN"
-          echo "Resolved PREFIX = $(cygpath -m "$PREFIX_WIN")"
-          ls -R "$(cygpath -m "$PREFIX_WIN")"
+          echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
+          ls -R "$(cygpath -u "$PREFIX_WIN")"
 
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: C:\msys64\mingw64.exe {0}
