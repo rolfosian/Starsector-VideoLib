@@ -72,6 +72,8 @@ public class NoSoundDecoder implements Decoder {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
                 if (f == null) { // EOF / Error
+                    // FFmpeg.printError(pipePtr);
+
                     switch(this.MODE) {
                         case LOOP:
                             while(!textureBuffer.isEmpty()) {

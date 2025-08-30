@@ -421,9 +421,10 @@ typedef struct {
     uint8_t *audio_out_buffer;
     int audio_out_capacity_bytes;
 
-    // for seeking
     int64_t seek_target_us;
     int seeking;
+
+    int error_status;
 
     pthread_mutex_t mutex;
 } FFmpegPipeContext;
@@ -579,6 +580,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
     ctx->seek_target_us = -1;
     ctx->seeking = 0;
+    ctx->error_status = 0;
     
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
@@ -621,6 +623,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
         int ret = av_read_frame(ctx->fmt_ctx, pkt);
         if (ret < 0) {
             // EOF or error
+            ctx->error_status = ret;
+
             if (ret == AVERROR_EOF) {
                 if (ctx->seeking && last_frame) {
                     sws_scale(ctx->sws_ctx,
@@ -1055,6 +1059,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
 
     ctx->seek_target_us = -1;
     ctx->seeking = 0;
+    ctx->error_status = 0;
     
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
@@ -1188,6 +1193,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
         int ret = av_read_frame(ctx->fmt_ctx, pkt);
         if (ret < 0) {
             // EOF or error
+            ctx->error_status;
+
             if (ret == AVERROR_EOF) {
                 if (ctx->seeking && last_frame) {
                     // Convert last frame to RGB
@@ -1433,6 +1440,20 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *en
     
     pthread_mutex_lock(&ctx->mutex);
     int64_t result = ctx->duration_us;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    return result;
+}
+
+JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, jclass clazz, jlong ptr) {
+    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    if (!ctx) {
+        printe(env, "getDurationUs: null context pointer");
+        return 42069;
+    }
+    
+    pthread_mutex_lock(&ctx->mutex);
+    int result = ctx->error_status;
     pthread_mutex_unlock(&ctx->mutex);
 
     return result;

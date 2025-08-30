@@ -18,6 +18,104 @@ public class FFmpeg {
 
     protected static final Cleaner cleaner = Cleaner.create();
 
+    public static final int AVERROR_BSF_NOT_FOUND      = -1179861752;
+    public static final int AVERROR_BUG                = -558323010;
+    public static final int AVERROR_BUFFER_TOO_SMALL   = -1397118274;
+    public static final int AVERROR_DECODER_NOT_FOUND  = -1128613112;
+    public static final int AVERROR_DEMUXER_NOT_FOUND  = -1296385272;
+    public static final int AVERROR_ENCODER_NOT_FOUND  = -1129203192;
+    public static final int AVERROR_EOF                = -541478725;
+    public static final int AVERROR_EXIT               = -1414092869;
+    public static final int AVERROR_EXTERNAL           = -542398533;
+    public static final int AVERROR_FILTER_NOT_FOUND   = -1279870712;
+    public static final int AVERROR_INVALIDDATA        = -1094995529;
+    public static final int AVERROR_MUXER_NOT_FOUND    = -1481985528;
+    public static final int AVERROR_OPTION_NOT_FOUND   = -1414549496;
+    public static final int AVERROR_PATCHWELCOME       = -1163346256;
+    public static final int AVERROR_PROTOCOL_NOT_FOUND = -1330794744;
+    public static final int AVERROR_STREAM_NOT_FOUND   = -1381258232;
+    public static final int AVERROR_BUG2               = -541545794;
+    public static final int AVERROR_UNKNOWN            = -1313558101;
+    public static final int AVERROR_EXPERIMENTAL       = -733130664;
+    public static final int AVERROR_INPUT_CHANGED      = -1668179713;
+    public static final int AVERROR_OUTPUT_CHANGED     = -1668179714;
+    public static final int AVERROR_HTTP_BAD_REQUEST   = -808465656;
+    public static final int AVERROR_HTTP_UNAUTHORIZED  = -825242872;
+    public static final int AVERROR_HTTP_FORBIDDEN     = -858797304;
+    public static final int AVERROR_HTTP_NOT_FOUND     = -875574520;
+    public static final int AVERROR_HTTP_TOO_MANY_REQUESTS = -959591672;
+    public static final int AVERROR_HTTP_OTHER_4XX     = -1482175736;
+    public static final int AVERROR_HTTP_SERVER_ERROR  = -1482175992;
+
+    public static boolean hasError(long ptr) {
+        return getErrorStatus(ptr) != 0;
+    }
+
+    public static void printError(long ptr) {
+        print(getErrorMessage(ptr));
+    }
+
+    public static String getErrorMessage(long ptr) {
+        int errorCode = getErrorStatus(ptr);
+        switch (errorCode) {
+            case AVERROR_EOF:
+                return "End of file";
+            case AVERROR_EXIT:
+                return "Immediate exit requested";
+            case AVERROR_BUG:
+            case AVERROR_BUG2:
+                return "Internal bug";
+            case AVERROR_INVALIDDATA:
+                return "Invalid data found when processing input";
+            case AVERROR_BUFFER_TOO_SMALL:
+                return "Buffer too small";
+            case AVERROR_DECODER_NOT_FOUND:
+                return "Decoder not found";
+            case AVERROR_ENCODER_NOT_FOUND:
+                return "Encoder not found";
+            case AVERROR_DEMUXER_NOT_FOUND:
+                return "Demuxer not found";
+            case AVERROR_MUXER_NOT_FOUND:
+                return "Muxer not found";
+            case AVERROR_STREAM_NOT_FOUND:
+                return "Stream not found";
+            case AVERROR_OPTION_NOT_FOUND:
+                return "Option not found";
+            case AVERROR_FILTER_NOT_FOUND:
+                return "Filter not found";
+            case AVERROR_PROTOCOL_NOT_FOUND:
+                return "Protocol not found";
+            case AVERROR_BSF_NOT_FOUND:
+                return "Bitstream filter not found";
+            case AVERROR_EXTERNAL:
+                return "Error in external library";
+            case AVERROR_UNKNOWN:
+                return "Unknown error";
+            case AVERROR_EXPERIMENTAL:
+                return "Feature flagged experimental";
+            case AVERROR_INPUT_CHANGED:
+                return "Input changed, reconfiguration required";
+            case AVERROR_OUTPUT_CHANGED:
+                return "Output changed, reconfiguration required";
+            case AVERROR_HTTP_BAD_REQUEST:
+                return "HTTP 400 Bad Request";
+            case AVERROR_HTTP_UNAUTHORIZED:
+                return "HTTP 401 Unauthorized";
+            case AVERROR_HTTP_FORBIDDEN:
+                return "HTTP 403 Forbidden";
+            case AVERROR_HTTP_NOT_FOUND:
+                return "HTTP 404 Not Found";
+            case AVERROR_HTTP_TOO_MANY_REQUESTS:
+                return "HTTP 429 Too Many Requests";
+            case AVERROR_HTTP_OTHER_4XX:
+                return "HTTP Other 4XX";
+            case AVERROR_HTTP_SERVER_ERROR:
+                return "HTTP 5XX Server Error";
+            default:
+                return "Unrecognized error code: " + errorCode;
+        }
+    }
+
     static {
         String osName = System.getProperty("os.name").toLowerCase();
         String cwd = System.getProperty("user.dir");
@@ -34,8 +132,7 @@ public class FFmpeg {
 
         } else if (osName.startsWith("mac")) {
             String binDir = cwd + "/mods/VideoLib/ffmpeg-jni/bin/mac/";
-            // TODO: Mac static barebones ffmpeg decoder libs and jni compilation
-            // See: ffmpeg-static/README.md
+
             System.load(binDir + "ffmpegjni.dylib"); // our bridge
 
         } else {
@@ -54,10 +151,11 @@ public class FFmpeg {
     public static native void resizeImage(long ptr, int newWidth, int newHeight);
 
     // general video functions compatible with both sound and no sound context pointers
+    public static native int getErrorStatus(long ptr);
     public static native float getVideoFps(long ptr);
     public static native double getDurationSeconds(long ptr);
     public static native long getDurationUs(long ptr);
-    
+
     public static native void seek(long ptr, long targetUs);
     public static native void closePipe(long ptr);
 

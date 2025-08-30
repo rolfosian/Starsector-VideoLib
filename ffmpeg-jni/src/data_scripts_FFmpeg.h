@@ -65,6 +65,14 @@ JNIEXPORT jfloat JNICALL Java_data_scripts_ffmpeg_FFmpeg_getVideoFps
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
+ * Method:    getErrorStatus
+ * Signature: (J)I
+ */
+JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus
+(JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     data_scripts_ffmpeg_FFmpeg
  * Method:    getDurationSeconds
  * Signature: (J)D
  */
