@@ -247,8 +247,8 @@ jobs:
         shell: C:\msys64\mingw64.exe {0}
         run: |
           echo "PREFIX_WIN = $PREFIX_WIN"
-          echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
-          ls -R "$(cygpath -u "$PREFIX_WIN")"
+          echo "Resolved PREFIX = $(cygpath -m "$PREFIX_WIN")"
+          ls -R "$(cygpath -m "$PREFIX_WIN")"
 
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: C:\msys64\mingw64.exe {0}
