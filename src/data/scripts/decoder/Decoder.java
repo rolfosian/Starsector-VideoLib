@@ -13,4 +13,7 @@ public interface Decoder {
 
     public VideoMode getMode();
     public void setMode(VideoMode mode);
+
+    public int requestCurrentVideoTextureId();
+    public int requestCurrentVideoTextureId(float deltaTime);
 }

@@ -9,8 +9,6 @@ import data.scripts.buffers.TextureFrame;
 
 import org.lwjgl.opengl.GL11;
 
-import com.fs.starfarer.campaign.ui.marketinfo.p;
-
 import org.apache.log4j.Logger;
 
 public class NoSoundDecoder implements Decoder {
@@ -72,8 +70,11 @@ public class NoSoundDecoder implements Decoder {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
                 if (f == null) { // EOF / Error
-                    // FFmpeg.printError(pipePtr);
-
+                    int err = FFmpeg.getErrorStatus(pipePtr);
+                    if (err != FFmpeg.AVERROR_EOF) {
+                        FFmpeg.printError(pipePtr);
+                    }
+                    
                     switch(this.MODE) {
                         case LOOP:
                             while(!textureBuffer.isEmpty()) {

@@ -204,10 +204,12 @@ public class PlayerControlPanel {
 
         private long pendingSeekTarget = -1;
         private long oldSeekTarget = -1;
+
         public boolean seeking = false;
         private boolean isAdvanced = false;
+        private boolean hasSeeked = false;
+
         private float seekX;
-        private float oldSeekX;
 
         private VideoMode oldProjectorMode;
         private VideoMode oldDecoderMode;
@@ -287,33 +289,34 @@ public class PlayerControlPanel {
                 
                 timeAccumulator++;
                 if (timeAccumulator >= SEEK_APPLY_THRESHOLD) {
-                    if (!(oldSeekTarget == pendingSeekTarget)) {
+                    if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         projector.getDecoder().setMode(VideoMode.SEEKING);
                         projector.getDecoder().seek(pendingSeekTarget);
                         projector.setMode(VideoMode.SEEKING);
+                        this.hasSeeked = true;
                     }
                     
-                    oldSeekTarget = pendingSeekTarget;
-                    timeAccumulator = 0;
-                    this.currentVideoPts = pendingSeekTarget;
+                    this.oldSeekTarget = this.pendingSeekTarget;
+                    this.timeAccumulator = 0;
+                    this.currentVideoPts = this.pendingSeekTarget;
                 }
         
             } else {
                 if (this.pendingSeekTarget >= 0 && timeAccumulator >= SEEK_APPLY_THRESHOLD) {
-                    if (!(oldSeekTarget == pendingSeekTarget)) {
+                    if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         projector.getDecoder().setMode(VideoMode.SEEKING);
-                        projector.getDecoder().seek(pendingSeekTarget);
+                        projector.getDecoder().seek(this.pendingSeekTarget);
                         projector.setMode(VideoMode.SEEKING);
-                        oldSeekTarget = pendingSeekTarget;
+                        this.oldSeekTarget = this.pendingSeekTarget;
                     }
 
-                    pendingSeekTarget = -1;
-                    timeAccumulator = 0;
+                    this.pendingSeekTarget = -1;
+                    this.timeAccumulator = 0;
                     this.currentVideoPts = pendingSeekTarget;
                 }
                 
                 if (!projector.paused()) {
-                    float newX = getButtonXFromSeekPosition(currentVideoPts);
+                    float newX = getButtonXFromSeekPosition(this.currentVideoPts);
                     seekButton.getPosition().inTL(newX, this.seekButtonY);
                 }
             }
@@ -334,11 +337,12 @@ public class PlayerControlPanel {
                         this.oldProjectorMode = projector.getMode();
                         this.oldDecoderMode = projector.getDecoder().getMode();
 
-                        wasPaused = projector.paused();
+                        this.wasPaused = projector.paused();
                         projector.pause();
                         projector.setMode(VideoMode.SEEKING);
                         seekButton.setEnabled(false);
 
+                        this.seekX = event.getX();
                         event.consume();
                         this.isAdvanced = false;
                         continue;
@@ -350,7 +354,7 @@ public class PlayerControlPanel {
                         projector.setMode(oldProjectorMode);
                         projector.getDecoder().setMode(oldDecoderMode);
                         seekButton.setEnabled(true);
-                        if (!wasPaused) projector.unpause();
+                        if (!this.wasPaused) projector.unpause();
 
                         event.consume();
                         continue;
@@ -422,8 +426,6 @@ public class PlayerControlPanel {
             this.adjustedLeftBound = this.seekBarPanelLeftBound - this.seekButtonOffset;
             this.adjustedRightBound = this.seekBarPanelRightBound + this.seekButtonOffset;
 
-            
-            
             this.reset();
         }
 
