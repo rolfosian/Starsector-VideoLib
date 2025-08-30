@@ -215,7 +215,7 @@ jobs:
         run: |
           set -eo pipefail
           cd ffmpeg-src
-          PREFIX=$(cygpath -u "$PREFIX_WIN")
+          PREFIX=$(cygpath -m "$PREFIX_WIN")
           export CC=x86_64-w64-mingw32-gcc
           export CXX=x86_64-w64-mingw32-g++
           export AR=x86_64-w64-mingw32-ar
