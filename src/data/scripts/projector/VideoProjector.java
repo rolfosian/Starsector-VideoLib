@@ -31,6 +31,7 @@ public abstract class VideoProjector implements CustomUIPanelPlugin {
 
     public abstract VideoMode getMode();
     public abstract void setMode(VideoMode mode);
+    public abstract void setCurrentTextureId(int id);
 
     @Override
     public void render(float alphaMult) {}

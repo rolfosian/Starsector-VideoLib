@@ -152,6 +152,7 @@ public class FFmpeg {
 
     // general video functions compatible with both sound and no sound context pointers
     public static native int getErrorStatus(long ptr);
+    // public static native long getFinalVideoFramePts(long ptr);
     public static native float getVideoFps(long ptr);
     public static native double getDurationSeconds(long ptr);
     public static native long getDurationUs(long ptr);

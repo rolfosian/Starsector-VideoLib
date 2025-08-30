@@ -13,13 +13,12 @@ import com.fs.starfarer.api.ModSpecAPI;
 
 @SuppressWarnings("unchecked")
 public class VideoPaths {
-    private static final Logger logger = Logger.getLogger(VideoPaths.class);
-    
     public static boolean populated = false;
     public static Map<String, String> map;
 
     protected static void populate() {
         if (populated) return;
+        Logger logger = Logger.getLogger(VideoPaths.class);
 
         Map<String, String> mape = new HashMap<>();
         try {
@@ -53,7 +52,7 @@ public class VideoPaths {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
-        
+
         map = Collections.unmodifiableMap(mape);
         populated = true;
     }

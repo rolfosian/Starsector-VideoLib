@@ -87,6 +87,13 @@ JNIEXPORT jdouble JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationSeconds
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     data_scripts_ffmpeg_FFmpeg
+ * Method:    getDurationUs
+ * Signature: (JL)L
+ */
+JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getFinalVideoFramePts
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg

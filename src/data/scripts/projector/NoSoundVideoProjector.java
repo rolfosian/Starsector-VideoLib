@@ -258,6 +258,10 @@ public class NoSoundVideoProjector extends VideoProjector {
         return this.paused;
     }
 
+    public void setCurrentTextureId(int id) {
+        this.currentTextureId = id;
+    }
+
     public VideoMode getMode() {
         return this.MODE;
     }

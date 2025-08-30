@@ -7,10 +7,10 @@ public abstract class Frame {
     public final ByteBuffer buffer;
 
     protected Frame(ByteBuffer buffer, long pts) {
-        FFmpeg.cleaner.register(this, () -> FFmpeg.freeBuffer(buffer));
-
         this.pts = pts;
         this.buffer = buffer;
+
+        FFmpeg.cleaner.register(this, () -> FFmpeg.freeBuffer(buffer));
     }
 
     public final void freeBuffer() {
