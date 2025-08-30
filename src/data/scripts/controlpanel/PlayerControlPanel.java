@@ -196,6 +196,7 @@ public class PlayerControlPanel {
     // TODO Needs polish
     private class SeekBarPlugin extends BaseCustomUIPanelPlugin {
         private double durationSeconds; // seconds in 0.000 format
+        private long durationUs;
         private long currentVideoPts; // µs
 
         private int timeAccumulator = 0;
@@ -204,6 +205,7 @@ public class PlayerControlPanel {
         private long pendingSeekTarget = -1;
         private long oldSeekTarget = -1;
         public boolean seeking = false;
+        private boolean isAdvanced = false;
         private float seekX;
         private float oldSeekX;
 
@@ -211,9 +213,10 @@ public class PlayerControlPanel {
         private VideoMode oldDecoderMode;
         boolean wasPaused;
 
-        private float seekButtonX;
+        private float seekButtonOffset;
         private float seekButtonY;
 
+        private PositionAPI seekBarPanelPosition;
         private float seekBarPanelX;
         private float seekBarPanelY;
         private float seekPanelWidth;
@@ -221,39 +224,54 @@ public class PlayerControlPanel {
 
         private float seekBarPanelLeftBound;
         private float seekBarPanelRightBound;
-        private float seekBarPanelTopBound;
-        private float seekBarPanelBottomBound;
+        private float seekbarPanelYBoundTolerance = 25f;
 
-        private float seekLineX; // pre calculate for in rendering method - mid of panelX
         private float seekLineY; // for in rendering method - mid of panelY
+        
+        // Transition zone boundaries for smooth seek button positioning
+        private float transitionStart;
+        private float transitionEnd;
+        
+        private float adjustedLeftBound;
+        private float adjustedRightBound;
 
         private void setSeekBarPanelBounds(PositionAPI panelPos) {
             this.seekBarPanelLeftBound = panelPos.getCenterX() - panelPos.getWidth() / 2;
             this.seekBarPanelRightBound = panelPos.getCenterX() + panelPos.getWidth() / 2;
-            this.seekBarPanelTopBound = panelPos.getCenterY() + panelPos.getHeight() / 2;
-            this.seekBarPanelBottomBound = panelPos.getCenterY() - panelPos.getHeight() / 2;
+            
+            if (seekButton != null) {
+                this.adjustedLeftBound = this.seekBarPanelLeftBound - this.seekButtonOffset;
+                this.adjustedRightBound = this.seekBarPanelRightBound + this.seekButtonOffset;
+            }
         }
 
         private long getSeekPositionFromX(float mouseX) {
             float relativeX = mouseX - this.seekBarPanelLeftBound;
             float clampedX = Math.max(0f, Math.min(relativeX, this.seekPanelWidth));
             double fraction = clampedX / this.seekPanelWidth;
-            return (long) Math.min(
-                fraction * this.durationSeconds * 1_000_000,
-                this.durationSeconds * 1_000_000 - 100_000
-            );
+            return (long) (fraction * this.durationUs);
         }
 
         private float getButtonXFromSeekPosition(long pts) {
-            long clampedPts = (long) Math.min(pts, this.durationSeconds * 1_000_000 - 100_000);
-            double fraction = clampedPts / (double)(this.durationSeconds * 1_000_000);
-            return (float) (fraction * this.seekPanelWidth);
+            double fraction = pts / (double)(this.durationUs);
+            float newX = (float) (fraction * this.seekPanelWidth);
+        
+            if (newX <= this.transitionStart) {
+                return newX - seekButtonOffset;
+
+            } else if (newX >= this.transitionEnd) {
+                return Math.min(newX, this.seekPanelWidth - seekButtonOffset);
+
+            } else {
+                float transitionProgress = (newX - this.transitionStart) / (this.transitionEnd - this.transitionStart);
+                float offsetAmount = seekButtonOffset * (1.0f - transitionProgress);
+                return newX - offsetAmount;
+            }
         }
 
-        private boolean isInSeekLineBounds(float mouseX, float mouseY) {
-            float tolerance = 25f; // clickable band above/below the line
-            return mouseX >= this.seekBarPanelLeftBound && mouseX <= this.seekBarPanelRightBound &&
-                   mouseY >= (this.seekLineY - tolerance) && mouseY <= (this.seekLineY + tolerance);
+        private boolean isInSeekLineBounds(float mouseX, float mouseY) {            
+            return mouseX >= this.adjustedLeftBound && mouseX <= this.adjustedRightBound &&
+                   mouseY >= (this.seekLineY - seekbarPanelYBoundTolerance) && mouseY <= (this.seekLineY + seekbarPanelYBoundTolerance);
         }
 
         @Override
@@ -263,6 +281,7 @@ public class PlayerControlPanel {
             if (this.seeking) {
                 this.seekX = Math.max(seekBarPanelLeftBound, Math.min(this.seekX, this.seekBarPanelRightBound));
                 this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
+                
                 float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
                 seekButton.getPosition().inTL(newX, this.seekButtonY);
                 
@@ -292,10 +311,14 @@ public class PlayerControlPanel {
                     timeAccumulator = 0;
                     this.currentVideoPts = pendingSeekTarget;
                 }
-        
-                float newX = getButtonXFromSeekPosition(currentVideoPts);
-                seekButton.getPosition().inTL(newX, this.seekButtonY);
+                
+                if (!projector.paused()) {
+                    float newX = getButtonXFromSeekPosition(currentVideoPts);
+                    seekButton.getPosition().inTL(newX, this.seekButtonY);
+                }
             }
+            
+            if (!this.isAdvanced) this.isAdvanced = true;
         }
 
         @Override
@@ -316,25 +339,12 @@ public class PlayerControlPanel {
                         projector.setMode(VideoMode.SEEKING);
                         seekButton.setEnabled(false);
 
-                        // if (!(oldSeekTarget == pendingSeekTarget)) {
-                        //     projector.getDecoder().setMode(VideoMode.SEEKING);
-                        //     projector.getDecoder().seek(pendingSeekTarget);
-                        //     projector.setMode(VideoMode.SEEKING);
-                        // }
-                        
-                        // oldSeekTarget = pendingSeekTarget;
-                        // this.currentVideoPts = pendingSeekTarget;
-
-                        // this.seekX = Math.max(seekBarPanelLeftBound, Math.min(event.getX(), this.seekBarPanelRightBound));
-                        // this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
-                        // float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
-                        // seekButton.getPosition().inTL(newX, this.seekButtonY);
-
                         event.consume();
+                        this.isAdvanced = false;
                         continue;
                     }
 
-                    if (this.seeking && event.isMouseUpEvent()) {
+                    if (this.seeking && this.isAdvanced && event.isMouseUpEvent()) {
                         this.seeking = false;
 
                         projector.setMode(oldProjectorMode);
@@ -362,31 +372,35 @@ public class PlayerControlPanel {
             this.seekPanelWidth = seekBarPanelPos.getWidth();
             this.seekPanelHeight = seekBarPanelPos.getHeight();
         
-            this.seekLineX = seekBarPanelPos.getX();
             this.seekLineY = seekBarPanelPos.getCenterY();
             
-            setSeekBarPanelBounds(seekBarPanelPos);
 
             if (seekButton != null) {
                 this.seekButtonY = -seekButton.getPosition().getHeight() / 2; // relative to panel top
+                this.seekButtonOffset = seekButton.getPosition().getWidth() / 2;
+                
+                this.transitionStart = seekBarPanelPos.getWidth() - 60;
+                this.transitionEnd = seekBarPanelPos.getWidth() - 30;
+                
+                this.adjustedLeftBound = this.seekBarPanelLeftBound - this.seekButtonOffset;
+                this.adjustedRightBound = this.seekBarPanelRightBound + this.seekButtonOffset;
             }
 
-            
+            setSeekBarPanelBounds(seekBarPanelPos);
         }
 
         public void init(PositionAPI seekBarPanelPos) {
+            this.seekBarPanelPosition = seekBarPanelPos;
             this.seekBarPanelX = seekBarPanelPos.getX();
             this.seekBarPanelY = seekBarPanelPos.getY();
         
             this.seekPanelWidth = seekBarPanelPos.getWidth();
             this.seekPanelHeight = seekBarPanelPos.getHeight();
         
-            this.seekLineX = seekBarPanelPos.getX();
             this.seekLineY = seekBarPanelPos.getCenterY();
         
-            setSeekBarPanelBounds(seekBarPanelPos);
-        
-            this.durationSeconds = projector.getDecoder().getDuration();
+            this.durationSeconds = projector.getDecoder().getDurationSeconds();
+            this.durationUs = projector.getDecoder().getDurationUs();
         
             seekBarTt = seekBarPanel.createUIElement(seekBarPanelPos.getWidth() - 10, seekBarPanelPos.getHeight() / 3, false);
 
@@ -398,6 +412,18 @@ public class PlayerControlPanel {
             seekBarPanel.addUIElement(seekBarTt).inTL(0f, 0f);
 
             this.seekButtonY = -seekButton.getPosition().getHeight() / 2;
+            this.seekButtonOffset = seekButton.getPosition().getWidth() / 2;
+
+            setSeekBarPanelBounds(seekBarPanelPos);
+            
+            this.transitionStart = seekBarPanelPos.getWidth() - 60;
+            this.transitionEnd = seekBarPanelPos.getWidth() - 30;
+            
+            this.adjustedLeftBound = this.seekBarPanelLeftBound - this.seekButtonOffset;
+            this.adjustedRightBound = this.seekBarPanelRightBound + this.seekButtonOffset;
+
+            
+            
             this.reset();
         }
 

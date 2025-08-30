@@ -386,7 +386,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
     av_frame_free(&dst);
 }
 
-// Sound-enabled pipe context (video + audio)
 typedef struct {
     AVFormatContext *fmt_ctx;
 
@@ -403,6 +402,7 @@ typedef struct {
     int64_t frame_count;
     float fps;
     double duration_seconds;
+    int64_t duration_us;
 
     // audio
     int audio_stream_index;
@@ -570,8 +570,10 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->fps = fps;
 
     if (fmt_ctx->duration > 0) {
+        ctx->duration_us = fmt_ctx->duration;
         ctx->duration_seconds = (double)fmt_ctx->duration / (double)AV_TIME_BASE;
     } else {
+        ctx->duration_us = 0;
         ctx->duration_seconds = 0.0;
     }
 
@@ -614,17 +616,52 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
 
     pthread_mutex_lock(&ctx->mutex);
 
+    AVFrame *last_frame = NULL;
     while (1) {
         int ret = av_read_frame(ctx->fmt_ctx, pkt);
         if (ret < 0) {
             // EOF or error
             if (ret == AVERROR_EOF) {
-                // printe(env, "readFrameNoSound: end of file reached");
+                if (ctx->seeking && last_frame) {
+                    sws_scale(ctx->sws_ctx,
+                              (const uint8_t * const *)last_frame->data,
+                              last_frame->linesize,
+                              0,
+                              ctx->video_ctx->height,
+                              ctx->rgb_frame->data,
+                              ctx->rgb_frame->linesize);
+            
+                    void *copy = malloc(ctx->rgb_size);
+                    if (!copy) {
+                        ctx->seeking = 0;
+                        printe(env, "returning null last frame");
+                        av_frame_unref(last_frame);
+                        pthread_mutex_unlock(&ctx->mutex);
+                        av_packet_free(&pkt);
+                        return NULL;
+                    }
+                    memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
+            
+                    jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
+            
+                    jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
+                    jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
+            
+                    jobject result = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)last_frame->pts);
+                    
+                    ctx->seeking = 0;
+                    av_frame_unref(last_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return result;
+                }
+
             } else {
                 char error_msg[256];
                 snprintf(error_msg, sizeof(error_msg), "readFrameNoSound: failed to read frame, error %d", ret);
                 printe(env, error_msg);
             }
+
             av_packet_free(&pkt);
             pthread_mutex_unlock(&ctx->mutex);
             return NULL;
@@ -648,10 +685,14 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
 
                 // if seeking: skip until first frame >= seek target
                 if (ctx->seeking && pts < ctx->seek_target_us) {
+                    if (last_frame) av_frame_free(&last_frame);
+                    last_frame = av_frame_clone(ctx->video_frame);
+
                     av_frame_unref(ctx->video_frame);
                     continue;
                 }
                 ctx->seeking = 0;
+                if (last_frame) av_frame_free(&last_frame);
 
                 // convert to RGB
                 sws_scale(ctx->sws_ctx,
@@ -983,10 +1024,12 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     ctx->frame_count = 0;
     ctx->fps = fps;
 
-    // duration in seconds
+    // duration in seconds and microseconds
     if (fmt_ctx->duration > 0) {
+        ctx->duration_us = fmt_ctx->duration;
         ctx->duration_seconds = (double)fmt_ctx->duration / (double)AV_TIME_BASE;
     } else {
+        ctx->duration_us = 0;
         ctx->duration_seconds = 0.0;
     }
 
@@ -1139,12 +1182,46 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
 
     pthread_mutex_lock(&ctx->mutex);
 
+    AVFrame *last_frame = NULL; // store last frame while seeking
+
     while (1) {
         int ret = av_read_frame(ctx->fmt_ctx, pkt);
         if (ret < 0) {
             // EOF or error
             if (ret == AVERROR_EOF) {
-                // printe(env, "read: end of file reached");
+                if (ctx->seeking && last_frame) {
+                    // Convert last frame to RGB
+                    sws_scale(ctx->sws_ctx,
+                              (const uint8_t * const *)last_frame->data,
+                              last_frame->linesize,
+                              0,
+                              ctx->video_ctx->height,
+                              ctx->rgb_frame->data,
+                              ctx->rgb_frame->linesize);
+
+                    void *copy = malloc(ctx->rgb_size);
+                    if (!copy) {
+                        ctx->seeking = 0;
+                        printe(env, "read: failed to allocate last frame copy buffer");
+                        av_frame_unref(last_frame);
+                        pthread_mutex_unlock(&ctx->mutex);
+                        av_packet_free(&pkt);
+                        return NULL;
+                    }
+                    memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
+
+                    jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
+
+                    jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
+                    jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
+                    jobject videoResult = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)last_frame->pts);
+
+                    ctx->seeking = 0;
+                    av_frame_unref(last_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return videoResult;
+                }
             } else {
                 char error_msg[256];
                 snprintf(error_msg, sizeof(error_msg), "read: failed to read frame, error %d", ret);
@@ -1155,9 +1232,6 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
             return NULL;
         }
 
-        // ---------------------
-        // Video packet
-        // ---------------------
         if (pkt->stream_index == ctx->video_stream_index) {
             ret = avcodec_send_packet(ctx->video_ctx, pkt);
             av_packet_unref(pkt);
@@ -1169,19 +1243,19 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
             }
 
             while ((ret = avcodec_receive_frame(ctx->video_ctx, ctx->video_frame)) >= 0) {
-                // compute PTS in microseconds
                 int64_t pts = av_rescale_q(ctx->video_frame->pts,
                                            ctx->fmt_ctx->streams[ctx->video_stream_index]->time_base,
                                            AV_TIME_BASE_Q);
 
-                // if seeking: skip until first frame >= seek target
                 if (ctx->seeking && pts < ctx->seek_target_us) {
+                    if (last_frame) av_frame_free(&last_frame);
+                    last_frame = av_frame_clone(ctx->video_frame);
                     av_frame_unref(ctx->video_frame);
                     continue;
                 }
                 ctx->seeking = 0;
+                if (last_frame) av_frame_free(&last_frame);
 
-                // convert to RGB
                 sws_scale(ctx->sws_ctx,
                           (const uint8_t * const *)ctx->video_frame->data,
                           ctx->video_frame->linesize,
@@ -1199,72 +1273,23 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     return NULL;
                 }
                 memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
-                
+
                 jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                if (!byteBuffer) {
-                    printe(env, "read: failed to create video DirectByteBuffer");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
-                
+
                 jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
-                if (!cls) {
-                    printe(env, "read: failed to find VideoFrame class");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
-                
                 jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
-                if (!ctor) {
-                    printe(env, "read: failed to get VideoFrame constructor");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
-                
                 result = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)pts);
-                if (!result) {
-                    printe(env, "read: failed to create VideoFrame object");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
 
                 av_frame_unref(ctx->video_frame);
                 pthread_mutex_unlock(&ctx->mutex);
                 av_packet_free(&pkt);
                 return result;
             }
-            
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                char error_msg[256];
-                snprintf(error_msg, sizeof(error_msg), "read: failed to receive video frame, error %d", ret);
-                printe(env, error_msg);
-            }
-        }
 
-        // ---------------------
-        // Audio packet
-        // ---------------------
-        else if (pkt->stream_index == ctx->audio_stream_index && ctx->audio_ctx) {
+        } else if (pkt->stream_index == ctx->audio_stream_index && ctx->audio_ctx) {
             ret = avcodec_send_packet(ctx->audio_ctx, pkt);
             av_packet_unref(pkt);
-            if (ret < 0) {
-                char error_msg[256];
-                snprintf(error_msg, sizeof(error_msg), "read: failed to send audio packet, error %d", ret);
-                printe(env, error_msg);
-                continue;
-            }
+            if (ret < 0) continue;
 
             while ((ret = avcodec_receive_frame(ctx->audio_ctx, ctx->audio_frame)) >= 0) {
                 int dst_nb_samples = av_rescale_rnd(
@@ -1277,7 +1302,6 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 uint8_t **converted = NULL;
                 if (av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
                                                        dst_nb_samples, ctx->out_sample_fmt, 0) < 0) {
-                    printe(env, "read: failed to allocate audio conversion buffer");
                     av_frame_unref(ctx->audio_frame);
                     continue;
                 }
@@ -1286,9 +1310,6 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                                                     (const uint8_t **)ctx->audio_frame->data,
                                                     ctx->audio_frame->nb_samples);
                 if (converted_samples < 0) {
-                    char error_msg[256];
-                    snprintf(error_msg, sizeof(error_msg), "read: failed to convert audio, error %d", converted_samples);
-                    printe(env, error_msg);
                     av_freep(&converted[0]);
                     av_freep(&converted);
                     av_frame_unref(ctx->audio_frame);
@@ -1298,77 +1319,27 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 int buffer_size = av_samples_get_buffer_size(NULL, ctx->out_channels,
                                                              converted_samples, ctx->out_sample_fmt, 1);
                 if (buffer_size < 0) {
-                    printe(env, "read: failed to get audio buffer size");
                     av_freep(&converted[0]);
                     av_freep(&converted);
                     av_frame_unref(ctx->audio_frame);
                     continue;
                 }
-
-                int16_t *audio_buf = (int16_t *)converted[0];
-
-                int64_t pts = av_rescale_q(ctx->audio_frame->pts,
-                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
-                                           AV_TIME_BASE_Q);
-
-                // if seeking: skip until first frame >= seek target
-                if (ctx->seeking && pts < ctx->seek_target_us) {
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
-                ctx->seeking = 0;
 
                 if (ctx->audio_out_capacity_bytes < buffer_size) {
                     if (ctx->audio_out_buffer) av_free(ctx->audio_out_buffer);
                     ctx->audio_out_buffer = (uint8_t *)av_malloc(buffer_size);
-                    if (!ctx->audio_out_buffer) {
-                        printe(env, "read: failed to allocate audio output buffer");
-                        av_freep(&converted[0]);
-                        av_freep(&converted);
-                        av_frame_unref(ctx->audio_frame);
-                        continue;
-                    }
                     ctx->audio_out_capacity_bytes = buffer_size;
                 }
-                memcpy(ctx->audio_out_buffer, audio_buf, buffer_size);
+                memcpy(ctx->audio_out_buffer, converted[0], buffer_size);
 
                 jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ctx->audio_out_buffer, buffer_size);
-                if (!byteBuffer) {
-                    printe(env, "read: failed to create audio DirectByteBuffer");
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
 
                 jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame");
-                if (!cls) {
-                    printe(env, "read: failed to find AudioFrame class");
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
-                
                 jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
-                if (!ctor) {
-                    printe(env, "read: failed to get AudioFrame constructor");
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
-                
-                result = (*env)->NewObject(env, cls, ctor, byteBuffer, buffer_size, (jlong)pts);
-                if (!result) {
-                    printe(env, "read: failed to create AudioFrame object");
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
+                result = (*env)->NewObject(env, cls, ctor, byteBuffer, buffer_size,
+                                           (jlong)av_rescale_q(ctx->audio_frame->pts,
+                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
+                                           AV_TIME_BASE_Q));
 
                 av_freep(&converted[0]);
                 av_freep(&converted);
@@ -1378,16 +1349,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 av_packet_free(&pkt);
                 return result;
             }
-            
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                char error_msg[256];
-                snprintf(error_msg, sizeof(error_msg), "read: failed to receive audio frame, error %d", ret);
-                printe(env, error_msg);
-            }
-        }
-
-        // Other streams
-        else {
+        } else {
             av_packet_unref(pkt);
         }
     }
@@ -1454,5 +1416,24 @@ JNIEXPORT jdouble JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationSeconds(JNI
         printe(env, "getDurationSeconds: null context pointer");
         return 0.0;
     }
-    return ctx->duration_seconds;
+    
+    pthread_mutex_lock(&ctx->mutex);
+    double result = ctx->duration_seconds;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    return result;
+}
+
+JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, jclass clazz, jlong ptr) {
+    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    if (!ctx) {
+        printe(env, "getDurationUs: null context pointer");
+        return 0;
+    }
+    
+    pthread_mutex_lock(&ctx->mutex);
+    int64_t result = ctx->duration_us;
+    pthread_mutex_unlock(&ctx->mutex);
+
+    return result;
 }
