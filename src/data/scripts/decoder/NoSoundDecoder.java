@@ -40,7 +40,8 @@ public class NoSoundDecoder implements Decoder {
     private float gameFps = 0f;
     private float videoFps = 0f;
     private float spf = 0f;
-    private double videoDuration = 0;
+    private double videoDurationSeconds = 0;
+    private long videoDurationUs = 0;
 
     private volatile int currentVideoTextureId = 0;
     private volatile long currentVideoPts = 0;
@@ -165,15 +166,14 @@ public class NoSoundDecoder implements Decoder {
             boolean switched = false;
 
             while (timeAccumulator >= spf) {
-                switched = true;
                 timeAccumulator -= spf;
                 
                 if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
-                // print(textureBuffer.size());
                 
                 TextureFrame texture = textureBuffer.popFront(width, height);
 
                 if (texture != null) {
+                    switched = true;
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
                 }
@@ -185,7 +185,7 @@ public class NoSoundDecoder implements Decoder {
                     textureBuffer.convertFront(width, height);
 
                 } else {
-                    textureBuffer.convertSome(width, height, (int)(gameFps / videoFps));
+                    textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
                 }
             }
         }
@@ -194,7 +194,9 @@ public class NoSoundDecoder implements Decoder {
     }
 
     public int requestCurrentVideoTextureId() {
-        while (textureBuffer.isEmpty()) sleep(1);
+        while (textureBuffer.isEmpty()) {
+            sleep(1);
+        } 
 
         synchronized(textureBuffer) {
             TextureFrame texture = textureBuffer.popFront(width, height);
@@ -214,19 +216,22 @@ public class NoSoundDecoder implements Decoder {
 
     public float getVideoFps() { return videoFps; }
 
-    public void start() {
-        if (running) return;
+    public TextureBuffer start() {
+        if (running) return null;
         print("Starting NoSoundDecoder for file", videoFilePath);
         running = true;
 
         pipePtr = FFmpeg.openPipe(videoFilePath, width, height, 0);
         print("Opened FFmpeg pipe, ptr =", pipePtr);
 
-        videoDuration = FFmpeg.getDurationSeconds(pipePtr);
+        videoDurationSeconds = FFmpeg.getDurationSeconds(pipePtr);
+        videoDurationUs = FFmpeg.getDurationUs(pipePtr);
+
         videoFps = FFmpeg.getVideoFps(pipePtr);
         spf = 1 / videoFps;
         print("Video Framerate =", videoFps);
-        print("Video Duration=", videoDuration);
+        print("Video Duration=", videoDurationSeconds);
+        print("Video DurationUs=", videoDurationUs);
 
         decodeThread = new Thread(this::decodeLoop, "NoSoundDecoder");
         decodeThread.start();
@@ -236,6 +241,7 @@ public class NoSoundDecoder implements Decoder {
         synchronized(textureBuffer) {
             textureBuffer.convertFront(width, height);
         }
+        return textureBuffer;
     }
 
     public void finish() {
@@ -260,6 +266,7 @@ public class NoSoundDecoder implements Decoder {
 
         print("Clearing Texture/Video Buffer");
         textureBuffer.clear();
+        // textureBuffer.glDeleteBuffers();
     }
 
     public void stop() {
@@ -307,8 +314,12 @@ public class NoSoundDecoder implements Decoder {
         return this.textureBuffer;
     }
 
-    public double getDuration() {
-        return this.videoDuration;
+    public double getDurationSeconds() {
+        return this.videoDurationSeconds;
+    }
+
+    public long getDurationUs() {
+        return this.videoDurationUs;
     }
 
     public long getCurrentVideoPts() {
@@ -320,7 +331,7 @@ public class NoSoundDecoder implements Decoder {
     }
     
     public void setMode(VideoMode newMode) {
-        print("setting mode", newMode);
+        print("Setting Mode", newMode);
         this.OLD_MODE = this.MODE;
         this.MODE = newMode;
     }    

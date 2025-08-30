@@ -1,5 +1,6 @@
 package data.scripts.projector;
 
+import java.nio.FloatBuffer;
 import java.util.*;
 
 import com.fs.starfarer.api.Global;
@@ -10,12 +11,14 @@ import com.fs.starfarer.api.ui.PositionAPI;
 
 import data.scripts.VideoMode;
 import data.scripts.VideoPaths;
+import data.scripts.buffers.TextureBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.NoSoundDecoder;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
 
 public class NoSoundVideoProjector extends VideoProjector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
@@ -36,6 +39,9 @@ public class NoSoundVideoProjector extends VideoProjector {
     private CustomPanelAPI panel;
     private NoSoundDecoder decoder;
 
+    // private final int vboId;
+    // private final FloatBuffer quadBuffer;
+
     // playback/texture state
     private int currentTextureId = 0;
     private volatile boolean isPlaying = false;
@@ -55,7 +61,10 @@ public class NoSoundVideoProjector extends VideoProjector {
         this.height = height;
 
         this.decoder = new NoSoundDecoder(this, videoFilePath, width, height, mode);
-        decoder.start();
+        this.decoder.start();
+
+        // this.vboId = textureBuffer.getVboId();
+        // this.quadBuffer = textureBuffer.getQuadBuffer();
 
         if (mode == VideoMode.PAUSED) {
             paused = true;
@@ -152,6 +161,42 @@ public class NoSoundVideoProjector extends VideoProjector {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
+
+        // GL11.glEnable(GL11.GL_TEXTURE_2D);
+        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
+    
+        // GL11.glEnable(GL11.GL_BLEND);
+        // GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        // GL11.glColor4f(1f, 1f, 1f, alphaMult);
+    
+        // quadBuffer.clear();
+        // quadBuffer.put(new float[] {
+        //     x, y + height, 0f, 0f,         // top-left
+        //     x + width, y + height, 1f, 0f, // top-right
+        //     x + width, y, 1f, 1f,          // bottom-right
+        //     x, y, 0f, 1f                   // bottom-left
+        // });
+        // quadBuffer.flip();
+    
+        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
+        // GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, quadBuffer);
+    
+        // GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
+        // GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+    
+        // GL11.glVertexPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 0);
+        // GL11.glTexCoordPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 2 * Float.BYTES);
+    
+        // GL11.glDrawArrays(GL11.GL_QUADS, 0, 4);
+    
+        // GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
+        // GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
+    
+        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+        // GL11.glColor4f(1f, 1f, 1f, 1f);
+        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        // GL11.glDisable(GL11.GL_BLEND);
+        // GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
     public void start() {

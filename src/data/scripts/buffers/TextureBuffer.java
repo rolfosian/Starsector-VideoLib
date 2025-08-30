@@ -1,9 +1,14 @@
 package data.scripts.buffers;
 
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
 import org.apache.log4j.Logger;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL21;
+
 import data.scripts.ffmpeg.VideoFrame;
 
 public class TextureBuffer {
@@ -20,6 +25,10 @@ public class TextureBuffer {
     private final VideoFrame[] videoFrames;
     private final TextureFrame[] textures;
 
+    // private final int pboId;
+    // private final int vboId;
+    // private final FloatBuffer quadBuffer;
+
     private int size;
     private final int capacity;
     private int head;
@@ -32,6 +41,14 @@ public class TextureBuffer {
         this.size = 0;
         this.head = 0;
         this.tail = 0;
+
+        // this.quadBuffer = BufferUtils.createFloatBuffer(4 * 4);
+        // this.vboId = GL15.glGenBuffers();
+        // this.pboId = GL15.glGenBuffers();
+
+        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
+        // GL15.glBufferData(GL15.GL_ARRAY_BUFFER, quadBuffer.capacity() * Float.BYTES, GL15.GL_DYNAMIC_DRAW);
+        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
     }
 
     public int size() {
@@ -145,4 +162,50 @@ public class TextureBuffer {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         return textureId;
     }
+
+    // this might be more efficient if we reuse the same buffer every frame but requires refactor of jni and seeking gates
+    // private int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
+    //     if (frameBuffer == null) return -1;
+    
+    //     int textureId = GL11.glGenTextures();
+    //     GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+    
+    //     // Allocate empty texture
+    //     GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, width, height, 0,
+    //                       GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+    
+    //     // Set filtering
+    //     GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+    //     GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+    
+    //     GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, pboId);
+    //     GL15.glBufferData(GL21.GL_PIXEL_UNPACK_BUFFER, frameBuffer.capacity(), GL15.GL_STREAM_DRAW);
+    
+    //     // Map PBO directly (no copy)
+    //     ByteBuffer buffer = GL15.glMapBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, GL15.GL_WRITE_ONLY, frameBuffer.capacity(), null);
+    //     buffer.put(frameBuffer); // Optional if frameBuffer is already mapped/ready
+    //     GL15.glUnmapBuffer(GL21.GL_PIXEL_UNPACK_BUFFER);
+    
+    //     // Upload to texture
+    //     GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, width, height, GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, 0);
+    
+    //     // Unbind
+    //     GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
+    //     GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+    
+    //     return textureId;
+    // }
+
+    // public int getVboId() {
+    //     return vboId;
+    // }
+
+    // public FloatBuffer getQuadBuffer() {
+    //     return this.quadBuffer;
+    // }
+
+    // public void glDeleteBuffers() {
+    //     GL15.glDeleteBuffers(pboId);
+    //     GL15.glDeleteBuffers(vboId);
+    // }
 }
