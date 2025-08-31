@@ -38,7 +38,10 @@ public abstract class VideoProjector implements CustomUIPanelPlugin {
     public abstract void setEOFMode(EOFMode mode);
 
     public abstract void setCurrentTextureId(int id);
+    public abstract boolean isRendering();
+    public abstract void setIsRendering(boolean rendering);
     public abstract void setControlPanel(PlayerControlPanel controlPanel);
+    public abstract PlayerControlPanel getControlPanel();
 
     @Override
     public void render(float alphaMult) {}

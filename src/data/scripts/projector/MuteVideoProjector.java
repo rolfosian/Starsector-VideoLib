@@ -50,7 +50,7 @@ public class MuteVideoProjector extends VideoProjector {
 
     // playback/texture state
     private int currentTextureId = 0;
-    private boolean isPlaying = false;
+    private boolean isRendering = false;
     private boolean paused = false;
 
     private float x = 0f;
@@ -81,7 +81,7 @@ public class MuteVideoProjector extends VideoProjector {
 
         if (startingPlayMode == PlayMode.PAUSED) {
             paused = true;
-            isPlaying = true;
+            isRendering = true;
             currentTextureId = decoder.getCurrentVideoTextureId();
             MODE = PlayMode.PAUSED;
         }
@@ -93,7 +93,7 @@ public class MuteVideoProjector extends VideoProjector {
             public void advance(float arg0) {
                 checkAdvancing ^= 1;
 
-                if (!(checkAdvancing == advancingValue)) {
+                if (!(checkAdvancing == advancingValue)) { // as soon as this becomes misaligned with the value that is flipped in projector's advance then we finish and clean up
                     finish();
                     isDone = true;
                     Global.getSector().removeTransientScript(this);
@@ -131,6 +131,10 @@ public class MuteVideoProjector extends VideoProjector {
 
     public void setClickToPause(boolean clickToPause) {
         this.clickToPause = clickToPause;
+    }
+
+    public PlayerControlPanel getControlPanel() {
+        return this.controlPanel;
     }
 
     public void setControlPanel(PlayerControlPanel controlPanel) {
@@ -185,7 +189,7 @@ public class MuteVideoProjector extends VideoProjector {
 
     @Override
     public void render(float alphaMult) {
-        if (!isPlaying) return;
+        if (!isRendering) return;
 
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
@@ -251,7 +255,7 @@ public class MuteVideoProjector extends VideoProjector {
     }
 
     public void start() {
-        isPlaying = true;
+        isRendering = true;
     }
 
     public void pause() {
@@ -272,15 +276,13 @@ public class MuteVideoProjector extends VideoProjector {
     }
 
     public void stop() {
-        isPlaying = false;
+        isRendering = false;
         paused = true;
 
         if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
         decoder.stop();
-    }
-
-    public void seek(double targetSecond) {
-        decoder.seek(targetSecond);
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        isRendering = false;
     }
 
     public void restart() {
@@ -291,7 +293,7 @@ public class MuteVideoProjector extends VideoProjector {
     }
 
     public void finish() {
-        isPlaying = false;
+        isRendering = false;
 
         if (currentTextureId != 0) {
             GL11.glDeleteTextures(currentTextureId);
@@ -338,7 +340,11 @@ public class MuteVideoProjector extends VideoProjector {
         return this.height;
     }
 
-    public boolean isPlaying() {
-        return this.isPlaying;
+    public void setIsRendering(boolean isRendering) {
+        this.isRendering = isRendering;
+    }
+
+    public boolean isRendering() {
+        return this.isRendering;
     }
 }

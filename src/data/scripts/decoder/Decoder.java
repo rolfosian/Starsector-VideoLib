@@ -10,11 +10,10 @@ public interface Decoder {
     public long getCurrentVideoPts();
 
     public void seek(long targetUs);
-    public void seek(double targetSecond);
 
     public PlayMode getPlayMode();
     public void setPlayMode(PlayMode mode);
-    
+
     public EOFMode getEOFMode();
     public void setEOFMode(EOFMode mode);
 

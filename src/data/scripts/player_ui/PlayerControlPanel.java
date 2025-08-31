@@ -332,7 +332,7 @@ public class PlayerControlPanel {
             for (int i = 0; i < events.size(); i++) {
                 InputEventAPI event = events.get(i);
 
-                if (event.isMouseEvent()) {
+                if (!event.isConsumed() && event.isMouseEvent()) {
 
                     if (event.isMouseDownEvent() && !this.seeking && isInSeekLineBounds(event.getX(), event.getY())) {
                         this.seeking = true;
@@ -345,6 +345,7 @@ public class PlayerControlPanel {
                         projector.setPlayMode(PlayMode.SEEKING);
                         projector.getDecoder().setPlayMode(PlayMode.SEEKING);
                         seekButton.setEnabled(false);
+                        stopButton.setEnabled(true);
 
                         this.seekX = event.getX();
                         this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
