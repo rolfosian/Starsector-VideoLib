@@ -170,7 +170,7 @@ jobs:
             ffmpeg-jni/bin/mac/ffmpegjni.dylib
 
   build-windows:
-    name: Windows (MSYS2)
+    name: Windows
     runs-on: windows-latest
     steps:
       - name: Checkout
