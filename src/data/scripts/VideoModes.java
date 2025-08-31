@@ -1,7 +1,5 @@
 package data.scripts;
 
-// these need to be separated for their specific uses i think
-
 public class VideoModes {
 
     public static enum EOFMode {

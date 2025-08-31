@@ -28,24 +28,16 @@ public class VideoPlayerFactory {
         logger.info(sb.toString());
     }
 
-    // public static VideoPlayerWithControls addControlPanel(VideoProjector projectorPlugin, CustomPanelAPI projectorPanel) {
-    //     float width = projectorPlugin.getWidth();
-    //     float height = projectorPlugin.getHeight();
-
-        
-    //     return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
-    // }
-
     public static VideoPlayerWithControls createMutePlayerWithControls(String filename, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         VideoProjector projectorPlugin = new MuteVideoProjector(filename, width, height, startingPlayMode, startingEOFMode);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
-        int controlsHeight = (int) (height / 100 * 6.5f);
+        float controlsHeight = height / 100 * 6.5f;
         PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
         CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
-        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, (int) width, controlsHeight, false);
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, (int) controlsHeight, false);
         masterPanel.addComponent(controlPanel.getControlPanel()).belowMid(projectorPanel, 5f);
 
         return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
