@@ -73,7 +73,7 @@ public class MuteDecoder implements Decoder {
         print("NoSoundDecoder decodeLoop started");
 
         while (running) {
-            if (!textureBuffer.isFull()) {                
+            if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
 
                 if (f == null) { // EOF / Error
@@ -99,6 +99,7 @@ public class MuteDecoder implements Decoder {
                                 
                                 case PLAY_UNTIL_END:
                                     seekWithoutClearingBuffer(0);
+                                    if (videoProjector.getControlPanel() != null) videoProjector.getControlPanel().stop();
                                     videoProjector.stop();
                                     break;
     
@@ -228,7 +229,6 @@ public class MuteDecoder implements Decoder {
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
-        PLAY_MODE = PlayMode.FINISHED;
 
         print("Joining NoSoundDecoder decoderLoop thread");
         try {

@@ -199,36 +199,30 @@ public class PlayerControlPanel {
         private long durationUs;
         private long currentVideoPts; // µs
 
+        private PlayMode oldProjectorMode;
+        private PlayMode oldDecoderMode;
+        boolean wasPaused;
+
         private int timeAccumulator = 0;
         private static final int SEEK_APPLY_THRESHOLD = 10;
 
         private long pendingSeekTarget = -1;
         private long oldSeekTarget = -1;
+        private float seekX;
 
         public boolean seeking = false;
         private boolean isAdvanced = false;
         private boolean hasSeeked = false;
 
-        private float seekX;
-
-        private PlayMode oldProjectorMode;
-        private PlayMode oldDecoderMode;
-        boolean wasPaused;
-
         private float seekButtonOffset;
         private float seekButtonY;
 
-        private PositionAPI seekBarPanelPosition;
-        private float seekBarPanelX;
-        private float seekBarPanelY;
         private float seekPanelWidth;
-        private float seekPanelHeight;
-
         private float seekBarPanelLeftBound;
         private float seekBarPanelRightBound;
         private float seekbarPanelYBoundTolerance = 25f;
 
-        private float seekLineY; // for in rendering method - mid of panelY
+        private float seekLineY;
         
         // Transition zone boundaries for smooth seek button positioning
         private float transitionStart;
@@ -271,7 +265,7 @@ public class PlayerControlPanel {
             }
         }
 
-        private boolean isInSeekLineBounds(float mouseX, float mouseY) {            
+        private boolean isInSeekLineBounds(float mouseX, float mouseY) {
             return mouseX >= this.adjustedLeftBound && mouseX <= this.adjustedRightBound &&
                    mouseY >= (this.seekLineY - seekbarPanelYBoundTolerance) && mouseY <= (this.seekLineY + seekbarPanelYBoundTolerance);
         }
@@ -382,14 +376,8 @@ public class PlayerControlPanel {
 
         @Override
         public void positionChanged(PositionAPI seekBarPanelPos) {
-            this.seekBarPanelX = seekBarPanelPos.getX();
-            this.seekBarPanelY = seekBarPanelPos.getY();
-        
             this.seekPanelWidth = seekBarPanelPos.getWidth();
-            this.seekPanelHeight = seekBarPanelPos.getHeight();
-        
             this.seekLineY = seekBarPanelPos.getCenterY();
-            
 
             if (seekButton != null) {
                 this.seekButtonY = -seekButton.getPosition().getHeight() / 2; // relative to panel top
@@ -406,13 +394,7 @@ public class PlayerControlPanel {
         }
 
         public void init(PositionAPI seekBarPanelPos) {
-            this.seekBarPanelPosition = seekBarPanelPos;
-            this.seekBarPanelX = seekBarPanelPos.getX();
-            this.seekBarPanelY = seekBarPanelPos.getY();
-        
             this.seekPanelWidth = seekBarPanelPos.getWidth();
-            this.seekPanelHeight = seekBarPanelPos.getHeight();
-        
             this.seekLineY = seekBarPanelPos.getCenterY();
         
             this.durationSeconds = projector.getDecoder().getDurationSeconds();
