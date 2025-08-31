@@ -10,7 +10,7 @@ import com.fs.starfarer.api.ui.TooltipMakerAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.util.Misc;
 
-import data.scripts.VideoMode;
+import data.scripts.VideoModes.PlayMode;
 import data.scripts.projector.VideoProjector;
 
 import java.awt.Color;
@@ -211,8 +211,8 @@ public class PlayerControlPanel {
 
         private float seekX;
 
-        private VideoMode oldProjectorMode;
-        private VideoMode oldDecoderMode;
+        private PlayMode oldProjectorMode;
+        private PlayMode oldDecoderMode;
         boolean wasPaused;
 
         private float seekButtonOffset;
@@ -307,9 +307,9 @@ public class PlayerControlPanel {
             } else {
                 if (this.pendingSeekTarget >= 0 && timeAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
-                        projector.getDecoder().setMode(VideoMode.SEEKING);
+                        projector.getDecoder().setPlayMode(PlayMode.SEEKING);
                         projector.getDecoder().seek(this.pendingSeekTarget);
-                        projector.setMode(VideoMode.SEEKING);
+                        projector.setPlayMode(PlayMode.SEEKING);
                         this.oldSeekTarget = this.pendingSeekTarget;
                     }
 
@@ -337,13 +337,13 @@ public class PlayerControlPanel {
                     if (event.isMouseDownEvent() && !this.seeking && isInSeekLineBounds(event.getX(), event.getY())) {
                         this.seeking = true;
 
-                        this.oldProjectorMode = projector.getMode();
-                        this.oldDecoderMode = projector.getDecoder().getMode();
+                        this.oldProjectorMode = projector.getPlayMode();
+                        this.oldDecoderMode = projector.getDecoder().getPlayMode();
 
                         this.wasPaused = projector.paused();
                         projector.pause();
-                        projector.setMode(VideoMode.SEEKING);
-                        projector.getDecoder().setMode(VideoMode.SEEKING);
+                        projector.setPlayMode(PlayMode.SEEKING);
+                        projector.getDecoder().setPlayMode(PlayMode.SEEKING);
                         seekButton.setEnabled(false);
 
                         this.seekX = event.getX();
@@ -362,8 +362,8 @@ public class PlayerControlPanel {
                     if (this.seeking && this.isAdvanced && event.isMouseUpEvent()) {
                         this.seeking = false;
 
-                        projector.setMode(oldProjectorMode);
-                        projector.getDecoder().setMode(oldDecoderMode);
+                        projector.setPlayMode(oldProjectorMode);
+                        projector.getDecoder().setPlayMode(oldDecoderMode);
                         seekButton.setEnabled(true);
                         if (!this.wasPaused) projector.unpause();
 

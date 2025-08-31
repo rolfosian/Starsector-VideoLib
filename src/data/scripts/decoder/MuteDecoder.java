@@ -3,7 +3,10 @@ package data.scripts.decoder;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.VideoFrame;
 import data.scripts.projector.MuteVideoProjector;
-import data.scripts.VideoMode;
+import data.scripts.VideoLibModPlugin;
+import data.scripts.VideoModes;
+import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.buffers.TextureFrame;
 
@@ -21,13 +24,11 @@ public class MuteDecoder implements Decoder {
         }
         logger.info(sb.toString());
     }
-
     private static int MAX_BUF_SIZE = 60;
 
-    private final Thread mainThread;
-
-    private VideoMode MODE;
-    private VideoMode OLD_MODE;
+    private PlayMode PLAY_MODE;
+    private PlayMode OLD_PLAY_MODE;
+    private EOFMode EOF_MODE;
 
     private String videoFilePath;
     private volatile boolean running = false;
@@ -50,18 +51,18 @@ public class MuteDecoder implements Decoder {
     private int width;
     private int height;
 
-    private int i = 0;
-
     private float timeAccumulator = 0f;
 
-    public MuteDecoder(MuteVideoProjector videoProjector, String videoFilePath, int width, int height, VideoMode mode) {
+    public MuteDecoder(MuteVideoProjector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing NoSoundDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
+
         this.width = width;
         this.height = height;
-        this.MODE = mode;
-        this.mainThread = Thread.currentThread();
+
+        this.PLAY_MODE = startingPlayMode;
+        this.EOF_MODE = startingEOFMode;
     }
 
     private void decodeLoop() {
@@ -71,44 +72,63 @@ public class MuteDecoder implements Decoder {
         while (running) {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(pipePtr);
+
                 if (f == null) { // EOF / Error
-                    int err = FFmpeg.getErrorStatus(pipePtr);
-                    if (err != FFmpeg.AVERROR_EOF) {
-                        FFmpeg.printError(pipePtr);
+                    if (FFmpeg.getErrorStatus(pipePtr) != FFmpeg.AVERROR_EOF) {
+                        logger.error("FFmpeg error for file " + videoFilePath + " - " + FFmpeg.getErrorMessage(pipePtr)
+                        + ", interrupting main thread...",
+                        new RuntimeException(FFmpeg.getErrorMessage(pipePtr)));
+
+                        FFmpeg.closePipe(pipePtr);
+                        pipePtr = 0;
+                        textureBuffer.clear();
+                        VideoLibModPlugin.getMainThread().interrupt();
+                        return;
                     }
-                    
-                    switch(this.MODE) {
-                        case LOOP:
-                            while(!textureBuffer.isEmpty()) {
-                                if (!videoProjector.isPlaying()) {
-                                    continue outer;
-                                }
-                                sleep(1);
-                            }
 
-                            if (currentVideoPts != 0) {
-                                seek(0);
-                                currentVideoPts = 0;
-                            } else {
-                                sleep(1);
-                            }
-                            continue;
-
-                        case PLAY_UNTIL_END:
-                            while(!textureBuffer.isEmpty()) {
-                                if (!videoProjector.isPlaying()) {
-                                    if (currentVideoPts != 0) {
-                                        seek(0);
-                                        currentVideoPts = 0;
+                    if (!(this.PLAY_MODE == PlayMode.SEEKING)) {
+                        switch(this.EOF_MODE) {
+                            case LOOP:
+                                while(!textureBuffer.isEmpty()) {
+                                    if (!videoProjector.isPlaying()) {
+                                        continue outer;
                                     }
-                                    continue outer;
+                                    sleep(1);
                                 }
-                                sleep(1);
-                            }
+    
+                                if (currentVideoPts != 0) {
+                                    seek(0);
+                                    currentVideoPts = 0;
+                                } else {
+                                    sleep(1);
+                                }
+                                continue;
+                            
+                            case PLAY_UNTIL_END:
+                                while(!textureBuffer.isEmpty()) {
+                                    if (!videoProjector.isPlaying()) {
+                                        if (currentVideoPts != 0) {
+                                            seek(0);
+                                            currentVideoPts = 0;
+                                        }
+                                        continue outer;
+                                    }
+                                    sleep(1);
+                                }
+    
+                                videoProjector.stop();
+                                continue;
 
-                            videoProjector.stop();
-                            continue;
-                        
+                            case PAUSE:
+                                break;
+    
+                            default:
+                                break;
+                        }
+                    }
+
+                    
+                    switch(this.PLAY_MODE) {
                         case PAUSED:
                             while(!textureBuffer.isEmpty()) {
                                 if (!videoProjector.isPlaying()) {
@@ -254,7 +274,7 @@ public class MuteDecoder implements Decoder {
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
-        MODE = VideoMode.FINISHED;
+        PLAY_MODE = PlayMode.FINISHED;
 
         print("Joining NoSoundDecoder decoderLoop thread");
         try {
@@ -275,7 +295,7 @@ public class MuteDecoder implements Decoder {
     }
 
     public void stop() {
-        MODE = VideoMode.STOPPED;
+        PLAY_MODE = PlayMode.STOPPED;
         timeAccumulator = 0f;
         seek(0);
     }
@@ -331,14 +351,22 @@ public class MuteDecoder implements Decoder {
         return this.currentVideoPts;
     }
 
-    public VideoMode getMode() {
-        return this.MODE;
+    public EOFMode getEOFMode() {
+        return this.EOF_MODE;
+    }
+
+    public void setEOFMode(EOFMode mode) {
+        this.EOF_MODE = mode;
+    }
+
+    public PlayMode getPlayMode() {
+        return this.PLAY_MODE;
     }
     
-    public void setMode(VideoMode newMode) {
+    public void setPlayMode(PlayMode newMode) {
         print("Setting Mode", newMode);
-        this.OLD_MODE = this.MODE;
-        this.MODE = newMode;
+        this.OLD_PLAY_MODE = this.PLAY_MODE;
+        this.PLAY_MODE = newMode;
     }
 
     public int getErrorStatus() {

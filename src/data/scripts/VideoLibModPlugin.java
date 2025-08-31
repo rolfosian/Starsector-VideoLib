@@ -18,10 +18,17 @@ public class VideoLibModPlugin extends BaseModPlugin {
         logger.info(sb.toString());
     }
 
+    private static Thread mainThread;
+
     @Override
     public void onApplicationLoad() {
         FFmpeg.init();
         VideoPaths.populate();
+        mainThread = Thread.currentThread();
+    }
+
+    public static Thread getMainThread() {
+        return mainThread;
     }
 
 }

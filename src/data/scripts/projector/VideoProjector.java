@@ -7,8 +7,10 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 
-import data.scripts.VideoMode;
+import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
+import data.scripts.player_ui.PlayerControlPanel;
 
 public abstract class VideoProjector implements CustomUIPanelPlugin {
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
@@ -22,15 +24,21 @@ public abstract class VideoProjector implements CustomUIPanelPlugin {
     public abstract void finish();
 
     public abstract boolean paused();
+    public abstract void setClickToPause(boolean clickToPause);
 
     public abstract Decoder getDecoder();
 
     public abstract int getWidth();
     public abstract int getHeight();
 
-    public abstract VideoMode getMode();
-    public abstract void setMode(VideoMode mode);
+    public abstract PlayMode getPlayMode();
+    public abstract void setPlayMode(PlayMode mode);
+
+    public abstract EOFMode getEOFMode();
+    public abstract void setEOFMode(EOFMode mode);
+
     public abstract void setCurrentTextureId(int id);
+    public abstract void setControlPanel(PlayerControlPanel controlPanel);
 
     @Override
     public void render(float alphaMult) {}

@@ -5,6 +5,8 @@ import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 
+import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;
 import data.scripts.player_ui.PlayerControlPanel;
 import data.scripts.player_ui.PlayerPanelPlugin;
 import data.scripts.player_ui.VideoPlayerWithControls;
@@ -34,8 +36,8 @@ public class VideoPlayerFactory {
     //     return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     // }
 
-    public static VideoPlayerWithControls createMutePlayerWithControls(String filename, int width, int height, VideoMode startMode) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(filename, width, height, startMode);
+    public static VideoPlayerWithControls createMutePlayerWithControls(String filename, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(filename, width, height, startingPlayMode, startingEOFMode);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = (int) (height / 100 * 6.5f);

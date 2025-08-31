@@ -9,11 +9,14 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 
-import data.scripts.VideoMode;
+import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;
+import data.scripts.VideoModes;
 import data.scripts.VideoPaths;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
+import data.scripts.player_ui.PlayerControlPanel;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
@@ -33,11 +36,14 @@ public class MuteVideoProjector extends VideoProjector {
 
     private String videoFilePath;
     private int width, height;
-    private VideoMode MODE;
-    private VideoMode OLD_MODE;
+    private PlayMode MODE;
+    private PlayMode OLD_MODE;
+
+    private EOFMode EOF_MODE;
 
     private CustomPanelAPI panel;
     private MuteDecoder decoder;
+    private PlayerControlPanel controlPanel = null;
 
     // private final int vboId;
     // private final FloatBuffer quadBuffer;
@@ -53,25 +59,31 @@ public class MuteVideoProjector extends VideoProjector {
     public int advancingValue = 0;
     private int checkAdvancing = 0;
 
-    public MuteVideoProjector(String videoFilename, int width, int height, VideoMode mode) {
+    private boolean clickToPause = false;
+    private float leftBound;
+    private float rightBound;
+    private float topBound;
+    private float bottomBound;
+
+    public MuteVideoProjector(String videoFilename, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         this.videoFilePath = VideoPaths.map.get(videoFilename);
-        this.MODE = mode;
+        this.MODE = startingPlayMode;
+        this.EOF_MODE = startingEOFMode;
 
         this.width = width;
         this.height = height;
 
-        this.decoder = new MuteDecoder(this, videoFilePath, width, height, mode);
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, startingPlayMode, startingEOFMode);
         this.decoder.start();
 
         // this.vboId = textureBuffer.getVboId();
         // this.quadBuffer = textureBuffer.getQuadBuffer();
 
-        if (mode == VideoMode.PAUSED) {
+        if (startingPlayMode == PlayMode.PAUSED) {
             paused = true;
-            currentTextureId = decoder.getCurrentVideoTextureId();
             isPlaying = true;
-            MODE = VideoMode.LOOP;
-            decoder.setMode(VideoMode.LOOP);
+            currentTextureId = decoder.getCurrentVideoTextureId();
+            MODE = PlayMode.PAUSED;
         }
 
         Global.getSector().addTransientScript(new EveryFrameScript() {
@@ -105,10 +117,44 @@ public class MuteVideoProjector extends VideoProjector {
         this.x = panelPos.getX();
         this.y = panelPos.getY();
         this.panel = panel;
+
+        this.leftBound = panelPos.getCenterX() - panelPos.getWidth() / 2;
+        this.rightBound = panelPos.getCenterX() + panelPos.getWidth() / 2;
+        this.bottomBound = panelPos.getCenterY() + panelPos.getHeight() / 2;
+        this.topBound = panelPos.getCenterY() - panelPos.getHeight() / 2 ;
+    }
+
+    private boolean isInBounds(float mouseX, float mouseY) {            
+        return mouseX >= this.leftBound && mouseX <= this.rightBound &&
+               mouseY >= this.topBound && mouseY <= this.bottomBound;
+    }
+
+    public void setClickToPause(boolean clickToPause) {
+        this.clickToPause = clickToPause;
+    }
+
+    public void setControlPanel(PlayerControlPanel controlPanel) {
+        this.controlPanel = controlPanel;
     }
 
     @Override
-    public void processInput(List<InputEventAPI> events) {}
+    public void processInput(List<InputEventAPI> events) {
+        for (int i = 0; i < events.size(); i++) {
+            InputEventAPI event = events.get(i);
+
+            if (!event.isConsumed() && event.isLMBDownEvent() && clickToPause && isInBounds(event.getX(), event.getY())) {
+                if (controlPanel != null) {
+                    if (paused) controlPanel.play();
+                    else controlPanel.pause();
+                    event.consume();
+                    return;
+                }
+                
+                if (paused) unpause(); else pause();
+                event.consume();
+            }
+        }
+    }
 
     @Override
     public void positionChanged(PositionAPI position) {
@@ -116,6 +162,11 @@ public class MuteVideoProjector extends VideoProjector {
         this.y = position.getY();
         this.width = (int) position.getWidth();
         this.height = (int) position.getHeight();
+
+        this.leftBound = position.getCenterX() - position.getWidth() / 2;
+        this.rightBound = position.getCenterX() + position.getWidth() / 2;
+        this.bottomBound = position.getCenterY() + position.getHeight() / 2;
+        this.topBound = position.getCenterY() - position.getHeight() / 2 ;
     }
 
     @Override
@@ -123,7 +174,7 @@ public class MuteVideoProjector extends VideoProjector {
     	// advance is called by game once per frame
         advancingValue ^= 1;
         if (paused) {
-            if (MODE == VideoMode.SEEKING) {
+            if (MODE == PlayMode.SEEKING) {
                 currentTextureId = decoder.getCurrentVideoTextureId();
                 MODE = OLD_MODE;
             }
@@ -205,7 +256,7 @@ public class MuteVideoProjector extends VideoProjector {
 
     public void pause() {
         paused = true;
-        this.MODE = VideoMode.PAUSED;
+        this.MODE = PlayMode.PAUSED;
     }
 
     public void unpause() {
@@ -215,8 +266,8 @@ public class MuteVideoProjector extends VideoProjector {
     public void play() {
         paused = false;
 
-        this.MODE = VideoMode.PLAYING;
-        decoder.setMode(VideoMode.LOOP);
+        this.MODE = PlayMode.PLAYING;
+        decoder.setEOFMode(this.EOF_MODE);
         start();
     }
 
@@ -262,13 +313,21 @@ public class MuteVideoProjector extends VideoProjector {
         this.currentTextureId = id;
     }
 
-    public VideoMode getMode() {
+    public PlayMode getPlayMode() {
         return this.MODE;
     }
 
-    public void setMode(VideoMode mode) {
+    public void setPlayMode(PlayMode mode) {
         this.OLD_MODE = this.MODE;
         this.MODE = mode;
+    }
+
+    public EOFMode getEOFMode() {
+        return this.EOF_MODE;
+    }
+
+    public void setEOFMode(EOFMode mode) {
+        this.EOF_MODE = mode;
     }
 
     public int getWidth() {

@@ -1,6 +1,7 @@
 package data.scripts.decoder;
 
-import data.scripts.VideoMode;
+import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;;
 
 public interface Decoder {
     public double getDurationSeconds();
@@ -11,8 +12,11 @@ public interface Decoder {
     public void seek(long targetUs);
     public void seek(double targetSecond);
 
-    public VideoMode getMode();
-    public void setMode(VideoMode mode);
+    public PlayMode getPlayMode();
+    public void setPlayMode(PlayMode mode);
+    
+    public EOFMode getEOFMode();
+    public void setEOFMode(EOFMode mode);
 
     public int getCurrentVideoTextureId();
     public int getCurrentVideoTextureId(float deltaTime);
