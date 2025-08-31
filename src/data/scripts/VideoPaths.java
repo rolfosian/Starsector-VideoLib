@@ -3,8 +3,6 @@ package data.scripts;
 import java.util.*;
 
 import org.json.JSONObject;
-import org.apache.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONException;
 
 import com.fs.starfarer.api.Global;
@@ -18,7 +16,6 @@ public class VideoPaths {
 
     protected static void populate() {
         if (populated) return;
-        Logger logger = Logger.getLogger(VideoPaths.class);
 
         Map<String, String> mape = new HashMap<>();
         try {
@@ -31,21 +28,23 @@ public class VideoPaths {
                 ModSpecAPI modSpec = modManager.getModSpec(modId);
 
                 if (modSpec == null)  {
-                    logger.warn("ModSpecAPI.getModSpec returned null for modId " + modId + " in VideoLib settings, ignoring");
+                    Global.getLogger(VideoPaths.class).warn("ModSpecAPI.getModSpec returned null for modId " + modId + " in VideoLib settings, ignoring");
                     continue;
                 }
 
                 String modPath = modSpec.getPath();
-                JSONArray videoFilenames = settings.getJSONArray(modId);
+                JSONObject filePaths = settings.getJSONObject(modId);
                 
-                for (int i = 0; i < videoFilenames.length(); i++) {
-                    String filename = videoFilenames.getString(i);
+                Iterator<String> fileIds = filePaths.keys();
+                while (fileIds.hasNext()) {
+                    String fileId = fileIds.next();
 
-                    if (mape.containsKey(filename)) {
-                        throw new RuntimeException("Duplicate video filename already located at " + map.get(filename));
+                    if (mape.containsKey(fileId)) {
+                        throw new IllegalArgumentException("Duplicate video file ID " + fileId + " for mod id " + modId + " already located at " + mape.get(fileId));
                     }
 
-                    mape.put(filename, modPath + "/data/videos/" + filename);
+                    String relativePath = filePaths.getString(fileId);
+                    mape.put(fileId, modPath + "/" + relativePath);
                 }
             }
 

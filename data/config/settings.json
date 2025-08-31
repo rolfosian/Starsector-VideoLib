@@ -1,7 +1,7 @@
 {
     "VideoLib" : {
-        "video_lib" : [
-            "test.mp4"
-        ]
+        "video_lib" : {
+            "test" : "data/videos/test.mp4"
+        }
     }
 }
