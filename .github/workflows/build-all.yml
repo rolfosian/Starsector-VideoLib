@@ -172,6 +172,8 @@ jobs:
   build-windows:
     name: Windows
     runs-on: windows-latest
+    env:
+      PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -210,8 +212,6 @@ jobs:
 
       - name: Build FFmpeg (static)
         shell: C:\msys64\mingw64.exe {0}
-        env:
-          PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
         run: |
           set -eo pipefail
           cd ffmpeg-src
@@ -254,7 +254,6 @@ jobs:
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: C:\msys64\mingw64.exe {0}
         env:
-          PREFIX_WIN: ${{ github.workspace }}\ffmpeg-static\windows
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
         run: |
           set -eo pipefail
