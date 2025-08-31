@@ -1,9 +1,10 @@
-package data.scripts.player_ui;
+package data.scripts.playerui;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
+import data.scripts.VideoModes.PlayMode;
 import data.scripts.projector.VideoProjector;
 
 public class VideoPlayerWithControls {
@@ -31,6 +32,7 @@ public class VideoPlayerWithControls {
         this.controlPanel.init();
         this.projector.init(this.projectorPanel.getPosition(), this.projectorPanel);
         ((PlayerPanelPlugin)this.masterPanel.getPlugin()).init(masterPanel.getPosition());
+        if (projector.getPlayMode() == PlayMode.PLAYING) controlPanel.play();
     }
 
     public void setClickToPause(boolean clickToPause) {

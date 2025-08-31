@@ -1,7 +1,7 @@
 {
     "VideoLib" : {
         "video_lib" : {
-            "test" : "data/videos/test.mp4"
+            "video_lib_demo" : "data/videos/jabroni.mp4"
         }
     }
 }

@@ -1,4 +1,4 @@
-package data.scripts.player_ui;
+package data.scripts.playerui;
 
 import org.lwjgl.opengl.GL11;
 

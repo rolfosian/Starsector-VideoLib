@@ -1,8 +1,7 @@
-package data.scripts.player_ui;
+package data.scripts.playerui;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -204,7 +203,7 @@ public class PlayerControlPanel {
         boolean wasPaused;
 
         private int timeAccumulator = 0;
-        private static final int SEEK_APPLY_THRESHOLD = 10;
+        private static final int SEEK_APPLY_THRESHOLD = 15;
 
         private long pendingSeekTarget = -1;
         private long oldSeekTarget = -1;

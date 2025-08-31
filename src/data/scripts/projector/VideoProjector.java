@@ -10,12 +10,11 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
-import data.scripts.player_ui.PlayerControlPanel;
+import data.scripts.playerui.PlayerControlPanel;
 
 public abstract class VideoProjector implements CustomUIPanelPlugin {
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
 
-    public abstract void start();
     public abstract void play();
     public abstract void pause();
     public abstract void unpause();

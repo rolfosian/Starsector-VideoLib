@@ -12,12 +12,11 @@ import com.fs.starfarer.api.ModSpecAPI;
 @SuppressWarnings("unchecked")
 public class VideoPaths {
     public static boolean populated = false;
-    public static Map<String, String> map;
+    private static Map<String, String> map = new HashMap<>();
 
     protected static void populate() {
         if (populated) return;
 
-        Map<String, String> mape = new HashMap<>();
         try {
             ModManagerAPI modManager = Global.getSettings().getModManager();
             JSONObject settings = Global.getSettings().getJSONObject("VideoLib");
@@ -39,12 +38,12 @@ public class VideoPaths {
                 while (fileIds.hasNext()) {
                     String fileId = fileIds.next();
 
-                    if (mape.containsKey(fileId)) {
-                        throw new IllegalArgumentException("Duplicate video file ID " + fileId + " for mod id " + modId + " already located at " + mape.get(fileId));
+                    if (map.containsKey(fileId)) {
+                        throw new IllegalArgumentException("Duplicate video file ID " + fileId + " for mod id " + modId + " already located at " + map.get(fileId));
                     }
 
                     String relativePath = filePaths.getString(fileId);
-                    mape.put(fileId, modPath + "/" + relativePath);
+                    map.put(fileId, modPath + "/" + relativePath);
                 }
             }
 
@@ -52,7 +51,12 @@ public class VideoPaths {
             throw new RuntimeException(e);
         }
 
-        map = Collections.unmodifiableMap(mape);
         populated = true;
+    }
+
+    public static String get(String key) {
+        String result = map.get(key);
+        if (result == null) throw new RuntimeException("VideoLib attempted to resolve relative path for file id " + (String)key + " but returned null");
+        return result;
     }
 }

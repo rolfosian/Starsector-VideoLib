@@ -11,12 +11,13 @@ import com.fs.starfarer.api.ui.PositionAPI;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
-import data.scripts.VideoModes;
 import data.scripts.VideoPaths;
-import data.scripts.buffers.TextureBuffer;
+
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
-import data.scripts.player_ui.PlayerControlPanel;
+
+import data.scripts.playerui.PlayerControlPanel;
+import data.scripts.buffers.TextureBuffer;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
@@ -65,8 +66,8 @@ public class MuteVideoProjector extends VideoProjector {
     private float topBound;
     private float bottomBound;
 
-    public MuteVideoProjector(String videoFilename, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        this.videoFilePath = VideoPaths.map.get(videoFilename);
+    public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+        this.videoFilePath = VideoPaths.get(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
 
@@ -254,10 +255,6 @@ public class MuteVideoProjector extends VideoProjector {
         // GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
-    public void start() {
-        isRendering = true;
-    }
-
     public void pause() {
         paused = true;
         this.MODE = PlayMode.PAUSED;
@@ -272,7 +269,7 @@ public class MuteVideoProjector extends VideoProjector {
 
         this.MODE = PlayMode.PLAYING;
         decoder.setEOFMode(this.EOF_MODE);
-        start();
+        isRendering = true;
     }
 
     public void stop() {
