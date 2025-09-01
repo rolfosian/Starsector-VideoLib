@@ -1,2 +1,2 @@
 command,class,tags,syntax,help
-videolib_demo,data.scripts.console.VideoLibDemo,"ui",videolib_demo,Opens an Interaction Dialog with a muted video playing on loop.
+vl_demo,data.scripts.console.VideoLibDemo,"ui",vl_demo,Opens an Interaction Dialog with a muted video playing on loop once console is closed.
