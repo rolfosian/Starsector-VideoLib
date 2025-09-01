@@ -187,6 +187,7 @@ jobs:
       - name: Set up MSYS2 with MinGW-w64
         uses: msys2/setup-msys2@v2
         with:
+          msystem: MINGW64
           update: true
           install: >-
             base-devel
@@ -208,13 +209,11 @@ jobs:
       - name: Fetch FFmpeg source
         shell: msys2 {0}
         run: |
-          mingw64
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Build FFmpeg (static)
         shell: msys2 {0}
         run: |
-          mingw64
           set -eo pipefail
           cd ffmpeg-src
           PREFIX=$(cygpath -u "$PREFIX_WIN")
@@ -249,7 +248,6 @@ jobs:
       - name: Check FFmpeg install path
         shell: msys2 {0}
         run: |
-          mingw64
           echo "PREFIX_WIN = $PREFIX_WIN"
           echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
           ls -R "$(cygpath -u "$PREFIX_WIN")"
@@ -259,7 +257,6 @@ jobs:
         env:
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
         run: |
-          mingw64
           set -eo pipefail
           PREFIX=$(cygpath -u "$PREFIX_WIN")
           JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
