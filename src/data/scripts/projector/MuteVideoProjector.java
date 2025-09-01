@@ -37,9 +37,9 @@ public class MuteVideoProjector extends VideoProjector {
 
     private String videoFilePath;
     private int width, height;
+    
     private PlayMode MODE;
     private PlayMode OLD_MODE;
-
     private EOFMode EOF_MODE;
 
     private CustomPanelAPI panel;
@@ -170,10 +170,10 @@ public class MuteVideoProjector extends VideoProjector {
         this.width = (int) position.getWidth();
         this.height = (int) position.getHeight();
 
-        this.leftBound = position.getCenterX() - position.getWidth() / 2;
-        this.rightBound = position.getCenterX() + position.getWidth() / 2;
-        this.bottomBound = position.getCenterY() + position.getHeight() / 2;
-        this.topBound = position.getCenterY() - position.getHeight() / 2 ;
+        this.leftBound = position.getCenterX() - this.width / 2;
+        this.rightBound = position.getCenterX() + this.width / 2;
+        this.bottomBound = position.getCenterY() + this.height / 2;
+        this.topBound = position.getCenterY() - this.height / 2 ;
     }
 
     @Override
