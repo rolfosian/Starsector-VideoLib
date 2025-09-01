@@ -47,7 +47,7 @@ public class VideoPaths {
                     String relativePath = filePaths.getString(fileId);
                     map.put(fileId, modPath + "/" + relativePath);
 
-                    logger.info("Loaded video file id " + fileId + " at " + modPath + "/" + relativePath);
+                    logger.info("Resolved absolute path for video file id " + fileId + " at [" + modPath + "/" + relativePath + "]");
                 }
             }
 
