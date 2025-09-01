@@ -216,16 +216,15 @@ jobs:
         run: |
           set -eo pipefail
           cd ffmpeg-src
+
           PREFIX=$(cygpath -u "$PREFIX_WIN")
-          export CC=x86_64-w64-mingw32-gcc
-          export CXX=x86_64-w64-mingw32-g++
-          export AR=x86_64-w64-mingw32-ar
-          export RANLIB=x86_64-w64-mingw32-ranlib
           mkdir -p "$PREFIX"
 
           ./configure \
             --target-os=mingw32 \
             --arch=x86_64 \
+            --cross-prefix=x86_64-w64-mingw32- \
+            --pkg-config=x86_64-w64-mingw32-pkg-config \
             --disable-everything \
             --disable-doc \
             --disable-programs \
