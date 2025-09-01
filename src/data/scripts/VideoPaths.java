@@ -4,6 +4,7 @@ import java.util.*;
 
 import org.json.JSONObject;
 import org.json.JSONException;
+import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
@@ -16,6 +17,7 @@ public class VideoPaths {
 
     protected static void populate() {
         if (populated) return;
+        Logger logger = Logger.getLogger(VideoPaths.class);
 
         try {
             ModManagerAPI modManager = Global.getSettings().getModManager();
@@ -27,7 +29,7 @@ public class VideoPaths {
                 ModSpecAPI modSpec = modManager.getModSpec(modId);
 
                 if (modSpec == null)  {
-                    Global.getLogger(VideoPaths.class).warn("ModSpecAPI.getModSpec returned null for modId " + modId + " in VideoLib settings, ignoring");
+                    logger.warn("ModSpecAPI.getModSpec returned null for modId " + modId + " in VideoLib settings, ignoring");
                     continue;
                 }
 
@@ -44,6 +46,8 @@ public class VideoPaths {
 
                     String relativePath = filePaths.getString(fileId);
                     map.put(fileId, modPath + "/" + relativePath);
+
+                    logger.info("Loaded video file id " + fileId + " at " + modPath + "/" + relativePath);
                 }
             }
 
@@ -56,7 +60,7 @@ public class VideoPaths {
 
     public static String get(String key) {
         String result = map.get(key);
-        if (result == null) throw new RuntimeException("VideoLib attempted to resolve relative path for file id " + (String)key + " but returned null");
+        if (result == null) throw new RuntimeException("VideoLib attempted to resolve absolute path for file id " + key + ", but returned null");
         return result;
     }
 }

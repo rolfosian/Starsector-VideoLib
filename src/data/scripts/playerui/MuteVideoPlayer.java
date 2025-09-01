@@ -1,0 +1,40 @@
+package data.scripts.playerui;
+
+import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIPanelAPI;
+
+import data.scripts.projector.VideoProjector;
+
+public class MuteVideoPlayer implements VideoPlayer {
+    private final CustomPanelAPI projectorPanel;
+    private final VideoProjector projector;
+
+    public MuteVideoPlayer(CustomPanelAPI playerPanel, VideoProjector projector) {
+        this.projectorPanel = playerPanel;
+        this.projector = projector;
+    }
+
+    public PositionAPI addTo(UIPanelAPI parent) {
+        return parent.addComponent(projectorPanel);
+    }
+
+    /** Must be called after masterPanel is added to target parent AND positioned*/
+    public void init() {
+        this.projector.init(projectorPanel.getPosition(), projectorPanel);
+    }
+
+    @Override
+    public CustomPanelAPI getProjectorPanel() {
+        return this.projectorPanel;
+    }
+
+    @Override
+    public VideoProjector getProjector() {
+        return this.projector;
+    }
+
+    public void setClickToPause(boolean clickToPause) {
+        this.projector.setClickToPause(clickToPause);
+    }
+}

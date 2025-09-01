@@ -7,9 +7,12 @@ import com.fs.starfarer.api.ui.PositionAPI;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+
+import data.scripts.playerui.MuteVideoPlayer;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.playerui.PlayerPanelPlugin;
-import data.scripts.playerui.VideoPlayerWithControls;
+import data.scripts.playerui.MuteVideoPlayerWithControls;
+
 import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
 
@@ -28,7 +31,7 @@ public class VideoPlayerFactory {
         logger.info(sb.toString());
     }
 
-    public static VideoPlayerWithControls createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public static MuteVideoPlayerWithControls createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
@@ -40,6 +43,13 @@ public class VideoPlayerFactory {
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, (int) controlsHeight, false);
         masterPanel.addComponent(controlPanel.getControlPanel()).belowMid(projectorPanel, 5f);
 
-        return new VideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
+        return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
+    }
+
+    public static MuteVideoPlayer createMutePlayer(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
+        
+        return new MuteVideoPlayer(projectorPanel, projectorPlugin);
     }
 }

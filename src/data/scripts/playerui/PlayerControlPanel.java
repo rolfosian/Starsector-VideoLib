@@ -4,13 +4,17 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.Fonts;
+import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.TooltipMakerAPI;
+import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.util.Misc;
 
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.projector.VideoProjector;
+import data.scripts.util.VideoUtils;
 
 import java.awt.Color;
 import java.util.*;
@@ -192,7 +196,6 @@ public class PlayerControlPanel {
         }
     }
 
-    // TODO Needs polish
     private class SeekBarPlugin extends BaseCustomUIPanelPlugin {
         private double durationSeconds; // seconds in 0.000 format
         private long durationUs;
@@ -229,6 +232,10 @@ public class PlayerControlPanel {
         
         private float adjustedLeftBound;
         private float adjustedRightBound;
+
+        private LabelAPI seekTimePseudoTt = Global.getSettings().createLabel("00:00:00", Fonts.ORBITRON_16);
+        private PositionAPI seekTimeTtPos;
+        private float seekTimeTtXOffset;
 
         private void setSeekBarPanelBounds(PositionAPI panelPos) {
             this.seekBarPanelLeftBound = panelPos.getCenterX() - panelPos.getWidth() / 2;
@@ -327,30 +334,44 @@ public class PlayerControlPanel {
 
                 if (!event.isConsumed() && event.isMouseEvent()) {
 
-                    if (event.isMouseDownEvent() && !this.seeking && isInSeekLineBounds(event.getX(), event.getY())) {
-                        this.seeking = true;
+                    if (isInSeekLineBounds(event.getX(), event.getY())) {
 
-                        this.oldProjectorMode = projector.getPlayMode();
-                        this.oldDecoderMode = projector.getDecoder().getPlayMode();
+                        if (event.isMouseMoveEvent()) {
+                            long seekPos = getSeekPositionFromX(event.getX());
+                            float toX = getButtonXFromSeekPosition(seekPos);
 
-                        this.wasPaused = projector.paused();
-                        projector.pause();
-                        projector.setPlayMode(PlayMode.SEEKING);
-                        projector.getDecoder().setPlayMode(PlayMode.SEEKING);
-                        seekButton.setEnabled(false);
-                        stopButton.setEnabled(true);
+                            seekTimePseudoTt.setText(VideoUtils.formatTime(seekPos));
+                            seekTimePseudoTt.setOpacity(1);
+                            seekTimeTtPos.inTL(toX - seekTimeTtXOffset, this.seekButtonY);
+                        }
 
-                        this.seekX = event.getX();
-                        this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
-                
-                        float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
-                        seekButton.getPosition().inTL(newX, this.seekButtonY);
-
-                        this.seek();
-
-                        event.consume();
-                        this.isAdvanced = false;
-                        continue;
+                        if (event.isMouseDownEvent() && !this.seeking) {
+                            this.seeking = true;
+    
+                            this.oldProjectorMode = projector.getPlayMode();
+                            this.oldDecoderMode = projector.getDecoder().getPlayMode();
+    
+                            this.wasPaused = projector.paused();
+                            projector.pause();
+                            projector.setPlayMode(PlayMode.SEEKING);
+                            projector.getDecoder().setPlayMode(PlayMode.SEEKING);
+                            seekButton.setEnabled(false);
+                            stopButton.setEnabled(true);
+    
+                            this.seekX = event.getX();
+                            this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
+                    
+                            float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
+                            seekButton.getPosition().inTL(newX, this.seekButtonY);
+    
+                            this.seek();
+    
+                            event.consume();
+                            this.isAdvanced = false;
+                            continue;
+                        }
+                    } else {
+                        seekTimePseudoTt.setOpacity(0);
                     }
 
                     if (this.seeking && this.isAdvanced && event.isMouseUpEvent()) {
@@ -419,6 +440,9 @@ public class PlayerControlPanel {
             this.adjustedLeftBound = this.seekBarPanelLeftBound - this.seekButtonOffset;
             this.adjustedRightBound = this.seekBarPanelRightBound + this.seekButtonOffset;
 
+            this.seekTimeTtPos = seekBarPanel.addComponent((UIComponentAPI)this.seekTimePseudoTt);
+            this.seekTimeTtXOffset = seekTimePseudoTt.computeTextWidth("00:00:00") / 2 / 2;
+
             this.reset();
         }
 
@@ -465,6 +489,5 @@ public class PlayerControlPanel {
         public void render(float alphaMult) {
 
         }
-
     }
 }

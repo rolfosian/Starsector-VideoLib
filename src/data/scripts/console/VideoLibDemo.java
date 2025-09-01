@@ -1,8 +1,10 @@
 package data.scripts.console;
 
 import data.scripts.VideoPlayerFactory;
-import data.scripts.playerui.VideoPlayerWithControls;
-import data.scripts.projector.MuteVideoProjector;
+
+import data.scripts.playerui.MuteVideoPlayer;
+import data.scripts.playerui.MuteVideoPlayerWithControls;
+
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.VideoModes.EOFMode;
 
@@ -55,27 +57,27 @@ public class VideoLibDemo implements BaseCommand {
                     }
                 };
 
-                // Video width and height (can be variable, but probably keep aspect ratio)
-                float width = 960f; // video width 
-                float height = 540f; // video height
+                // Video width and height (can be variable, but will incur non-negligible rescaling overhead if not the same as the video's actual resolution, price especially noticeable while seeking)
+                float width = 960; // video width 
+                float height = 540; // video height
 
                 // parent
-                CustomPanelAPI panel = dialog.getVisualPanel().showCustomPanel(width, height, escPlugin);
+                CustomPanelAPI parentPanel = dialog.getVisualPanel().showCustomPanel(width, height, escPlugin);
 
-                if (args.contains("controls")) {
-                    VideoPlayerWithControls videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("video_lib_demo", (int)width, (int)height, PlayMode.PLAYING, EOFMode.LOOP);
-                    videoPlayer.setClickToPause(true);
-                    videoPlayer.addTo(panel).inTL(0f, 0f).setXAlignOffset(-500f); // add to parent
-                    videoPlayer.init(); // init projector so it knows where/height/width to render, starts implicitly
+                if (args.contains("wc")) {                                                   // file ID defined in data/config/settings.json           // starting PlayMode // starting EOFMode
+                    MuteVideoPlayerWithControls videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("video_lib_demo", (int)width, (int)height, PlayMode.PLAYING, EOFMode.LOOP);
+                    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
+
+                    videoPlayer.addTo(parentPanel).inTL(0f, 0f).setXAlignOffset(-500f); // add to parent
+                    videoPlayer.init(); // init projector so it knows where/height/width to render
         
-                } else {
-                    MuteVideoProjector projector = new MuteVideoProjector("video_lib_demo", (int)width, (int)height, PlayMode.PLAYING, EOFMode.LOOP); // Create our projector
-                    CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projector); // Its panel
-                    panel.addComponent(projectorPanel).inTL(0f,0f).setXAlignOffset(-500f); // add the projector panel to its parent
+                } else {                                                         // file ID defined in data/config/settings.json           // starting PlayMode // starting EOFMode
+                    MuteVideoPlayer videoPlayer = VideoPlayerFactory.createMutePlayer("video_lib_demo", (int)width, (int)height, PlayMode.PLAYING, EOFMode.LOOP);
+                    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
-                    projector.init(projectorPanel.getPosition(), projectorPanel); // init projector so it knows where/height/width to render
-                    projector.setClickToPause(true); // setClickToPause on the video so user has some basic semblance of control
-                    projector.setIsRendering(true); // DONT FORGET TO ENABLE RENDERING ON THE PROJECTOR LMAO!!!!
+                    videoPlayer.addTo(parentPanel).inTL(0f,0f).setXAlignOffset(-500f); // add the projector panel to its parent
+                    videoPlayer.init(); // init projector so it knows where/width/height to render
+                    
                 }
             }
             public void advance(float arg0) {}

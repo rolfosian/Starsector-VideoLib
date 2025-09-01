@@ -80,13 +80,6 @@ public class MuteVideoProjector extends VideoProjector {
         // this.vboId = textureBuffer.getVboId();
         // this.quadBuffer = textureBuffer.getQuadBuffer();
 
-        if (startingPlayMode == PlayMode.PAUSED) {
-            paused = true;
-            isRendering = true;
-            currentTextureId = decoder.getCurrentVideoTextureId();
-            MODE = PlayMode.PAUSED;
-        }
-
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
 
@@ -123,6 +116,15 @@ public class MuteVideoProjector extends VideoProjector {
         this.rightBound = panelPos.getCenterX() + panelPos.getWidth() / 2;
         this.bottomBound = panelPos.getCenterY() + panelPos.getHeight() / 2;
         this.topBound = panelPos.getCenterY() - panelPos.getHeight() / 2 ;
+
+        if (this.MODE == PlayMode.PLAYING) {
+            this.isRendering = true;
+
+        } else if (this.MODE == PlayMode.PAUSED) {
+            this.isRendering = true;
+            this.paused = true;
+            this.currentTextureId = decoder.getCurrentVideoTextureId();
+        }
     }
 
     private boolean isInBounds(float mouseX, float mouseY) {            
@@ -332,7 +334,7 @@ public class MuteVideoProjector extends VideoProjector {
     public int getWidth() {
         return this.width;
     }
-
+    
     public int getHeight() {
         return this.height;
     }
