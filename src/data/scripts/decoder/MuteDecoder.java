@@ -100,7 +100,7 @@ public class MuteDecoder implements Decoder {
                                 case PLAY_UNTIL_END:
                                     seekWithoutClearingBuffer(0);
                                     if (videoProjector.getControlPanel() != null) videoProjector.getControlPanel().stop();
-                                    videoProjector.stop();
+                                    else videoProjector.stop();
                                     break;
     
                                 case PAUSE:
