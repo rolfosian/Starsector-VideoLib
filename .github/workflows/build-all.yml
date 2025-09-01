@@ -221,10 +221,6 @@ jobs:
           mkdir -p "$PREFIX"
 
           ./configure \
-            --target-os=mingw32 \
-            --arch=x86_64 \
-            --cross-prefix=x86_64-w64-mingw32- \
-            --pkg-config=x86_64-w64-mingw32-pkg-config \
             --disable-everything \
             --disable-doc \
             --disable-programs \
@@ -238,7 +234,6 @@ jobs:
             --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-demuxer=matroska,mov,image2,gif \
             --enable-protocol=file \
-            --enable-w32threads \
             --prefix="$PREFIX"
 
           mingw32-make -j$(nproc)
