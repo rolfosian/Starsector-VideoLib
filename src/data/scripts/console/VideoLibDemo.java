@@ -100,70 +100,71 @@ public class VideoLibDemo implements BaseCommand {
                     videoPlayer.init(); // init projector so it knows where/width/height to render
                 }
 
-                // May revisit this at some stage, too much debug required, repositioning is obtuse with visual panel,
-
-                currentVideoId = "video_lib_demo";
-
-                Color c1 = Global.getSettings().getBasePlayerColor();
-                Color c2 = Global.getSettings().getDarkPlayerColor();
-
-                TooltipMakerAPI tt = parentPanel.createUIElement(202f, videoHeight, true);
-                Object table = tt.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, true,
-                new Object[]{"Available Videos by Id", 200f});
-
-                String[] videoFileIds = VideoPaths.keys();
-                float yOffset = 0f;
-                
-                for (String fileId : videoFileIds) {
-                    UIPanelAPI row = (UIPanelAPI) tt.addRowWithGlow(c1, fileId);
-
-                    PositionAPI rowPos = row.getPosition();
+                currentVideoId = fileId;
+                // May revisit this at some stage, too much debug required, repositioning is obtuse
+                if (videoPlayer instanceof MuteVideoPlayer) {
+                    Color c1 = Global.getSettings().getBasePlayerColor();
+                    Color c2 = Global.getSettings().getDarkPlayerColor();
+    
+                    TooltipMakerAPI tt = parentPanel.createUIElement(202f, videoHeight, true);
+                    Object table = tt.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, true,
+                    new Object[]{"Available Videos by Id", 200f});
+    
+                    String[] videoFileIds = VideoPaths.keys();
+                    float yOffset = 0f;
                     
-                    CustomPanelAPI overlayPanel = Global.getSettings().createCustom(200f, 29f, new BaseCustomUIPanelPlugin() {
-                        @Override
-                        public void buttonPressed(Object buttonId) {
-                            if (!currentVideoId.equals(fileId)) {
-                                currentVideoId = fileId;
-                                String path = VideoPaths.get(fileId);
-
-                                int[] size = FFmpeg.getWidthAndHeight(path);
-
-                                if (videoPlayer instanceof MuteVideoPlayer) {
-                                    videoPlayer.openNewVideo(fileId, size[0], size[1]);
-                                    recenter(parentPanel.getPosition(), size[0]);
-
-                                } else if (videoPlayer instanceof MuteVideoPlayerWithControls) {
-                                    // PlayMode mode = videoPlayer.getProjector().getPlayMode();
-                                    // EOFMode eofMode = videoPlayer.getProjector().getEOFMode();
-
-                                    // tt.removeComponent((UIComponentAPI) table);
-                                    // parentPanel.removeComponent(tt);
-                                    // parentPanel.removeComponent(videoPlayer.getMasterPanel()); // will stop and clean up automatically
-
-                                    // videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, size[0], size[1], mode, eofMode);
-                                    // videoPlayer.setClickToPause(true);
-
-                                    // videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-                                    // videoPlayer.init();
-                                    // parentPanel.addComponent(tt).rightOfTop((UIComponentAPI)videoPlayer.getMasterPanel(), 0f);
+                    for (String fileId : videoFileIds) {
+                        UIPanelAPI row = (UIPanelAPI) tt.addRowWithGlow(c1, fileId);
+    
+                        PositionAPI rowPos = row.getPosition();
+                        
+                        CustomPanelAPI overlayPanel = Global.getSettings().createCustom(200f, 29f, new BaseCustomUIPanelPlugin() {
+                            @Override
+                            public void buttonPressed(Object buttonId) {
+                                if (!currentVideoId.equals(fileId)) {
+                                    currentVideoId = fileId;
+                                    String path = VideoPaths.get(fileId);
+    
+                                    int[] size = FFmpeg.getWidthAndHeight(path);
+    
+                                    // if (videoPlayer instanceof MuteVideoPlayer) {
+                                        videoPlayer.openNewVideo(fileId, size[0], size[1]);
+                                        recenter(parentPanel.getPosition(), size[0]);
+    
+                                    // } else if (videoPlayer instanceof MuteVideoPlayerWithControls) {
+                                    //     PlayMode mode = videoPlayer.getProjector().getPlayMode();
+                                    //     EOFMode eofMode = videoPlayer.getProjector().getEOFMode();
+    
+                                    //     tt.removeComponent((UIComponentAPI) table);
+                                    //     parentPanel.removeComponent(tt);
+                                    //     parentPanel.removeComponent(videoPlayer.getMasterPanel()); // will stop and clean up automatically
+    
+                                    //     videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, size[0], size[1], mode, eofMode);
+                                    //     videoPlayer.setClickToPause(true);
+    
+                                    //     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
+                                    //     videoPlayer.init();
+                                    //     parentPanel.addComponent(tt).rightOfTop((UIComponentAPI)videoPlayer.getMasterPanel(), 0f);
+                                    // }
                                 }
-                            }
-                        };
-                    });
-                    
-                    TooltipMakerAPI buttonHolder = overlayPanel.createUIElement(200f, 29f, false);
-                    ButtonAPI button = buttonHolder.addButton("", "", 200f, 29f, 0f);
-                    button.setButtonPressedSound(null);
-                    button.setMouseOverSound(null);
-                    button.setOpacity(0.1f);
-                    overlayPanel.addUIElement(buttonHolder);
-
-                    yOffset = yOffset == 0 ? yOffset + 29f: yOffset + 31f;
-                    tt.addComponent(overlayPanel).inTL(rowPos.getX(), yOffset);
+                            };
+                        });
+                        
+                        TooltipMakerAPI buttonHolder = overlayPanel.createUIElement(200f, 29f, false);
+                        ButtonAPI button = buttonHolder.addButton("", "", 200f, 29f, 0f);
+                        button.setButtonPressedSound(null);
+                        button.setMouseOverSound(null);
+                        button.setOpacity(0.1f);
+                        overlayPanel.addUIElement(buttonHolder);
+    
+                        yOffset = yOffset == 0 ? yOffset + 29f: yOffset + 31f;
+                        tt.addComponent(overlayPanel).inTL(rowPos.getX(), yOffset);
+                    }
+    
+                    tt.addTable("", 0, 1f);
+                    parentPanel.addUIElement(tt).rightOfTop((UIComponentAPI)videoPlayer.getMasterPanel(), 0f);
                 }
 
-                tt.addTable("", 0, 1f);
-                parentPanel.addUIElement(tt).rightOfTop((UIComponentAPI)videoPlayer.getMasterPanel(), 0f);
 
             }
             public void advance(float arg0) {}
