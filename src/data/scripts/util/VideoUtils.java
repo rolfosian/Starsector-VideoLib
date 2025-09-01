@@ -28,4 +28,8 @@ public class VideoUtils {
             return String.format("%04.1f", seconds);
         }
     }
+
+    public static float getControlsHeight(int videoHeight) {
+        return videoHeight / 100 * 6.5f;
+    }
 }

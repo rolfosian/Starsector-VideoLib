@@ -244,7 +244,9 @@ public class MuteDecoder implements Decoder {
         }
 
         print("Clearing Texture/Video Buffer");
-        textureBuffer.clear();
+        synchronized(textureBuffer) {
+            textureBuffer.clear();
+        }
         // textureBuffer.glDeleteBuffers();
     }
 
@@ -284,6 +286,14 @@ public class MuteDecoder implements Decoder {
         }
     }
 
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+
     public TextureBuffer getTextureBuffer() {
         return this.textureBuffer;
     }
@@ -320,6 +330,10 @@ public class MuteDecoder implements Decoder {
 
     public int getErrorStatus() {
         return FFmpeg.getErrorStatus(pipePtr);
+    }
+
+    public void setVideoFilePath(String path) {
+        this.videoFilePath = path;
     }
 
     private void sleep(long millis) {

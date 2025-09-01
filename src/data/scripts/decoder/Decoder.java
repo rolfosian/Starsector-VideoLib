@@ -17,8 +17,13 @@ public interface Decoder {
     public EOFMode getEOFMode();
     public void setEOFMode(EOFMode mode);
 
+    public void setVideoFilePath(String path);
     public int getCurrentVideoTextureId();
     public int getCurrentVideoTextureId(float deltaTime);
 
     public int getErrorStatus();
+    public void restart();
+
+    public void setWidth(int width);
+    public void setHeight(int height);
 }

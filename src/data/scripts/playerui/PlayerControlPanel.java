@@ -48,6 +48,8 @@ public class PlayerControlPanel {
     // private CustomPanelAPI volumePanel;
     // private VolumePlugin volumePlugin;
 
+    CustomPanelAPI playPauseStopPanel;
+    TooltipMakerAPI playPauseStopHolder;
     private ButtonAPI playButton;
     private ButtonAPI pauseButton;
     private ButtonAPI stopButton;
@@ -65,14 +67,14 @@ public class PlayerControlPanel {
     public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound) {
         this.projector = projector;
         this.playerControls = new PlayerControls();
-        this.controlPanel = Global.getSettings().createCustom(width, height, playerControls);
+        this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
 
         this.seekBarPlugin = new SeekBarPlugin();
-        this.seekBarPanel = Global.getSettings().createCustom(width - 10, height / 3, seekBarPlugin);
+        this.seekBarPanel = Global.getSettings().createCustom(width - 10, height / 3, this.seekBarPlugin);
         
-        controlPanel.addComponent(seekBarPanel).inMid().setYAlignOffset(-(height / 2));
+        this.controlPanel.addComponent(seekBarPanel).inMid().setYAlignOffset(-(height / 2));
 
-        CustomPanelAPI playPauseStopPanel = Global.getSettings().createCustom(width, height - height / 3 - 10f, new BaseCustomUIPanelPlugin() {
+        this.playPauseStopPanel = Global.getSettings().createCustom(width, height - height / 3 - 10f, new BaseCustomUIPanelPlugin() {
             @Override
             public void render(float alphaMult) {}
 
@@ -96,20 +98,20 @@ public class PlayerControlPanel {
                 }
             }
         });
-        TooltipMakerAPI buttonHolder = playPauseStopPanel.createUIElement(width, height - height / 3 - 10f, false);
+        this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, height - height / 3 - 10f, false);
 
-        playButton = buttonHolder.addButton("Play", "PLAY", 30f, 30f, 5f);
-        pauseButton = buttonHolder.addButton("Pause", "PAUSE", 30f, 30f, 0f);
-        stopButton = buttonHolder.addButton("Stop", "STOP", 30f, 30f, 0f);
+        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", 30f, 30f, 5f);
+        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", 30f, 30f, 0f);
+        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", 30f, 30f, 0f);
 
-        playPauseStopPanel.addUIElement(buttonHolder);
-        pauseButton.getPosition().rightOfMid(playButton, 5f);
-        stopButton.getPosition().rightOfMid(pauseButton, 5f);
+        this.playPauseStopPanel.addUIElement(playPauseStopHolder);
+        this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
+        this.stopButton.getPosition().rightOfMid(this.pauseButton, 5f);
 
-        if (projector.getPlayMode() == PlayMode.PAUSED) pauseButton.setEnabled(false);
-        else if (projector.getPlayMode() == PlayMode.PLAYING) playButton.setEnabled(false);
+        if (projector.getPlayMode() == PlayMode.PAUSED) this.pauseButton.setEnabled(false);
+        else if (projector.getPlayMode() == PlayMode.PLAYING) this.playButton.setEnabled(false);
 
-        controlPanel.addComponent(playPauseStopPanel).inTL(0f, controlPanel.getPosition().getHeight());
+        this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0f, this.controlPanel.getPosition().getHeight());
         // if (withSound) {
 
         // }
@@ -137,6 +139,10 @@ public class PlayerControlPanel {
         
         seekBarPlugin.reset();
         self.projector.stop();
+    }
+
+    public CustomPanelAPI getSeekBarPanel() {
+        return this.seekBarPanel;
     }
 
     public CustomPanelAPI getControlPanel() {

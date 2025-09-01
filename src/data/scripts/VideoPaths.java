@@ -14,10 +14,12 @@ import com.fs.starfarer.api.ModSpecAPI;
 public class VideoPaths {
     public static boolean populated = false;
     private static Map<String, String> map = new HashMap<>();
+    private static String[] keys;
 
     protected static void populate() {
         if (populated) return;
         Logger logger = Logger.getLogger(VideoPaths.class);
+        List<String> keyz = new ArrayList<>();
 
         try {
             ModManagerAPI modManager = Global.getSettings().getModManager();
@@ -46,6 +48,7 @@ public class VideoPaths {
 
                     String relativePath = filePaths.getString(fileId);
                     map.put(fileId, modPath + "/" + relativePath);
+                    keyz.add(fileId);
 
                     logger.info("Resolved absolute path for video file id " + fileId + " at [" + modPath + "/" + relativePath + "]");
                 }
@@ -54,7 +57,7 @@ public class VideoPaths {
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
-
+        keys = keyz.toArray(new String[0]);
         populated = true;
     }
 
@@ -62,5 +65,9 @@ public class VideoPaths {
         String result = map.get(key);
         if (result == null) throw new RuntimeException("VideoLib attempted to resolve absolute path for file id " + key + ", but returned null");
         return result;
+    }
+
+    public static String[] keys() {
+        return keys;
     }
 }

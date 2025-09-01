@@ -139,6 +139,7 @@ public class FFmpeg {
     // Native methods
     public static native void init(); // ref AudioFrame/VideoFrame classes/constructors
     public static native void freeBuffer(ByteBuffer toFree);
+    public static native int[] getWidthAndHeight(String filepath);
 
     // jpeg, png, webp, gif (still frames)
     public static native long openImage(String filename, int width, int height);

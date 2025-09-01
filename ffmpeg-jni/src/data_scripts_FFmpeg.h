@@ -151,6 +151,14 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioSampleRate
 JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     data_scripts_ffmpeg_FFmpeg
+ * Method:    getWidthAndHeight
+ * Signature: (Ljava/lang/String;)[I
+ */
+JNIEXPORT jintArray JNICALL Java_data_scripts_ffmpeg_FFmpeg_getWidthAndHeight
+  (JNIEnv *, jclass, jstring);
+
 #ifdef __cplusplus
 }
 #endif

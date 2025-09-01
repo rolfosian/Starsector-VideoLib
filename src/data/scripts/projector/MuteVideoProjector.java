@@ -37,7 +37,7 @@ public class MuteVideoProjector extends VideoProjector {
 
     private String videoFilePath;
     private int width, height;
-    
+
     private PlayMode MODE;
     private PlayMode OLD_MODE;
     private EOFMode EOF_MODE;
@@ -311,6 +311,7 @@ public class MuteVideoProjector extends VideoProjector {
     }
 
     public void setCurrentTextureId(int id) {
+        if (id == currentTextureId) return;
         this.currentTextureId = id;
     }
 
@@ -334,9 +335,21 @@ public class MuteVideoProjector extends VideoProjector {
     public int getWidth() {
         return this.width;
     }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
     
     public int getHeight() {
         return this.height;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
+    }
+    
+    public void setVideoFilePath(String path) {
+        this.videoFilePath = path;
     }
 
     public void setIsRendering(boolean isRendering) {

@@ -26,9 +26,12 @@ public abstract class VideoProjector implements CustomUIPanelPlugin {
     public abstract void setClickToPause(boolean clickToPause);
 
     public abstract Decoder getDecoder();
+    public abstract void setVideoFilePath(String path);
 
     public abstract int getWidth();
+    public abstract void setWidth(int width);
     public abstract int getHeight();
+    public abstract void setHeight(int height);
 
     public abstract PlayMode getPlayMode();
     public abstract void setPlayMode(PlayMode mode);

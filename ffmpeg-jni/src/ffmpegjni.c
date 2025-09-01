@@ -1441,3 +1441,56 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *en
 
     return result;
 }
+
+JNIEXPORT jintArray JNICALL Java_data_scripts_ffmpeg_FFmpeg_getWidthAndHeight(JNIEnv *env, jclass clazz, jstring jfilepath) {
+    const char *filepath = (*env)->GetStringUTFChars(env, jfilepath, NULL);
+    if (!filepath) {
+        printe(env, "getWidthAndHeight: failed to get filepath string");
+        return NULL;
+    }
+    
+    AVFormatContext *fmt_ctx = NULL;
+    AVCodecContext *codec_ctx = NULL;
+    AVCodec *codec = NULL;
+    jintArray result = NULL;
+    
+    if (avformat_open_input(&fmt_ctx, filepath, NULL, NULL) < 0) {
+        printe(env, "getWidthAndHeight: failed to open input file");
+        goto cleanup;
+    }
+    
+    if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
+        printe(env, "getWidthAndHeight: failed to find stream info");
+        goto cleanup;
+    }
+
+    int video_stream_index = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    if (video_stream_index < 0) {
+        printe(env, "getWidthAndHeight: no video stream found");
+        goto cleanup;
+    }
+
+    AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_index]->codecpar;
+    if (!codecpar) {
+        printe(env, "getWidthAndHeight: no codec parameters");
+        goto cleanup;
+    }
+
+    result = (*env)->NewIntArray(env, 2);
+    if (!result) {
+        printe(env, "getWidthAndHeight: failed to create result array");
+        goto cleanup;
+    }
+    
+    jint dimensions[2] = {(jint)codecpar->width, (jint)codecpar->height};
+    (*env)->SetIntArrayRegion(env, result, 0, 2, dimensions);
+    
+cleanup:
+    if (fmt_ctx) {
+        avformat_close_input(&fmt_ctx);
+    }
+
+    (*env)->ReleaseStringUTFChars(env, jfilepath, filepath);
+    
+    return result;
+}

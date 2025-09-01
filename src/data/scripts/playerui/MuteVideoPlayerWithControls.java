@@ -4,8 +4,11 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
+import data.scripts.VideoPaths;
 import data.scripts.VideoModes.PlayMode;
+import data.scripts.decoder.Decoder;
 import data.scripts.projector.VideoProjector;
+import data.scripts.util.VideoUtils;
 
 public class MuteVideoPlayerWithControls implements VideoPlayer {
     private final CustomPanelAPI masterPanel;
@@ -38,6 +41,22 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
         if (projector.getPlayMode() == PlayMode.PLAYING) controlPanel.play();
     }
 
+    public void openNewVideo(String videoId, int width, int height) { // this is too much debug with all the control panel components, easier to just scrap the thing and make a new one, may revisit this
+        // Decoder decoder = this.projector.getDecoder();
+        // decoder.setVideoFilePath(VideoPaths.get(videoId));
+        // decoder.setWidth(width);
+        // decoder.setHeight(height);
+        // decoder.restart();
+
+        // this.projectorPanel.getPosition().setSize(width, height);
+        // this.projector.setWidth(width);
+        // this.projector.setHeight(height);
+        
+        // this.masterPanel.getPosition().setSize(width, this.controlPanel.setSize(width, height) + height + 5f);
+
+        // this.projector.setCurrentTextureId(this.projector.getDecoder().getCurrentVideoTextureId());
+    }
+
     @Override
     public void setClickToPause(boolean clickToPause) {
         this.projector.setClickToPause(clickToPause);
@@ -59,5 +78,13 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
 
     public CustomPanelAPI getMasterPanel() {
         return this.masterPanel;
+    }
+
+    public float getWidth() {
+        return masterPanel.getPosition().getWidth();
+    }
+
+    public float getHeight() {
+        return masterPanel.getPosition().getHeight();
     }
 }

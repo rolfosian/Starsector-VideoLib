@@ -7,3 +7,5 @@ FFmpeg.class
 ffmpeg-static-libs
 buildwindows.ps1
 buildlinux.sh
+videos
+settings.json
