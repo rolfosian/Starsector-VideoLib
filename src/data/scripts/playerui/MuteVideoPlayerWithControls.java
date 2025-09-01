@@ -56,4 +56,8 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
     public PlayerControlPanel getControls() {
         return this.controlPanel;
     }
+
+    public CustomPanelAPI getMasterPanel() {
+        return this.masterPanel;
+    }
 }
