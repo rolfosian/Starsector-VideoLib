@@ -208,11 +208,15 @@ jobs:
 
       - name: Fetch FFmpeg source
         shell: msys2 {0}
+        with:
+          msystem: MINGW64
         run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Build FFmpeg (static)
         shell: msys2 {0}
+        with:
+          msystem: MINGW64
         run: |
           set -eo pipefail
           cd ffmpeg-src
@@ -230,7 +234,6 @@ jobs:
             --enable-gpl \
             --enable-static \
             --disable-shared \
-            --disable-pthreads \
             --enable-w32threads \
             --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
@@ -243,6 +246,8 @@ jobs:
 
       - name: Check FFmpeg install path
         shell: msys2 {0}
+        with:
+          msystem: MINGW64
         run: |
           echo "PREFIX_WIN = $PREFIX_WIN"
           echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
@@ -250,6 +255,8 @@ jobs:
 
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: msys2 {0}
+        with:
+          msystem: MINGW64
         env:
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
         run: |
