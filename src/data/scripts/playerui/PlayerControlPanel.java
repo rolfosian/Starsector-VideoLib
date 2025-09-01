@@ -106,6 +106,9 @@ public class PlayerControlPanel {
         pauseButton.getPosition().rightOfMid(playButton, 5f);
         stopButton.getPosition().rightOfMid(pauseButton, 5f);
 
+        if (projector.getPlayMode() == PlayMode.PAUSED) pauseButton.setEnabled(false);
+        else if (projector.getPlayMode() == PlayMode.PLAYING) playButton.setEnabled(false);
+
         controlPanel.addComponent(playPauseStopPanel).inTL(0f, controlPanel.getPosition().getHeight());
         // if (withSound) {
 
