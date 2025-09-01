@@ -13,6 +13,19 @@
 #include <libavutil/audio_fifo.h>
 #include <pthread.h>
 
+static jclass VideoFrameClass;
+static jmethodID VideoFrameClassCtor;
+static jclass AudioFrameClass;
+static jmethodID AudioFrameClassCtor;
+
+JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz) {
+    VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame"));
+    VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
+
+    AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
+    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
+}
+
 JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
     jmethodID mid = (*env)->GetStaticMethodID(env, cls, "print", "([Ljava/lang/Object;)V");
@@ -36,10 +49,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, j
     if (ptr != NULL) {
         free(ptr);
     }
-}
-
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz) {
-    avformat_network_init();
 }
 
 // for jpeg, png, webp, gif
@@ -429,7 +438,6 @@ typedef struct {
     pthread_mutex_t mutex;
 } FFmpegPipeContext;
 
-
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jint startFrame) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
@@ -656,12 +664,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
             
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-            
-                    jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
-                    jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
-            
-                    jobject result = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)last_frame->pts);
-                    
+                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
                     ctx->seeking = 0;
                     av_frame_unref(last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
@@ -736,27 +739,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     return NULL;
                 }
                 
-                jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
-                if (!cls) {
-                    printe(env, "readFrameNoSound: failed to find VideoFrame class");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
-                
-                jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
-                if (!ctor) {
-                    printe(env, "readFrameNoSound: failed to get VideoFrame constructor");
-                    free(copy);
-                    av_frame_unref(ctx->video_frame);
-                    pthread_mutex_unlock(&ctx->mutex);
-                    av_packet_free(&pkt);
-                    return NULL;
-                }
-                
-                result = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
                 if (!result) {
                     printe(env, "readFrameNoSound: failed to create VideoFrame object");
                     free(copy);
@@ -1139,7 +1122,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jc
     }
 
     pthread_mutex_destroy(&ctx->mutex);
-
     free(ctx);
 }
 
@@ -1228,10 +1210,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
 
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-
-                    jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
-                    jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
-                    jobject videoResult = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)last_frame->pts);
+                    jobject videoResult = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
 
                     ctx->seeking = 0;
                     av_frame_unref(last_frame);
@@ -1292,10 +1271,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
 
                 jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-
-                jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame");
-                jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;J)V");
-                result = (*env)->NewObject(env, cls, ctor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
 
                 av_frame_unref(ctx->video_frame);
                 pthread_mutex_unlock(&ctx->mutex);
@@ -1350,10 +1326,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 memcpy(ctx->audio_out_buffer, converted[0], buffer_size);
 
                 jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ctx->audio_out_buffer, buffer_size);
-
-                jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame");
-                jmethodID ctor = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
-                result = (*env)->NewObject(env, cls, ctor, byteBuffer, buffer_size,
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size,
                                            (jlong)av_rescale_q(ctx->audio_frame->pts,
                                            ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
                                            AV_TIME_BASE_Q));

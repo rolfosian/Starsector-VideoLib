@@ -137,7 +137,7 @@ public class FFmpeg {
     }
 
     // Native methods
-    public static native void init(); // av_register_all / network init if needed
+    public static native void init(); // ref AudioFrame/VideoFrame classes/constructors
     public static native void freeBuffer(ByteBuffer toFree);
 
     // jpeg, png, webp, gif (still frames)
