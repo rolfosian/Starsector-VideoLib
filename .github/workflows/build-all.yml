@@ -230,6 +230,11 @@ jobs:
             --enable-gpl \
             --enable-static \
             --disable-shared \
+            --disable-pthreads \
+            --enable-w32threads \
+            --disable-texi2html \
+            --disable-makeinfo \
+            --disable-xmllint \
             --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif \
             --enable-demuxer=matroska,mov,image2,gif \
