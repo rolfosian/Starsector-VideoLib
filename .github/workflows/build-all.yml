@@ -206,13 +206,15 @@ jobs:
             mingw-w64-x86_64-nasm
 
       - name: Fetch FFmpeg source
-        shell: C:\msys64\mingw64.exe {0}
+        shell: msys2 {0}
         run: |
+          mingw64
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
       - name: Build FFmpeg (static)
-        shell: C:\msys64\mingw64.exe {0}
+        shell: msys2 {0}
         run: |
+          mingw64
           set -eo pipefail
           cd ffmpeg-src
           PREFIX=$(cygpath -u "$PREFIX_WIN")
@@ -245,17 +247,19 @@ jobs:
           mingw32-make install
 
       - name: Check FFmpeg install path
-        shell: C:\msys64\mingw64.exe {0}
+        shell: msys2 {0}
         run: |
+          mingw64
           echo "PREFIX_WIN = $PREFIX_WIN"
           echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
           ls -R "$(cygpath -u "$PREFIX_WIN")"
 
       - name: Build JNI bridge (ffmpegjni.dll)
-        shell: C:\msys64\mingw64.exe {0}
+        shell: msys2 {0}
         env:
           JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
         run: |
+          mingw64
           set -eo pipefail
           PREFIX=$(cygpath -u "$PREFIX_WIN")
           JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
