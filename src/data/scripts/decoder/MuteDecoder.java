@@ -275,8 +275,6 @@ public class MuteDecoder implements Decoder {
             }
             this.currentVideoPts = targetUs;
         }
-
-        
     }
 
     public void seekWithoutClearingBuffer(long targetUs) {
@@ -284,10 +282,9 @@ public class MuteDecoder implements Decoder {
             print("Seeking to", targetUs, "µs");
             FFmpeg.seek(pipePtr, targetUs);
         }
-
     }
 
-    public TextureBuffer gTextureBuffer() {
+    public TextureBuffer getTextureBuffer() {
         return this.textureBuffer;
     }
 
