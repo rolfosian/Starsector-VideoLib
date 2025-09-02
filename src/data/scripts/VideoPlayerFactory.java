@@ -16,6 +16,7 @@ import data.scripts.playerui.MuteVideoPlayerWithControls;
 import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
 
+import java.awt.Color;
 import java.util.*;
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;
@@ -35,13 +36,28 @@ public class VideoPlayerFactory {
         VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
-        float controlsHeight = height / 100 * 6.5f;
+        int controlsHeight = 70;
         PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
         CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
-        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, (int) controlsHeight, false);
-        masterPanel.addComponent(controlPanel.getControlPanel()).belowMid(projectorPanel, 5f);
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, false);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight); //(0f);//(projectorPanel, 0f);
+
+        return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
+    }
+
+    public static MuteVideoPlayerWithControls createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, Color textColor, Color bgButtonColor) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
+
+        int controlsHeight = 70;
+        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
+
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, false, textColor, bgButtonColor);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
 
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }

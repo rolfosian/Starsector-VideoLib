@@ -35,6 +35,9 @@ public class PlayerControlPanel {
         logger.info(sb.toString());
     }
 
+    private static final float BTN_SIZE = 30f;
+    private static final float pseudoSeekTtOffset = BTN_SIZE / 2;
+
     private PlayerControlPanel self = this;
     private final VideoProjector projector;
     private final CustomPanelAPI controlPanel;
@@ -54,27 +57,29 @@ public class PlayerControlPanel {
     private ButtonAPI pauseButton;
     private ButtonAPI stopButton;
 
-    private Color seekButtonColor = Misc.getDarkPlayerColor();
-    private float seekLineRed = seekButtonColor.getRed() / 255f;
-    private float seekLineGreen = seekButtonColor.getGreen() / 255f;
-    private float seekLineBlue = seekButtonColor.getBlue() / 255f;
+    private Color textColor;
+    private Color bgButtonColor;
+    private float seekLineRed;
+    private float seekLineGreen;
+    private float seekLineBlue;
 
     public void init() {
         playerControls.init(controlPanel.getPosition());
         seekBarPlugin.init(seekBarPanel.getPosition());
     }
 
-    public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound) {
+    public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound, Color textColor, Color buttonBgColor) {
         this.projector = projector;
         this.playerControls = new PlayerControls();
         this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
 
-        this.seekBarPlugin = new SeekBarPlugin();
-        this.seekBarPanel = Global.getSettings().createCustom(width - 10, height / 3, this.seekBarPlugin);
-        
-        this.controlPanel.addComponent(seekBarPanel).inMid().setYAlignOffset(-(height / 2));
+        this.textColor = textColor;
+        this.bgButtonColor = buttonBgColor;
+        this.seekLineRed = buttonBgColor.getRed() / 255f;
+        this.seekLineGreen = buttonBgColor.getGreen() / 255f;
+        this.seekLineBlue = buttonBgColor.getBlue() / 255f;
 
-        this.playPauseStopPanel = Global.getSettings().createCustom(width, height - height / 3 - 10f, new BaseCustomUIPanelPlugin() {
+        this.playPauseStopPanel = Global.getSettings().createCustom(width, BTN_SIZE, new BaseCustomUIPanelPlugin() {
             @Override
             public void render(float alphaMult) {}
 
@@ -98,11 +103,11 @@ public class PlayerControlPanel {
                 }
             }
         });
-        this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, height - height / 3 - 10f, false);
+        this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, BTN_SIZE, false);
 
-        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", 30f, 30f, 5f);
-        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", 30f, 30f, 0f);
-        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", 30f, 30f, 0f);
+        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 5f);
+        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
+        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
 
         this.playPauseStopPanel.addUIElement(playPauseStopHolder);
         this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
@@ -111,7 +116,73 @@ public class PlayerControlPanel {
         if (projector.getPlayMode() == PlayMode.PAUSED) this.pauseButton.setEnabled(false);
         else if (projector.getPlayMode() == PlayMode.PLAYING) this.playButton.setEnabled(false);
 
-        this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0f, this.controlPanel.getPosition().getHeight());
+        this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0f, 0f);
+
+        this.seekBarPlugin = new SeekBarPlugin();
+        this.seekBarPanel = Global.getSettings().createCustom(width - 10, BTN_SIZE, this.seekBarPlugin);
+        
+        this.controlPanel.addComponent(seekBarPanel).inTL(10f, 0f);
+
+        // if (withSound) {
+
+        // }
+    }
+
+    public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound) {
+        this.projector = projector;
+        this.playerControls = new PlayerControls();
+        this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
+
+        this.textColor = Misc.getTextColor();
+        this.bgButtonColor = Misc.getDarkPlayerColor();
+        this.seekLineRed = bgButtonColor.getRed() / 255f;
+        this.seekLineGreen = bgButtonColor.getGreen() / 255f;
+        this.seekLineBlue = bgButtonColor.getBlue() / 255f;
+
+        this.playPauseStopPanel = Global.getSettings().createCustom(width, BTN_SIZE, new BaseCustomUIPanelPlugin() {
+            @Override
+            public void render(float alphaMult) {}
+
+            @Override
+            public void buttonPressed(Object buttonId) {
+                switch((String)buttonId) {
+                    case "PLAY":
+                        play();
+                        return;
+
+                    case "PAUSE":
+                        pause();
+                        return;
+
+                    case "STOP":
+                        stop();
+                        return;
+
+                    default:
+                        return;
+                }
+            }
+        });
+        this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, BTN_SIZE, false);
+
+        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 5f);
+        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
+        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
+
+        this.playPauseStopPanel.addUIElement(playPauseStopHolder);
+        this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
+        this.stopButton.getPosition().rightOfMid(this.pauseButton, 5f);
+
+        if (projector.getPlayMode() == PlayMode.PAUSED) this.pauseButton.setEnabled(false);
+        else if (projector.getPlayMode() == PlayMode.PLAYING) this.playButton.setEnabled(false);
+
+        this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0f, 0f);
+
+        this.seekBarPlugin = new SeekBarPlugin();
+        this.seekBarPanel = Global.getSettings().createCustom(width - 10, BTN_SIZE, this.seekBarPlugin);
+        
+        this.controlPanel.addComponent(seekBarPanel).inTL(10f, 0f);
+
         // if (withSound) {
 
         // }
@@ -205,6 +276,12 @@ public class PlayerControlPanel {
         }
     }
 
+    public void setSeekBarLineColor(Color color) {
+        this.seekLineRed = color.getRed() / 255f;
+        this.seekLineGreen = color.getGreen() / 255f;
+        this.seekLineBlue = color.getBlue() / 255f;
+    }
+
     private class SeekBarPlugin extends BaseCustomUIPanelPlugin {
         private double durationSeconds; // seconds in 0.000 format
         private long durationUs;
@@ -214,7 +291,7 @@ public class PlayerControlPanel {
         private PlayMode oldDecoderMode;
         boolean wasPaused;
 
-        private int timeAccumulator = 0;
+        private int seekAccumulator = 0;
         private static final int SEEK_APPLY_THRESHOLD = 15;
 
         private long pendingSeekTarget = -1;
@@ -246,6 +323,15 @@ public class PlayerControlPanel {
         private PositionAPI seekTimeTtPos;
         private float seekTimeTtXOffset;
 
+        private LabelAPI currentTimeLabel = Global.getSettings().createLabel("00:00 / 00:00", Fonts.ORBITRON_16);
+        private float currentTimeLabelWidth;
+        private String durationString;
+
+        public SeekBarPlugin() {
+            this.seekTimePseudoTt.setColor(textColor);
+            this.currentTimeLabel.setColor(textColor);
+        }
+        
         private void setSeekBarPanelBounds(PositionAPI panelPos) {
             this.seekBarPanelLeftBound = panelPos.getCenterX() - panelPos.getWidth() / 2;
             this.seekBarPanelRightBound = panelPos.getCenterX() + panelPos.getWidth() / 2;
@@ -287,16 +373,25 @@ public class PlayerControlPanel {
 
         private void seek() {
             projector.getDecoder().seek(pendingSeekTarget);
+            currentTimeLabel.setText(String.format("%s / %s", VideoUtils.formatTimeNoDecimals(pendingSeekTarget), durationString));
+            this.timeAccumulator = 0;
 
             this.hasSeeked = true;
             this.oldSeekTarget = this.pendingSeekTarget;
-            this.timeAccumulator = 0;
+            this.seekAccumulator = 0;
             this.currentVideoPts = this.pendingSeekTarget;
         }
 
+        private float timeAccumulator = 0;
         @Override
         public void advance(float deltaTime) {
+            timeAccumulator += deltaTime;
             this.currentVideoPts = projector.getDecoder().getCurrentVideoPts();
+
+            if (timeAccumulator >= 0.25) {
+                currentTimeLabel.setText(String.format("%s / %s", VideoUtils.formatTimeNoDecimals(currentVideoPts), durationString));
+                timeAccumulator = 0;
+            }
 
             if (this.seeking) {
                 this.seekX = Math.max(seekBarPanelLeftBound, Math.min(this.seekX, this.seekBarPanelRightBound));
@@ -305,8 +400,8 @@ public class PlayerControlPanel {
                 float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
                 seekButton.getPosition().inTL(newX, this.seekButtonY);
                 
-                timeAccumulator++;
-                if (timeAccumulator >= SEEK_APPLY_THRESHOLD) {
+                seekAccumulator++;
+                if (seekAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         this.seek();
                         projector.setCurrentTextureId(projector.getDecoder().getCurrentVideoTextureId());
@@ -314,7 +409,7 @@ public class PlayerControlPanel {
                 }
         
             } else {
-                if (this.pendingSeekTarget >= 0 && timeAccumulator >= SEEK_APPLY_THRESHOLD) {
+                if (this.pendingSeekTarget >= 0 && seekAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         projector.getDecoder().setPlayMode(PlayMode.SEEKING);
                         projector.getDecoder().seek(this.pendingSeekTarget);
@@ -323,7 +418,7 @@ public class PlayerControlPanel {
                     }
 
                     this.pendingSeekTarget = -1;
-                    this.timeAccumulator = 0;
+                    this.seekAccumulator = 0;
                     this.currentVideoPts = pendingSeekTarget;
                 }
                 
@@ -336,22 +431,26 @@ public class PlayerControlPanel {
             if (!this.isAdvanced) this.isAdvanced = true;
         }
 
-        @Override
+        private float peekPos;
+        @Override 
         public void processInput(List<InputEventAPI> events) {
             for (int i = 0; i < events.size(); i++) {
                 InputEventAPI event = events.get(i);
 
                 if (!event.isConsumed() && event.isMouseEvent()) {
+                    float mouseX = event.getX();
+                    float mouseY = event.getY();
 
-                    if (isInSeekLineBounds(event.getX(), event.getY())) {
+                    if (isInSeekLineBounds(mouseX, mouseY)) {
 
-                        if (event.isMouseMoveEvent()) {
-                            long seekPos = getSeekPositionFromX(event.getX());
+                        if (event.isMouseMoveEvent() && peekPos != mouseX) {
+                            peekPos = mouseX;
+                            long seekPos = getSeekPositionFromX(peekPos);
                             float toX = getButtonXFromSeekPosition(seekPos);
 
                             seekTimePseudoTt.setText(VideoUtils.formatTime(seekPos));
                             seekTimePseudoTt.setOpacity(1);
-                            seekTimeTtPos.inTL(toX - seekTimeTtXOffset, this.seekButtonY);
+                            seekTimeTtPos.inTL(toX - seekTimeTtXOffset, this.seekButtonY - pseudoSeekTtOffset);
                         }
 
                         if (event.isMouseDownEvent() && !this.seeking) {
@@ -367,7 +466,7 @@ public class PlayerControlPanel {
                             seekButton.setEnabled(false);
                             stopButton.setEnabled(true);
     
-                            this.seekX = event.getX();
+                            this.seekX = mouseX;
                             this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
                     
                             float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
@@ -396,7 +495,7 @@ public class PlayerControlPanel {
                     }
 
                     if (seeking) {
-                        this.seekX = event.getX();
+                        this.seekX = mouseX;
                         event.consume();
                     }
                 }
@@ -406,7 +505,7 @@ public class PlayerControlPanel {
         @Override
         public void positionChanged(PositionAPI seekBarPanelPos) {
             this.seekPanelWidth = seekBarPanelPos.getWidth();
-            this.seekLineY = seekBarPanelPos.getCenterY();
+            this.seekLineY = seekBarPanelPos.getY() + seekBarPanelPos.getHeight();
 
             if (seekButton != null) {
                 this.seekButtonY = -seekButton.getPosition().getHeight() / 2; // relative to panel top
@@ -424,14 +523,14 @@ public class PlayerControlPanel {
 
         public void init(PositionAPI seekBarPanelPos) {
             this.seekPanelWidth = seekBarPanelPos.getWidth();
-            this.seekLineY = seekBarPanelPos.getCenterY();
+            this.seekLineY = seekBarPanelPos.getY() + seekBarPanelPos.getHeight();
         
             this.durationSeconds = projector.getDecoder().getDurationSeconds();
             this.durationUs = projector.getDecoder().getDurationUs();
         
-            seekBarTt = seekBarPanel.createUIElement(seekBarPanelPos.getWidth() - 10, seekBarPanelPos.getHeight() / 3, false);
+            seekBarTt = seekBarPanel.createUIElement(seekBarPanelPos.getWidth(), seekBarPanelPos.getHeight(), false);
 
-            seekButton = seekBarTt.addButton("", null, 30f, 30f, 0f);
+            seekButton = seekBarTt.addButton("", null, textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
             seekButton.setClickable(false);
             seekButton.setMouseOverSound(null);
             seekButton.setButtonPressedSound(null);
@@ -451,6 +550,12 @@ public class PlayerControlPanel {
 
             this.seekTimeTtPos = seekBarPanel.addComponent((UIComponentAPI)this.seekTimePseudoTt);
             this.seekTimeTtXOffset = seekTimePseudoTt.computeTextWidth("00:00:00") / 2 / 2;
+            
+            this.durationString = VideoUtils.formatTimeNoDecimalsWithRound(this.durationUs);
+            this.currentTimeLabelWidth = this.currentTimeLabel.computeTextWidth(String.format("%s / %s", this.durationString, this.durationString));
+            playPauseStopPanel.addComponent((UIComponentAPI)this.currentTimeLabel).inTL(playPauseStopPanel.getPosition().getWidth() - this.currentTimeLabelWidth, 5f);
+
+            currentTimeLabel.setText(String.format("%s / %s", VideoUtils.formatTimeNoDecimals(currentVideoPts), durationString));
 
             this.reset();
         }
@@ -481,7 +586,7 @@ public class PlayerControlPanel {
             this.seeking = false;
             this.pendingSeekTarget = 0;
             this.currentVideoPts = 0;
-            this.timeAccumulator = 0;
+            this.seekAccumulator = 0;
         
             this.seekX = getButtonXFromSeekPosition(0);
             seekButton.getPosition().inTL(seekX, this.seekButtonY);
