@@ -237,6 +237,10 @@ jobs:
           echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
           ls -R "$(cygpath -u "$PREFIX_WIN")"
 
+      - name: Build JNI bridge (ffmpegjni.dll)
+        env:
+          JAVA_HOME_WIN: 
+        run: |
           PREFIX=$(cygpath -u "$PREFIX_WIN")
           JAVA_HOME=$(cygpath -u ${{ env.JAVA_HOME }})
           OUT_DIR=$(cygpath -u "${{ github.workspace }}\ffmpeg-jni\bin\windows")
