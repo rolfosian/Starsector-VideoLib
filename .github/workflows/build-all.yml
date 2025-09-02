@@ -206,12 +206,8 @@ jobs:
             mingw-w64-x86_64-libtasn1
             mingw-w64-x86_64-nasm
 
-      - name: Fetch FFmpeg source
-        run: |
           git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
-      - name: Build FFmpeg (static)
-        run: |
           cd ffmpeg-src
 
           PREFIX=$(cygpath -u "$PREFIX_WIN")
@@ -237,18 +233,12 @@ jobs:
           mingw32-make -j$(nproc)
           mingw32-make install
 
-      - name: Check FFmpeg install path
-        run: |
           echo "PREFIX_WIN = $PREFIX_WIN"
           echo "Resolved PREFIX = $(cygpath -u "$PREFIX_WIN")"
           ls -R "$(cygpath -u "$PREFIX_WIN")"
 
-      - name: Build JNI bridge (ffmpegjni.dll)
-        env:
-          JAVA_HOME_WIN: ${{ env.JAVA_HOME }}
-        run: |
           PREFIX=$(cygpath -u "$PREFIX_WIN")
-          JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
+          JAVA_HOME=$(cygpath -u ${{ env.JAVA_HOME }})
           OUT_DIR=$(cygpath -u "${{ github.workspace }}\ffmpeg-jni\bin\windows")
           mkdir -p "$OUT_DIR"
           gcc -O2 -DNDEBUG -DWIN32_LEAN_AND_MEAN -DUNICODE -D_UNICODE -fPIC \
