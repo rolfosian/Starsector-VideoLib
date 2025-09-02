@@ -50,4 +50,4 @@ jobs:
       - name: Fetch FFmpeg source
         shell: cmd
         run: |
-          dir c:\
+          dir c:\mingw64
