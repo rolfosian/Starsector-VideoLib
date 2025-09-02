@@ -48,6 +48,6 @@ jobs:
             mingw-w64-x86_64-nasm
 
       - name: Fetch FFmpeg source
-        shell: cmd.exe
+        shell: cmd
         run: |
           dir c:\
