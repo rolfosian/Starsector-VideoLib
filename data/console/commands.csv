@@ -1,2 +1,2 @@
 command,class,tags,syntax,help
-vl_demo,data.scripts.console.VideoLibDemo,"ui",vl_demo wc,"Opens an Interaction Dialog with a muted video playing on loop once console is closed. Optional Args: wc - with controls, optional file id defined in settings.json (See mods/VideoLib/settings.json and mods/VideoLib/data/videos)"
+vl_demo,data.scripts.console.VideoLibDemo,"ui",vl_demo wc,"Opens an Interaction Dialog with a muted video playing on loop once console is closed. Optional Args: wc - with controls - 'color:r,g,b' and 'textcolor:r,g,b' optional arguments for control color scheme. Optional file id defined in settings.json (See mods/VideoLib/settings.json and mods/VideoLib/data/videos)"
