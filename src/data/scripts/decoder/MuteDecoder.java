@@ -4,7 +4,7 @@ import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.VideoFrame;
 
 import data.scripts.projector.MuteVideoProjector;
-
+import data.scripts.projector.Projector;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
@@ -50,14 +50,14 @@ public class MuteDecoder implements Decoder {
     private long currentVideoPts = 0;
     private long seekedTo = 0;
 
-    public final MuteVideoProjector videoProjector;
+    public final Projector videoProjector;
 
     private int width;
     private int height;
 
     private float timeAccumulator = 0f;
 
-    public MuteDecoder(MuteVideoProjector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public MuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing NoSoundDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
@@ -146,12 +146,12 @@ public class MuteDecoder implements Decoder {
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
                 
-                if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
-                
                 TextureFrame texture = textureBuffer.popFront(width, height);
 
                 if (texture != null) {
                     switched = true;
+                    if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
                 }
@@ -185,7 +185,7 @@ public class MuteDecoder implements Decoder {
 
                 if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
 
-                videoProjector.setIsRendering(true);
+                videoProjector.setIsRendering(true); // this is dumb, i dont like this
             }
         }
 
@@ -298,6 +298,10 @@ public class MuteDecoder implements Decoder {
         return this.textureBuffer;
     }
 
+    public float getSpf() {
+        return this.spf;
+    }
+
     public double getDurationSeconds() {
         return this.videoDurationSeconds;
     }
@@ -334,6 +338,10 @@ public class MuteDecoder implements Decoder {
 
     public void setVideoFilePath(String path) {
         this.videoFilePath = path;
+    }
+
+    public long getFFmpegPipePtr() {
+        return this.pipePtr;
     }
 
     private void sleep(long millis) {

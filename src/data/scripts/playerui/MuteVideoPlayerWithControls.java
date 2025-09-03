@@ -72,6 +72,11 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
         return this.projector;
     }
 
+    @Override
+    public Decoder getDecoder() {
+        return this.projector.getDecoder();
+    }
+
     public PlayerControlPanel getControls() {
         return this.controlPanel;
     }

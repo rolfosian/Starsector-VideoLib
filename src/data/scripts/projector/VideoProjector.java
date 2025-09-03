@@ -12,7 +12,7 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
 import data.scripts.playerui.PlayerControlPanel;
 
-public abstract class VideoProjector implements CustomUIPanelPlugin {
+public abstract class VideoProjector implements CustomUIPanelPlugin, Projector {
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
 
     public abstract void play();

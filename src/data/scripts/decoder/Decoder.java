@@ -4,10 +4,12 @@ import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;;
 
 public interface Decoder {
+    public float getSpf();
     public double getDurationSeconds();
     public long getDurationUs();
     public float getVideoFps();
     public long getCurrentVideoPts();
+    public long getFFmpegPipePtr();
 
     public void seek(long targetUs);
 

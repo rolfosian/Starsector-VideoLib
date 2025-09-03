@@ -57,6 +57,11 @@ public class MuteVideoPlayer implements VideoPlayer {
         return this.projector;
     }
 
+    @Override
+    public Decoder getDecoder() {
+        return this.projector.getDecoder();
+    }
+
     public void setClickToPause(boolean clickToPause) {
         this.projector.setClickToPause(clickToPause);
     }
