@@ -50,26 +50,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     private int currentTextureId;
 
     public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
-        this.videoFilePath = VideoPaths.get(videoId);
-
-        this.planetTexTypeField = planetTexTypeField;
-        this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
-        this.planetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
-        if (planetTexObj == null) {
-            this.planetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
-            TexReflection.setPrivateVariable(planetTexTypeField, planet, planetTexObj);
-            this.resetToNull = true;
-        }
-        this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
-
-        this.MODE = PlayMode.PLAYING;
-        this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
-        this.decoder.start();
-
-        // TexReflection.invalidateTokens(planet);
-        currentTextureId = decoder.getCurrentVideoTextureId();
-        TexReflection.setTexObjId(planetTexObj, currentTextureId);
+        this(TexReflection.getPlanetFromCampaignPlanet(campaignPlanet), videoId, width, height, planetTexTypeField);
     }
 
     public PlanetProjector(Planet planet, String videoId, int width, int height, Object planetTexTypeField) {
