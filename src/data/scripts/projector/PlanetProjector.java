@@ -47,7 +47,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     private Object planetTexObj;
     private boolean resetToNull = false;
 
-    private int currentTextureId;    
+    private int currentTextureId;
 
     public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
         this.videoFilePath = VideoPaths.get(videoId);
@@ -67,7 +67,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start();
 
-        TexReflection.invalidateTokens(planet);
+        // TexReflection.invalidateTokens(planet);
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
@@ -90,7 +90,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start();
 
-        TexReflection.invalidateTokens(planet);
+        // TexReflection.invalidateTokens(planet);
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
@@ -184,5 +184,4 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         public static Object ATMOSPHERE;
         public static Object GLOW;
     }
-
 }

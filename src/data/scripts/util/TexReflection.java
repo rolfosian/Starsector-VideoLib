@@ -133,7 +133,8 @@ public class TexReflection {
             for (Object field : Planet.class.getDeclaredFields()) {
                 switch (getFieldName(field)) {
                     case "planetTex":
-                        texClassCtor = getFieldType(field).getDeclaredConstructors()[0];
+                        texClassCtor = getFieldType(field).getConstructors()[0];
+
                         PlanetTexType.PLANET = field;
                         setFieldAccessibleHandle.invoke(field, true);
                         continue;
