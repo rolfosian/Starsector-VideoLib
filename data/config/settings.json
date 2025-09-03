@@ -1,7 +1,8 @@
 {
     "VideoLib" : {
         "video_lib" : {
-            "video_lib_demo" : "data/videos/jabroni.mp4"
+            "video_lib_demo" : "data/videos/jabroni.mp4",
+            "video_lib_planets_demo" : "data/videos/dots.mp4"
         }
     }
 }
