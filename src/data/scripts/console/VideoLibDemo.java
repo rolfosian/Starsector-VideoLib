@@ -116,9 +116,19 @@ public class VideoLibDemo implements BaseCommand {
                 // Video width and height, should be the same as the encoded video file's resolution.
                 // Width and height CAN be variable, but will incur non-negligible rescaling overhead in ffmpeg if not the same as the video's actual resolution, price especially noticeable while seeking
                 // If you want to rescale the video while it is playing, you should have openGL do it by calling videoPlayer.getProjectorPanel().getPosition().setSize(width, height)
-                int videoWidth = 960;
-                int videoHeight = 540;
-                if (fileId == null) fileId = "video_lib_demo";
+                int videoWidth;
+                int videoHeight;
+                
+                if (fileId == null) {
+                    videoWidth = 960;
+                    videoHeight = 540;
+                    fileId = "video_lib_demo";
+
+                } else {
+                    int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.get(fileId));
+                    videoWidth = dimensions[0];
+                    videoHeight = dimensions[1];
+                }
 
                 // with controls
                 if (splitArgs.contains("wc")) {                    
@@ -142,7 +152,6 @@ public class VideoLibDemo implements BaseCommand {
                     videoPlayer.addTo(parentPanel).inTL(0f,0f); // add to parent
                     videoPlayer.init(); // init projector so it knows where/width/height to render
                 }
-
 
                 // ignore everything below this line if you value your sanity
                 currentVideoId = fileId;
