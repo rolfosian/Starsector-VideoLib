@@ -16,7 +16,7 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.util.TexReflection;
 
-/**It is imperative to call this class's finish() method if the player leaves the system its in or something to close the ffmpeg pipe*/
+/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something to stop the decoder, close the ffmpeg pipe and clean up*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
@@ -106,7 +106,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
     
-    private float d = 0;
     @Override
     public void advance(float deltaTime) {
         if (paused) return;
@@ -125,11 +124,9 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     @Override
     public void finish() {
-        TexReflection.setTexObjId(this.planetTexObj, this.originalPlanetTexId);
+        if (resetToNull) TexReflection.setPrivateVariable(planetTexTypeField, planet, null);
+        else TexReflection.setTexObjId(this.planetTexObj, this.originalPlanetTexId);
 
-        if (resetToNull) {
-            TexReflection.setPrivateVariable(planetTexTypeField, planet, null);
-        }
         if (currentTextureId != 0) {
             GL11.glDeleteTextures(currentTextureId);
             currentTextureId = 0;
@@ -191,4 +188,15 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     public PlayerControlPanel getControlPanel() {
         return null;
     }
+
+    /** Pseudo enums for different planet texture fields - This is the last parameter for the PlanetProjector's constructor. They are populated in a static block in TexReflection*/
+    public static class PlanetTexType {
+        public static Object PLANET;
+        public static Object CLOUD;
+        public static Object SHIELD;
+        public static Object SHIELD2;
+        public static Object ATMOSPHERE;
+        public static Object GLOW;
+    }
+
 }
