@@ -18,7 +18,7 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.util.TexReflection;
 
-/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something to stop the decoder, close the ffmpeg pipe and clean up. Or just leak memory I'm not your boss*/
+/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something else to stop the decoder, close the ffmpeg pipe and clean up. Or just leak memory and leave the decoder thread running forever; I'm not your boss*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
@@ -29,6 +29,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         }
         logger.info(sb.toString());
     }
+
+    public static final String PLANET_PROJECTOR_MEM_KEY = "$vlPlanetProjector";
 
     private boolean isDone;
 
@@ -41,6 +43,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     private final Decoder decoder;
 
+    private final PlanetAPI campaignPlanet;
     private final Planet planet;
     private final Object planetTexTypeField;
     private final int originalPlanetTexId;
@@ -50,12 +53,37 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     private int currentTextureId;
 
     public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
-        this(TexReflection.getPlanetFromCampaignPlanet(campaignPlanet), videoId, width, height, planetTexTypeField);
+        PlanetProjector possibleProj = (PlanetProjector) campaignPlanet.getMemory().get(PLANET_PROJECTOR_MEM_KEY);
+        if (possibleProj != null) possibleProj.finish();
+        campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
+
+        this.videoFilePath = VideoPaths.get(videoId);
+
+        this.campaignPlanet = campaignPlanet;
+        this.planetTexTypeField = planetTexTypeField;
+        this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
+        this.planetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
+        if (planetTexObj == null) {
+            this.planetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
+            TexReflection.setPrivateVariable(planetTexTypeField, planet, planetTexObj);
+            this.resetToNull = true;
+        }
+        this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
+
+        this.MODE = PlayMode.PLAYING;
+        this.EOF_MODE = EOFMode.LOOP;
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
+        this.decoder.start();
+
+        // TexReflection.invalidateTokens(planet);
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
 
     public PlanetProjector(Planet planet, String videoId, int width, int height, Object planetTexTypeField) {
         this.videoFilePath = VideoPaths.get(videoId);
 
+        this.campaignPlanet = null;
         this.planetTexTypeField = planetTexTypeField;
         this.planet = planet;
         this.planetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
@@ -93,6 +121,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     public void finish() {
         if (resetToNull) TexReflection.setPrivateVariable(planetTexTypeField, planet, null);
         else TexReflection.setTexObjId(this.planetTexObj, this.originalPlanetTexId);
+
+        if (campaignPlanet != null) campaignPlanet.getMemory().unset(PLANET_PROJECTOR_MEM_KEY);
 
         if (currentTextureId != 0) {
             GL11.glDeleteTextures(currentTextureId);
