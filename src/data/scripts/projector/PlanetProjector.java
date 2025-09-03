@@ -16,7 +16,6 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.util.TexReflection;
 
-// THIS IS SCUFFED BUT THE CONCEPT HAS PROMISE
 /**It is imperative to call this class's finish() method if the player leaves the system its in or something to close the ffmpeg pipe*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
@@ -41,24 +40,32 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     private final MuteDecoder decoder;
 
-    private final Object originalPlanetTexObj;
+    private final Object planetTexTypeField;
+    private Object planetTexObj;
+    private final int originalPlanetTexId;
     private final Planet planet;
 
-    private TextureObjBuffer texObjBuffer = new TextureObjBuffer(10);
-    private Object currentTexObj;
     private int currentTextureId;
-    private int oldTextureId = 0;
 
     private float gameFps;
     private float timeAccumulator = 0;
     private final float spf;
     private final float videoFps;
 
-    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height) {
+    private boolean resetToNull = false;
+
+    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
         this.videoFilePath = VideoPaths.get(videoId);
 
+        this.planetTexTypeField = planetTexTypeField;
         this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet);
+        this.planetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
+        if (planetTexObj == null) {
+            this.planetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
+            TexReflection.setPrivateVariable(planetTexTypeField, planet, planetTexObj);
+            this.resetToNull = true;
+        }
+        this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
@@ -68,15 +75,23 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.spf = decoder.getSpf();
         this.videoFps = decoder.getVideoFps();
 
-        this.currentTextureId = decoder.getCurrentVideoTextureId();
-        this.currentTexObj = TexReflection.instantiateTexObj(currentTextureId, GL11.GL_TEXTURE_2D);
+        TexReflection.invalidateTokens(planet);
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
 
-    public PlanetProjector(Planet planet, String videoId, int width, int height) {
+    public PlanetProjector(Planet planet, String videoId, int width, int height, Object planetTexTypeField) {
         this.videoFilePath = VideoPaths.get(videoId);
-        this.planet = planet;
 
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet);
+        this.planetTexTypeField = planetTexTypeField;
+        this.planet = planet;
+        this.planetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
+        if (planetTexObj == null) {
+            this.planetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
+            TexReflection.setPrivateVariable(planetTexTypeField, planet, planetTexObj);
+            this.resetToNull = true;
+        }
+        this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
@@ -86,52 +101,35 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.spf = decoder.getSpf();
         this.videoFps = decoder.getVideoFps();
 
-        this.texObjBuffer.add(decoder.getCurrentVideoTextureId(), GL11.GL_TEXTURE_2D);
+        TexReflection.invalidateTokens(planet);
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(planetTexObj, currentTextureId);
     }
     
+    private float d = 0;
     @Override
     public void advance(float deltaTime) {
         if (paused) return;
-
+        
         gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
-        boolean switched = false;
-
-        while (timeAccumulator >= spf) {
-            timeAccumulator -= spf;
+        int newId = decoder.getCurrentVideoTextureId(deltaTime);
+        if (newId != currentTextureId) {
+            TexReflection.setTexObjId(planetTexObj, newId);
             
-            Object textureObj = texObjBuffer.popFront();
-
-            if (textureObj != null) {
-                switched = true;
-                currentTexObj = textureObj;
-                TexReflection.setPlanetTex(planet, currentTexObj);
-                if (oldTextureId != 0) GL11.glDeleteTextures(oldTextureId);
-            }
-        }
-
-        if ((!switched && !texObjBuffer.isFull()) || texObjBuffer.isEmpty()) {
-            bufferTipple();
-        }
-    }
-
-    private void bufferTipple() {
-        if (gameFps <= videoFps) {
-            texObjBuffer.add(decoder.getCurrentVideoTextureId(), GL11.GL_TEXTURE_2D);
-
-        } else {
-            for (int i = 0; i < Math.min(4, texObjBuffer.getSpace() + 1); i++) {
-                texObjBuffer.add(decoder.getCurrentVideoTextureId(), GL11.GL_TEXTURE_2D);
-            }
+            if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+            currentTextureId = newId;
         }
     }
 
     @Override
     public void finish() {
-        TexReflection.setPlanetTex(this.planet, this.originalPlanetTexObj);
-        texObjBuffer.clear();
+        TexReflection.setTexObjId(this.planetTexObj, this.originalPlanetTexId);
 
+        if (resetToNull) {
+            TexReflection.setPrivateVariable(planetTexTypeField, planet, null);
+        }
         if (currentTextureId != 0) {
             GL11.glDeleteTextures(currentTextureId);
             currentTextureId = 0;
@@ -192,70 +190,5 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     @Override
     public PlayerControlPanel getControlPanel() {
         return null;
-    }
-    
-
-    private class TextureObjBuffer {
-        private Object[] buffer;
-        private int[] idBuffer;
-
-        private int head = 0;
-        private int tail = 0;
-        private int count = 0;
-        private int capacity;
-
-        public TextureObjBuffer(int capacity) {
-            this.capacity = capacity;
-            this.buffer = new Object[capacity];
-            this.idBuffer = new int[capacity];
-        }
-
-        public void add(int id, int glBindType) {
-            Object texObj = TexReflection.instantiateTexObj(glBindType, id);
-            buffer[tail] = texObj;
-            idBuffer[tail] = id;
-
-            tail = (tail + 1) % capacity;
-            count++;
-        }
-
-        public Object popFront() {
-            if (isEmpty()) return null;
-
-            Object texObj = buffer[head];
-            oldTextureId = currentTextureId;
-            currentTextureId = idBuffer[head];
-
-            buffer[head] = null;
-            idBuffer[head] = 0;
-            head = (head + 1) % capacity;
-            count--;
-
-            return texObj;
-        }
-
-        public void clear() {
-            int idx = head;
-            for (int i = 0; i < count; i++) {
-                buffer[idx] = null;
-                idBuffer[idx] = 0;
-                idx = (idx + 1) % capacity;
-            }
-            count = 0;
-            head = 0;
-            tail = 0;
-        }
-
-        public int getSpace() {
-            return this.capacity - this.count;
-        }
-
-        public boolean isFull() {
-            return count >= capacity;
-        }
-
-        public boolean isEmpty() {
-            return count == 0;
-        }
     }
 }

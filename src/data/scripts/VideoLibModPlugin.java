@@ -25,6 +25,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onApplicationLoad() {
         FFmpeg.init();
         TexReflection.init();
+        TexReflection.PlanetTexType.init();
         VideoPaths.populate();
         mainThread = Thread.currentThread();
     }

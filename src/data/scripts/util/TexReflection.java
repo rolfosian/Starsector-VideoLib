@@ -13,7 +13,10 @@ import java.util.jar.JarEntry;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.PlanetAPI;
+import com.fs.starfarer.campaign.CampaignPlanet;
 import com.fs.starfarer.combat.entities.terrain.Planet;
+import com.fs.graphics.util.GLListManager;
+import com.fs.graphics.util.GLListManager.GLListToken;
 
 import java.util.*;
 
@@ -28,36 +31,10 @@ public class TexReflection {
         logger.info(sb.toString());
     }
 
-    public static List<Class<?>> getAllObfClasses(String jarName) {
-        try {
-            JarFile jarFile = new JarFile(jarName);
-            Enumeration<JarEntry> entries = jarFile.entries();
-            List<Class<?>> obfClasses = new ArrayList<>();
-    
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-                if (entry.isDirectory()) continue;
-    
-                String name = entry.getName();
-                if (name.endsWith(".class")) {
-                    String className = name.replace("/", ".").substring(0, name.length() - ".class".length());
-                    obfClasses.add(Class.forName(className, false, Global.class.getClassLoader()));
-                }
-            }
-    
-            jarFile.close();
-            return obfClasses;
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final Class<?> fieldClass;
     private static final Class<?> constructorClass;
-    private static final Class<?> typeArrayClass;
 
     private static final MethodHandle getFieldTypeHandle;
     private static final MethodHandle setFieldHandle;
@@ -68,7 +45,6 @@ public class TexReflection {
     private static final MethodHandle setConstructorAccessibleHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
     private static final MethodHandle constructorNewInstanceHandle;
-    private static final MethodHandle getConstructorGenericParameterTypesHandle;
 
     static {
         try {
@@ -80,9 +56,6 @@ public class TexReflection {
             getFieldNameHandle = lookup.findVirtual(fieldClass, "getName", MethodType.methodType(String.class));
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
-
-            typeArrayClass = Class.forName("[Ljava.lang.reflect.Type;", false, Class.class.getClassLoader());
-            getConstructorGenericParameterTypesHandle = lookup.findVirtual(constructorClass, "getGenericParameterTypes", MethodType.methodType(typeArrayClass));
 
             setConstructorAccessibleHandle = lookup.findVirtual(constructorClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
@@ -138,101 +111,16 @@ public class TexReflection {
         }
     }
 
-    public static Object texClassCtor;
-    public static Object campaignPlanetGraphicsField;
-    public static Object planetTexField;
-    public static Object planetCloudTexField;
-    public static Object planetShieldTexField;
-    public static Object planetShieldTex2Field;
-    public static Object planetAtmosphereTexField;
-    public static Object planetGlowTexField;
-
-    static {
-        try {
-            List<Class<?>> obfClasses = getAllObfClasses("fs.common_obf.jar");
-            for (Class<?> cls : obfClasses) {
-                Object[] ctors = cls.getDeclaredConstructors();
-                if (ctors.length < 1) continue;
-
-                Object ctor = ctors[0];
-                Class<?>[] ctorParams = (Class<?>[]) getConstructorParameterTypesHandle.invoke(ctor);
-                if (ctorParams.length == 2 && ctorParams[0] != int.class && ctorParams[1] != int.class) continue;
-
-                Object[] fields = cls.getDeclaredFields();
-                int colorCount = 0;
-                int intCount = 0;
-                int stringCount = 0;
-
-                for (Object field : fields) {
-                    Class<?> fieldType = getFieldType(field);
-
-                    if (fieldType.equals(Color.class)) colorCount++;
-                    else if (fieldType.equals(int.class)) intCount++;
-                    else if (fieldType.equals(String.class)) stringCount++;
-                }
-
-                if (colorCount == 3 && intCount == 8 && stringCount == 2)  {
-                    texClassCtor = ctor;
-                    break;
-                }
+    public static List<Object> getAllVariables(Object instanceToGetFrom) {
+        List<Object> lst = new ArrayList<>();
+        Class<?> currentClass = instanceToGetFrom.getClass();
+        while (currentClass != null) {
+            for (Object field : currentClass.getDeclaredFields()) {
+                lst.add(getPrivateVariable(field, instanceToGetFrom));
             }
-
-            obfClasses = getAllObfClasses("starfarer_obf.jar");
-
-            outer:
-            for (Class<?> cls : obfClasses) {
-                if (cls.getSimpleName().equals("CampaignPlanet")) {
-                    for (Object field : cls.getDeclaredFields()) {
-                        if (getFieldName(field).equals("graphics")) {
-                            campaignPlanetGraphicsField = field;
-                            setFieldAccessibleHandle.invoke(field, true);
-                            break outer;
-                            
-                        }
-                    }
-                }
-            }
-
-            for (Object field : Planet.class.getDeclaredFields()) {
-                switch (getFieldName(field)) {
-                    case "planetTex":
-                        planetTexField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "cloudTex":
-                        planetCloudTexField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "shieldTex":
-                        planetShieldTexField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-
-                    case "shieldTex2":
-                        planetShieldTex2Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "atmosphereTex":
-                        planetAtmosphereTexField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "glowTex":
-                        planetGlowTexField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    default:
-                        continue;
-                }
-            }
-
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
+            currentClass = currentClass.getSuperclass();
         }
+        return lst;
     }
 
     public static void setPrivateVariable(Object field, Object instanceToModify, Object newValue) {
@@ -269,6 +157,117 @@ public class TexReflection {
         }
     }
 
+    public static Object planetListToken1Field;
+    public static Object planetListToken2Field;
+    public static Object planetListToken3Field;
+    public static Object planetListToken4Field;
+    public static Object planetListToken5Field;
+
+    public static Object campaignPlanetGraphicsField;
+    public static Object texClassCtor;
+    public static Object texObjectIdField;
+
+    public static class PlanetTexType {
+        public static Object PLANET;
+        public static Object CLOUD;
+        public static Object SHIELD;
+        public static Object SHIELD2;
+        public static Object ATMOSPHERE;
+        public static Object GLOW;
+
+        public static void init() {}
+    }
+
+    static {
+        try {
+            for (Object field : CampaignPlanet.class.getDeclaredFields()) {
+                if (getFieldName(field).equals("graphics")) {
+                    campaignPlanetGraphicsField = field;
+                    setFieldAccessibleHandle.invoke(field, true);
+                    break;
+                }
+            }
+
+            for (Object field : Planet.class.getDeclaredFields()) {
+                switch (getFieldName(field)) {
+                    case "planetTex":
+                        texClassCtor = getFieldType(field).getDeclaredConstructors()[0];
+                        PlanetTexType.PLANET = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                    
+                    case "cloudTex":
+                        PlanetTexType.CLOUD = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                    
+                    case "shieldTex":
+                        PlanetTexType.SHIELD = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+
+                    case "shieldTex2":
+                        PlanetTexType.SHIELD2 = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                    
+                    case "atmosphereTex":
+                        PlanetTexType.ATMOSPHERE = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                    
+                    case "glowTex":
+                        PlanetTexType.GLOW = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+
+                    case "listToken1":
+                        planetListToken1Field = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                        
+                    case "listToken2":
+                        planetListToken2Field = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                        
+                    case "listToken3":
+                        planetListToken3Field = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                        
+                    case "listToken4":
+                        planetListToken4Field = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                        
+                    case "listToken5":
+                        planetListToken5Field = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        continue;
+                    
+                    default:
+                        continue;
+                }
+            }
+
+            Object textObj = instantiateTexObj(69, 420);
+            for (Object field : textObj.getClass().getDeclaredFields()) {
+                if (getFieldTypeHandle.invoke(field).equals(int.class)) {
+                    setFieldAccessibleHandle.invoke(field, true);
+
+                    if (((int)getFieldHandle.invoke(field, textObj)) == 420) {
+                        texObjectIdField = field;
+                        break;
+                    } 
+                }
+            }
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Planet getPlanetFromCampaignPlanet(PlanetAPI campaignPlanet) {
         try {
             return (Planet) getFieldHandle.invoke(campaignPlanetGraphicsField, campaignPlanet);
@@ -277,17 +276,37 @@ public class TexReflection {
         }
     }
 
-    public static Object getPlanetTex(Planet planet) {
+    public static Object getPlanetTex(Planet planet, Object texField) {
         try {
-            return getFieldHandle.invoke(planetTexField, planet);
+            return getFieldHandle.invoke(texField, planet);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void setPlanetTex(Planet planet, Object texObj) {
+    // public static void setPlanetTex(Planet planet, Object texObj) {
+    //     try {
+    //         setFieldHandle.invoke(planetTexField, planet, texObj);
+    //     } catch (Throwable e) {
+    //         throw new RuntimeException(e);
+    //     }
+    // }
+
+    public static void setTexObjId(Object texObj, int id) {
         try {
-            setFieldHandle.invoke(planetTexField, planet, texObj);
+            setFieldHandle.invoke(texObjectIdField, texObj, id);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void invalidateTokens(Planet planet) {
+        try {
+            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken1Field, planet));
+            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken2Field, planet));
+            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken3Field, planet));
+            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken4Field, planet));
+            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken5Field, planet));
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
