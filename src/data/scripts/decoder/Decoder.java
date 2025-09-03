@@ -1,7 +1,8 @@
 package data.scripts.decoder;
 
 import data.scripts.VideoModes.EOFMode;
-import data.scripts.VideoModes.PlayMode;;
+import data.scripts.VideoModes.PlayMode;
+import data.scripts.buffers.TextureBuffer;;
 
 public interface Decoder {
     public float getSpf();
@@ -24,7 +25,10 @@ public interface Decoder {
     public int getCurrentVideoTextureId(float deltaTime);
 
     public int getErrorStatus();
+    public TextureBuffer start();
+    public void stop();
     public void restart();
+    public void finish();
 
     public void setWidth(int width);
     public void setHeight(int height);

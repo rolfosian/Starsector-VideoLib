@@ -11,12 +11,14 @@ import com.fs.starfarer.combat.entities.terrain.Planet;
 import data.scripts.VideoPaths;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
+
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.util.TexReflection;
 
-/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something to stop the decoder, close the ffmpeg pipe and clean up*/
+/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something to stop the decoder, close the ffmpeg pipe and clean up. Or just leak memory I'm not your boss*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
@@ -35,24 +37,17 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     private boolean paused = false;
 
     private PlayMode MODE;
-    private PlayMode OLD_MODE;
     private EOFMode EOF_MODE;
 
-    private final MuteDecoder decoder;
+    private final Decoder decoder;
 
-    private final Object planetTexTypeField;
-    private Object planetTexObj;
-    private final int originalPlanetTexId;
     private final Planet planet;
-
-    private int currentTextureId;
-
-    private float gameFps;
-    private float timeAccumulator = 0;
-    private final float spf;
-    private final float videoFps;
-
+    private final Object planetTexTypeField;
+    private final int originalPlanetTexId;
+    private Object planetTexObj;
     private boolean resetToNull = false;
+
+    private int currentTextureId;    
 
     public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
         this.videoFilePath = VideoPaths.get(videoId);
@@ -71,9 +66,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start();
-
-        this.spf = decoder.getSpf();
-        this.videoFps = decoder.getVideoFps();
 
         TexReflection.invalidateTokens(planet);
         currentTextureId = decoder.getCurrentVideoTextureId();
@@ -98,9 +90,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start();
 
-        this.spf = decoder.getSpf();
-        this.videoFps = decoder.getVideoFps();
-
         TexReflection.invalidateTokens(planet);
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(planetTexObj, currentTextureId);
@@ -109,9 +98,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     @Override
     public void advance(float deltaTime) {
         if (paused) return;
-        
-        gameFps = 1 / deltaTime;
-        timeAccumulator += deltaTime;
 
         int newId = decoder.getCurrentVideoTextureId(deltaTime);
         if (newId != currentTextureId) {
