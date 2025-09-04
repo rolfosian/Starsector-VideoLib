@@ -1,5 +1,10 @@
 package data.scripts.util;
 
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+
+import com.fs.starfarer.api.Global;
+
 public class VideoUtils {
     public static String formatTime(long us) {
         double totalSeconds = us / 1_000_000.0;
@@ -75,5 +80,27 @@ public class VideoUtils {
 
     public static String formatSecondsNoDecimalsWithRound(double seconds) {
         return String.format("%02d", (int) Math.round(seconds));
+    }
+
+    private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    private static final Set<String> videoLibIds = new HashSet<>();
+
+    public static String generateRandomId() {
+        StringBuilder sb = new StringBuilder(6);
+        
+        for (int i = 0; i < 6; i++) {
+            int index = ThreadLocalRandom.current().nextInt(CHARACTERS.length());
+            sb.append(CHARACTERS.charAt(index));
+        }
+        String result = "vl_" + sb.toString();
+
+        if (videoLibIds.contains(result)) return generateRandomId();
+        videoLibIds.add(result);
+
+        return "vl_" + sb.toString();
+    }
+
+    public static void removeId(String id) {
+        videoLibIds.remove(id);
     }
 }

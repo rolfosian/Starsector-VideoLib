@@ -26,7 +26,6 @@ public class MuteDecoder implements Decoder {
         }
         logger.info(sb.toString());
     }
-    private static int MAX_BUF_SIZE = 60;
 
     private PlayMode PLAY_MODE;
     private PlayMode OLD_PLAY_MODE;
@@ -38,7 +37,7 @@ public class MuteDecoder implements Decoder {
     private volatile boolean running = false;
     private Thread decodeThread;
     private long pipePtr;
-    private TextureBuffer textureBuffer = new TextureBuffer(MAX_BUF_SIZE);
+    private TextureBuffer textureBuffer;
 
     private float gameFps = 0f;
     private float videoFps = 0f;
@@ -57,10 +56,12 @@ public class MuteDecoder implements Decoder {
 
     private float timeAccumulator = 0f;
 
-    public MuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public MuteDecoder(Projector videoProjector, TextureBuffer textureBuffer, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing NoSoundDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
+
+        this.textureBuffer = textureBuffer;
 
         this.width = width;
         this.height = height;
@@ -188,7 +189,6 @@ public class MuteDecoder implements Decoder {
                 videoProjector.setIsRendering(true); // this is dumb, i dont like this
             }
         }
-
         return currentVideoTextureId;
     }
 

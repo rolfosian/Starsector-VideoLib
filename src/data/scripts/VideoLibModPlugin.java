@@ -5,8 +5,11 @@ import org.apache.log4j.Logger;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
 
+// import data.scripts.buffers.OverlayingTextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
+import data.scripts.planetlistener.PlanetProjectorListener;
 import data.scripts.util.TexReflection;
+import data.scripts.util.VideoUtils;
 
 public class VideoLibModPlugin extends BaseModPlugin {
     public static final Logger logger = Global.getLogger(VideoLibModPlugin.class);
@@ -25,8 +28,15 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onApplicationLoad() {
         FFmpeg.init();
         TexReflection.init();
+
         VideoPaths.populate();
         mainThread = Thread.currentThread();
+
+    }
+
+    @Override
+    public void onGameLoad(boolean newGame) {
+        Global.getSector().addTransientListener(new PlanetProjectorListener(false));
     }
 
     public static Thread getMainThread() {
