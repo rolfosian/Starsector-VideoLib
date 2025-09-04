@@ -3,7 +3,7 @@ package data.scripts.util;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.fs.starfarer.api.Global;
+import data.scripts.projector.PlanetProjector;
 
 public class VideoUtils {
     public static String formatTime(long us) {
@@ -83,9 +83,9 @@ public class VideoUtils {
     }
 
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    private static final Set<String> videoLibIds = new HashSet<>();
+    private static final Map<String, PlanetProjector> videoLibPlanetTexIds = new HashMap<>();
 
-    public static String generateRandomId() {
+    public static String generateRandomId(PlanetProjector projector) {
         StringBuilder sb = new StringBuilder(6);
         
         for (int i = 0; i < 6; i++) {
@@ -94,13 +94,17 @@ public class VideoUtils {
         }
         String result = "vl_" + sb.toString();
 
-        if (videoLibIds.contains(result)) return generateRandomId();
-        videoLibIds.add(result);
+        if (videoLibPlanetTexIds.containsKey(result)) return generateRandomId(projector);
+        videoLibPlanetTexIds.put(result, projector);
 
-        return "vl_" + sb.toString();
+        return result;
     }
 
     public static void removeId(String id) {
-        videoLibIds.remove(id);
+        videoLibPlanetTexIds.remove(id);
+    }
+
+    public static PlanetProjector getPlanetProjector(String id) {
+        return videoLibPlanetTexIds.get(id);
     }
 }

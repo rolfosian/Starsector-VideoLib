@@ -26,7 +26,7 @@ import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
-/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something else to stop the decoder, close the ffmpeg pipe and clean up. Or just leak memory and leave the decoder thread running forever; I'm not your boss*/
+/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something else to stop the decoder, close the ffmpeg pipe and reset the planet fields. Or just leak memory and leave the decoder thread running forever; I'm not your boss*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
@@ -81,7 +81,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomId();
+        this.ourPlanetTexObjId = VideoUtils.generateRandomId(this);
+        this.ourPlanetSpec.addTag(ourPlanetTexObjId);
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
@@ -115,9 +116,15 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     }
 
     public PlanetProjector(Planet planet, String videoId, int width, int height, Object planetTexTypeField) {
+        Object[] possibleProj = getPossibleProjector(planet);
+        if (possibleProj != null) {
+            ((PlanetProjector)possibleProj[0]).finish();
+            planet.getSpec().getTags().remove(possibleProj[1]);
+        }
+
         this.campaignPlanet = null;
         this.planetTexTypeField = planetTexTypeField;
-        this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
+        this.planet = planet;
 
         this.originalPlanetSpec = (PlanetSpec) campaignPlanet.getSpec();
         this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
@@ -125,7 +132,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomId();
+        this.ourPlanetTexObjId = VideoUtils.generateRandomId(this);
+        this.ourPlanetSpec.addTag(ourPlanetTexObjId);
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
@@ -157,6 +165,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
     }
+
+
     
     @Override
     public void advance(float deltaTime) {
@@ -176,6 +186,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         else TexReflection.setTexObjId(this.originalPlanetTexObj, this.originalPlanetTexId);
 
         TexReflection.texObjectMap.remove(ourPlanetTexObjId);
+        VideoUtils.removeId(ourPlanetTexObjId);
+
         planet.setSpec(originalPlanetSpec);
         if (campaignPlanet != null) {
             campaignPlanet.getMemory().unset(PLANET_PROJECTOR_MEM_KEY);
@@ -186,7 +198,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     @Override
     public void finish() {
         resetPlanetState();
-        VideoUtils.removeId(ourPlanetTexObjId);
 
         if (currentTextureId != 0) {
             GL11.glDeleteTextures(currentTextureId);
@@ -268,6 +279,13 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     @Override
     public PlayerControlPanel getControlPanel() {
+        return null;
+    }
+
+    private Object[] getPossibleProjector(Planet planet) {
+        for (String tag : planet.getSpec().getTags()) {
+            if (tag.startsWith("vl")) return new Object[] {VideoUtils.getPlanetProjector(tag), tag};
+        }
         return null;
     }
 }
