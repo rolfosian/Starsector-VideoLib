@@ -9,7 +9,6 @@ import com.fs.starfarer.api.Global;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.planetlistener.PlanetProjectorListener;
 import data.scripts.util.TexReflection;
-import data.scripts.util.VideoUtils;
 
 public class VideoLibModPlugin extends BaseModPlugin {
     public static final Logger logger = Global.getLogger(VideoLibModPlugin.class);
