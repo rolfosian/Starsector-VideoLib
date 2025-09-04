@@ -14,7 +14,9 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Industries;
 import com.fs.starfarer.api.util.IntervalUtil;
+
 
 public class VideoLibPlanetsDemo implements BaseCommand {
     @Override
@@ -40,10 +42,9 @@ public class VideoLibPlanetsDemo implements BaseCommand {
         if (fileId == null) fileId = "video_lib_planets_demo";
 
         List<PlanetProjector> projectors = new ArrayList<>();
-
         
         for (PlanetAPI planet : playerLoc.getPlanets()) {
-            PlanetProjector projector = new PlanetProjector(planet, fileId, videoWidth, videoHeight, PlanetTexType.SHIELD);
+            PlanetProjector projector = new PlanetProjector(planet, fileId, videoWidth, videoHeight, PlanetTexType.SHIELD2);
 
             Global.getSector().addTransientScript(projector);
             projectors.add(projector);
