@@ -5,14 +5,22 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.buffers.TextureBuffer;;
 
 public interface Decoder {
-    public float getSpf();
+    public int getErrorStatus();
+    public void seek(long targetUs);
+    
     public double getDurationSeconds();
     public long getDurationUs();
-    public float getVideoFps();
-    public long getCurrentVideoPts();
-    public long getFFmpegPipePtr();
 
-    public void seek(long targetUs);
+    public float getSpf();
+    public float getVideoFps();
+    public void setVideoFilePath(String path);
+    public long getCurrentVideoPts();
+    public int getCurrentVideoTextureId();
+    public int getCurrentVideoTextureId(float deltaTime);
+
+    public int getSampleRate();
+    public int getAudioChannels();
+    public long getFFmpegPipePtr();
 
     public PlayMode getPlayMode();
     public void setPlayMode(PlayMode mode);
@@ -20,13 +28,8 @@ public interface Decoder {
     public EOFMode getEOFMode();
     public void setEOFMode(EOFMode mode);
 
-    public void setVideoFilePath(String path);
-    public int getCurrentVideoTextureId();
-    public int getCurrentVideoTextureId(float deltaTime);
-
-    public int getErrorStatus();
-    public TextureBuffer start();
-    public TextureBuffer startFrom(long pts);
+    public void start();
+    public void startFrom(long pts);
     public void stop();
     public void restart();
     public void finish();

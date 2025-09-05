@@ -194,8 +194,8 @@ public class MuteDecoder implements Decoder {
 
     public float getVideoFps() { return videoFps; }
 
-    public TextureBuffer start() {
-        if (running) return null;
+    public void start() {
+        if (running) return;
         print("Starting NoSoundDecoder for file", videoFilePath);
         running = true;
 
@@ -221,11 +221,11 @@ public class MuteDecoder implements Decoder {
         synchronized(textureBuffer) {
             textureBuffer.convertFront(width, height);
         }
-        return textureBuffer;
+        return;
     }
 
-    public TextureBuffer startFrom(long target) {
-        if (running) return null;
+    public void startFrom(long target) {
+        if (running) return;
         print("Starting NoSoundDecoder for file", videoFilePath);
         running = true;
 
@@ -252,7 +252,7 @@ public class MuteDecoder implements Decoder {
         synchronized(textureBuffer) {
             textureBuffer.convertFront(width, height);
         }
-        return textureBuffer;
+        return;
     }
 
     public void finish() {
@@ -380,4 +380,7 @@ public class MuteDecoder implements Decoder {
             Thread.sleep(millis);
         } catch(InterruptedException ignored) {}
     }
+
+    public int getAudioChannels() {return 0;}
+    public int getSampleRate() {return 0;}
 }
