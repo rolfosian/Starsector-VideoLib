@@ -33,7 +33,7 @@ public class MuteVideoPlayer implements VideoPlayer {
         decoder.setVideoFilePath(videoFilePath);
         decoder.setWidth(width);
         decoder.setHeight(height);
-        decoder.restart();
+        decoder.restart(0);
 
         this.projectorPanel.getPosition().setSize(width, height);
         this.projector.setVideoFilePath(videoFilePath);

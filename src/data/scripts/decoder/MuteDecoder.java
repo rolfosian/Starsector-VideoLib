@@ -193,12 +193,12 @@ public class MuteDecoder implements Decoder {
 
     public float getVideoFps() { return videoFps; }
 
-    public void start() {
+    public void start(long startUs) {
         if (running) return;
         print("Starting NoSoundDecoder for file", videoFilePath);
         running = true;
 
-        pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, 0);
+        pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, startUs);
         print("Opened FFmpeg pipe, ptr =", pipePtr);
 
         if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
@@ -216,37 +216,6 @@ public class MuteDecoder implements Decoder {
         decodeThread.start();
         print("NoSoundDecoder decoderLoop thread started");
 
-        while(textureBuffer.isEmpty()) sleep(1);
-        synchronized(textureBuffer) {
-            textureBuffer.convertFront(width, height);
-        }
-        return;
-    }
-
-    public void startFrom(long target) {
-        if (running) return;
-        print("Starting NoSoundDecoder for file", videoFilePath);
-        running = true;
-
-        pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, 0);
-        print("Opened FFmpeg pipe, ptr =", pipePtr);
-
-        if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
-
-        videoDurationSeconds = FFmpeg.getDurationSeconds(pipePtr);
-        videoDurationUs = FFmpeg.getDurationUs(pipePtr);
-
-        videoFps = FFmpeg.getVideoFps(pipePtr);
-        spf = 1 / videoFps;
-        print("Video Framerate =", videoFps);
-        print("Video Duration=", videoDurationSeconds);
-        print("Video DurationUs=", videoDurationUs);
-
-        decodeThread = new Thread(this::decodeLoop, "NoSoundDecoder");
-        decodeThread.start();
-        print("NoSoundDecoder decoderLoop thread started");
-        seek(target);
-        
         while(textureBuffer.isEmpty()) sleep(1);
         synchronized(textureBuffer) {
             textureBuffer.convertFront(width, height);
@@ -286,14 +255,9 @@ public class MuteDecoder implements Decoder {
         seek(0);
     }
 
-    public void reset() {
-        stop();
-        start();
-    }
-
-    public void restart() {
+    public void restart(long startUs) {
         finish();
-        start();
+        start(startUs);
     }
 
     public void seek(long targetUs) {

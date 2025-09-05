@@ -438,7 +438,7 @@ typedef struct {
     pthread_mutex_t mutex;
 } FFmpegPipeContext;
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jint startFrame) {
+JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     AVFormatContext *fmt_ctx = NULL;
@@ -613,6 +613,22 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         return 0;
     }
 
+    // Optionally seek to starting timestamp (microseconds)
+    if (startUs > 0) {
+        int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
+        int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
+        if (seek_result < 0) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg), "openPipeNoSound: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
+            printe(env, error_msg);
+            // continue without seek
+        } else {
+            avcodec_flush_buffers(codec_ctx);
+            ctx->seek_target_us = (int64_t)startUs;
+            ctx->seeking = 1;
+        }
+    }
+
     (*env)->ReleaseStringUTFChars(env, jfilename, filename);
 
     return (jlong)(intptr_t)ctx;
@@ -771,7 +787,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
 }
 
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz,
-    jstring jfilename, jint width, jint height, jint startFrame) {
+    jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     AVFormatContext *fmt_ctx = NULL;
@@ -1071,6 +1087,25 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         return 0;
     }
     
+    // Optionally seek to starting timestamp (microseconds)
+    if (startUs > 0) {
+        int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
+        int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
+        if (seek_result < 0) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
+            printe(env, error_msg);
+            // continue without seek
+        } else {
+            avcodec_flush_buffers(vctx);
+            if (actx) avcodec_flush_buffers(actx);
+            if (fifo) av_audio_fifo_reset(fifo);
+            ctx->audio_next_pts_us = -1;
+            ctx->seek_target_us = (int64_t)startUs;
+            ctx->seeking = 1;
+        }
+    }
+
     (*env)->ReleaseStringUTFChars(env, jfilename, filename);
     return (jlong)(intptr_t)ctx;
 }

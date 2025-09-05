@@ -106,10 +106,10 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
  * Method:    openPipeNoSound
- * Signature: (Ljava/lang/String;III)J
+ * Signature: (Ljava/lang/String;IIJ)J
  */
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound
-  (JNIEnv *, jclass, jstring, jint, jint, jint);
+  (JNIEnv *, jclass, jstring, jint, jint, jlong);
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
@@ -122,10 +122,10 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
  * Method:    openPipe
- * Signature: (Ljava/lang/String;III)J
+ * Signature: (Ljava/lang/String;IIJ)J
  */
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe
-  (JNIEnv *, jclass, jstring, jint, jint, jint);
+  (JNIEnv *, jclass, jstring, jint, jint, jlong);
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg

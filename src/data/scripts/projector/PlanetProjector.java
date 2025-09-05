@@ -23,6 +23,7 @@ import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
 
 import data.scripts.playerui.PlayerControlPanel;
+import data.scripts.speakers.VideoProjectorSpeakers;
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
@@ -69,7 +70,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     private int currentTextureId;
 
-    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, Object planetTexTypeField) {
+    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
         PlanetProjector possibleProj = (PlanetProjector) campaignPlanet.getMemory().get(PLANET_PROJECTOR_MEM_KEY);
         if (possibleProj != null) possibleProj.finish();
         campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
@@ -116,17 +117,16 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-        this.decoder.start();
+        this.decoder.start(startVideoUs);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
     }
 
-    public PlanetProjector(Planet planet, String videoId, int width, int height, Object planetTexTypeField) {
-        Object[] possibleProj = getPossibleProjector(planet);
+    public PlanetProjector(Planet planet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
+        PlanetProjector possibleProj = getPossibleProjector(planet);
         if (possibleProj != null) {
-            ((PlanetProjector)possibleProj[0]).finish();
-            planet.getSpec().getTags().remove(possibleProj[1]);
+            possibleProj.finish();
         }
 
         this.width = width;
@@ -136,7 +136,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.planetTexTypeField = planetTexTypeField;
         this.planet = planet;
 
-        this.originalPlanetSpec = (PlanetSpec) campaignPlanet.getSpec();
+        this.originalPlanetSpec = planet.getSpec();
         this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
         if (originalPlanetTexObj != null) this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, originalPlanetTexObj);
         else this.originalPlanetTexId = 0;
@@ -149,7 +149,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
         TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
 
-        // TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
         planet.setSpec(ourPlanetSpec);
 
         this.videoId = videoId;
@@ -171,121 +170,11 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-        this.decoder.start();
+        this.decoder.start(startVideoUs);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
     }
-
-    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, long startPts, int width, int height, Object planetTexTypeField) {
-        PlanetProjector possibleProj = (PlanetProjector) campaignPlanet.getMemory().get(PLANET_PROJECTOR_MEM_KEY);
-        if (possibleProj != null) possibleProj.finish();
-        campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
-
-        this.width = width;
-        this.height = height;
-
-        this.campaignPlanet = campaignPlanet;
-        this.planetTexTypeField = planetTexTypeField;
-        this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
-
-        this.originalPlanetSpec = (PlanetSpec) campaignPlanet.getSpec();
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
-        if (originalPlanetTexObj != null) this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, originalPlanetTexObj);
-        else this.originalPlanetTexId = 0;
-
-        this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
-        this.ourPlanetSpec.addTag(ourPlanetTexObjId);
-        this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
-
-        TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
-        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
-
-        TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
-        planet.setSpec(ourPlanetSpec);
-
-        this.videoId = videoId;
-        this.videoFilePath = VideoPaths.get(videoId);
-
-        // if (planetTexTypeField == PlanetTexType.SHIELD) { // TODO: DETERMINE METHOD TO OVERLAY SHIELD TEXTURE PER VIDEO FRAME
-            // this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
-
-            // this.MODE = PlayMode.PLAYING;
-            // this.EOF_MODE = EOFMode.LOOP;
-            // this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-            // this.decoder.start();
-    
-            // currentTextureId = decoder.getCurrentVideoTextureId();
-            // TexReflection.setTexObjId(planetTexObj, currentTextureId);
-            // return;
-        // }
-
-        this.MODE = PlayMode.PLAYING;
-        this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-        this.decoder.startFrom(startPts);
-
-        currentTextureId = decoder.getCurrentVideoTextureId();
-        TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
-    }
-
-    public PlanetProjector(Planet planet, String videoId, long startPts, int width, int height, Object planetTexTypeField) {
-        Object[] possibleProj = getPossibleProjector(planet);
-        if (possibleProj != null) {
-            ((PlanetProjector)possibleProj[0]).finish();
-            planet.getSpec().getTags().remove(possibleProj[1]);
-        }
-
-        this.width = width;
-        this.height = height;
-
-        this.campaignPlanet = null;
-        this.planetTexTypeField = planetTexTypeField;
-        this.planet = planet;
-
-        this.originalPlanetSpec = (PlanetSpec) campaignPlanet.getSpec();
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
-        if (originalPlanetTexObj != null) this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, originalPlanetTexObj);
-        else this.originalPlanetTexId = 0;
-
-        this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
-        this.ourPlanetSpec.addTag(ourPlanetTexObjId);
-        this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
-
-        TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
-        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
-
-        // TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
-        planet.setSpec(ourPlanetSpec);
-
-        this.videoId = videoId;
-        this.videoFilePath = VideoPaths.get(videoId);
-
-        // if (planetTexTypeField == PlanetTexType.SHIELD) { // TODO: DETERMINE METHOD TO OVERLAY SHIELD TEXTURE PER VIDEO FRAME
-            // this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
-
-            // this.MODE = PlayMode.PLAYING;
-            // this.EOF_MODE = EOFMode.LOOP;
-            // this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-            // this.decoder.start();
-    
-            // currentTextureId = decoder.getCurrentVideoTextureId();
-            // TexReflection.setTexObjId(planetTexObj, currentTextureId);
-            // return;
-        // }
-
-        this.MODE = PlayMode.PLAYING;
-        this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
-        this.decoder.startFrom(startPts);
-
-        currentTextureId = decoder.getCurrentVideoTextureId();
-        TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
-    }
-
-
     
     @Override
     public void advance(float deltaTime) {
@@ -307,16 +196,21 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.texObjectMap.remove(ourPlanetTexObjId);
         VideoUtils.removeId(ourPlanetTexObjId);
 
+        ourPlanetSpec.getTags().remove(ourPlanetTexObjId);
+        originalPlanetSpec.getTags().addAll(ourPlanetSpec.getTags());
+
         planet.setSpec(originalPlanetSpec);
         if (campaignPlanet != null) {
             campaignPlanet.getMemory().unset(PLANET_PROJECTOR_MEM_KEY);
             TexReflection.setPlanetSpec(campaignPlanet, originalPlanetSpec);
         }
+
+        TexReflection.invalidateTokens(planet);
     }
 
     public void restart() {
         TexReflection.invalidateTokens(planet);
-        this.ourPlanetSpec.getTags().remove(ourPlanetTexObjId);
+
         this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
         this.ourPlanetSpec.addTag(ourPlanetTexObjId);
 
@@ -329,7 +223,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         }
         planet.setSpec(ourPlanetSpec);
 
-        this.decoder.startFrom(decoder.getCurrentVideoPts());
+        this.decoder.start(decoder.getCurrentVideoPts());
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
@@ -352,7 +246,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         Global.getSector().removeTransientScript(this);
     }
 
-    /** Pseudo enums for different planet texture fields - This is the last parameter for the PlanetProjector's constructor. They are populated in a static block in TexReflection*/
+    /** Pseudo enums for different planet texture fields - This is the last parameter for the PlanetProjector's constructor and what the projector replaces with video frames. They are populated in a static block in TexReflection*/
     public static class PlanetTexType {
         public static Object PLANET;
         public static Object CLOUD;
@@ -379,6 +273,10 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     public int getHeight() {
         return this.height;
+    }
+
+    public Planet getPlanet() {
+        return this.planet;
     }
 
     public PlanetAPI getCampaignPlanet() {
@@ -441,9 +339,13 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         return null;
     }
 
-    private Object[] getPossibleProjector(Planet planet) {
+    public VideoProjectorSpeakers getSpeakers() {
+        return null;
+    }
+
+    private PlanetProjector getPossibleProjector(Planet planet) {
         for (String tag : planet.getSpec().getTags()) {
-            if (tag.startsWith("vl")) return new Object[] {VideoUtils.getPlanetProjector(tag), tag};
+            if (tag.startsWith("vl")) return VideoUtils.getPlanetProjector(tag);
         }
         return null;
     }

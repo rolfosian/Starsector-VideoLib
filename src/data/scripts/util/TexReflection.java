@@ -21,7 +21,7 @@ import com.fs.graphics.util.GLListManager;
 import com.fs.graphics.util.GLListManager.GLListToken;
 
 import org.apache.log4j.Logger;
-import org.lwjgl.opengl.GL11;
+import org.lazywizard.console.Console;
 
 @SuppressWarnings("unchecked")
 public class TexReflection {
@@ -152,9 +152,12 @@ public class TexReflection {
 
     public static Object campaignPlanetGraphicsField;
     public static Object campaignPlanetSpecField;
+
     public static Object texClassCtor;
     public static Object texObjectIdField;
     public static Object texObjectGLBindField;
+
+    /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
     
     static {
@@ -404,7 +407,7 @@ public class TexReflection {
         }
     }
 
-    public static void logTexObjBindType(String name, Object field, PlanetAPI campaignPlanet) {
+    public static void logTexObjBindType(String typeName, Object field, PlanetAPI campaignPlanet) {
         Planet planet = getPlanetFromCampaignPlanet(campaignPlanet);
 
         try {
@@ -412,7 +415,8 @@ public class TexReflection {
             if (texObj == null) return;
 
             int bindType = (int) getFieldHandle.invoke(texObjectGLBindField, texObj);
-            print("BindType for", name+":", bindType);
+            Console.showMessage("BindType for " + campaignPlanet.getName() + " " + typeName+":" + " " + String.valueOf(bindType));
+            print("BindType for", campaignPlanet.getName(), typeName+":", bindType);
 
         } catch (Throwable e) {
             print(e);
@@ -420,7 +424,7 @@ public class TexReflection {
     }
     
     // runcode import data.scripts.util.TexReflection; TexReflection.logTexObjBindTypes(); 
-    // All return GL11.GL_TEXTURE_2D
+    // All return GL11.GL_TEXTURE_2D afaik
     public static void logTexObjBindTypes() {
         for (PlanetAPI campaignPlanet : Global.getSector().getPlayerFleet().getContainingLocation().getPlanets()) {
             TexReflection.logTexObjBindType("planet tex", PlanetTexType.PLANET, campaignPlanet);

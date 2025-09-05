@@ -5,6 +5,7 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.buffers.TextureBuffer;;
 
 public interface Decoder {
+    public long getFFmpegPipePtr();
     public int getErrorStatus();
     public void seek(long targetUs);
     
@@ -20,18 +21,16 @@ public interface Decoder {
 
     public int getSampleRate();
     public int getAudioChannels();
-    public long getFFmpegPipePtr();
-
+    
     public PlayMode getPlayMode();
     public void setPlayMode(PlayMode mode);
 
     public EOFMode getEOFMode();
     public void setEOFMode(EOFMode mode);
 
-    public void start();
-    public void startFrom(long pts);
+    public void start(long startUs);
     public void stop();
-    public void restart();
+    public void restart(long startUs);
     public void finish();
 
     public void setWidth(int width);

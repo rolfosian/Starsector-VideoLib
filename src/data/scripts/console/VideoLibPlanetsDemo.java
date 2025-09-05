@@ -44,7 +44,7 @@ public class VideoLibPlanetsDemo implements BaseCommand {
         List<PlanetProjector> projectors = new ArrayList<>();
         
         for (PlanetAPI planet : playerLoc.getPlanets()) {
-            PlanetProjector projector = new PlanetProjector(planet, fileId, videoWidth, videoHeight, PlanetTexType.SHIELD2);
+            PlanetProjector projector = new PlanetProjector(planet, fileId, videoWidth, videoHeight, 0, PlanetTexType.SHIELD2);
 
             Global.getSector().addTransientScript(projector);
             projectors.add(projector);

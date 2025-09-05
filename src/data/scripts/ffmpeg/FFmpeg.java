@@ -157,11 +157,11 @@ public class FFmpeg {
     public static native void closePipe(long ptr);
 
     // raw rgb frames with no sound
-    public static native long openPipeNoSound(String filename, int width, int height, int startFrame);
+    public static native long openPipeNoSound(String filename, int width, int height, long startUs);
     public static native VideoFrame readFrameNoSound(long ptr);
 
     // with sound
-    public static native long openPipe(String fileName, int width, int height, int startFrame);
+    public static native long openPipe(String fileName, int width, int height, long startUs);
     public static native Frame read(long ptr);
 
     public static native int getAudioSampleRate(long ptr);
