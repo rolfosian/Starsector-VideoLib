@@ -50,7 +50,7 @@ public class VideoPaths {
                     map.put(fileId, modPath + "/" + relativePath);
                     keyz.add(fileId);
 
-                    logger.info("Resolved absolute path for video file id " + fileId + " at [" + modPath + "/" + relativePath + "]");
+                    logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
                 }
             }
 
