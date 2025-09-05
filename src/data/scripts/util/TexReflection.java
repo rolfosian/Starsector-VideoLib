@@ -292,7 +292,6 @@ public class TexReflection {
                 }
             }
 
-            outer:
             for (Class<?> cls : getAllObfClasses("fs.common_obf.jar")) {
                 Object[] fields = cls.getDeclaredFields();
                 if (!(fields.length == 4)) continue;
@@ -324,7 +323,7 @@ public class TexReflection {
                 if (booleanMatch && mapMatch && loggerMatch && textureLoaderMatch) {
                     setFieldAccessibleHandle.invoke(mapField, true);
                     texObjectMap = (Map<String, Object>) getFieldHandle.invoke(mapField, null);
-                    break outer;
+                    break;
                 }
             }
 
