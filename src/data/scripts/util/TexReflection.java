@@ -60,10 +60,6 @@ public class TexReflection {
         }
     }
 
-    static {
-
-    }
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final Class<?> fieldClass;
@@ -405,6 +401,34 @@ public class TexReflection {
             return constructorNewInstanceHandle.invoke(texClassCtor, glBindType, texId);
         } catch (Throwable e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void logTexObjBindType(String name, Object field, PlanetAPI campaignPlanet) {
+        Planet planet = getPlanetFromCampaignPlanet(campaignPlanet);
+
+        try {
+            Object texObj = getFieldHandle.invoke(field, planet);
+            if (texObj == null) return;
+
+            int bindType = (int) getFieldHandle.invoke(texObjectGLBindField, texObj);
+            print("BindType for", name+":", bindType);
+
+        } catch (Throwable e) {
+            print(e);
+        }
+    }
+    
+    // runcode import data.scripts.util.TexReflection; TexReflection.logTexObjBindTypes(); 
+    // All return GL11.GL_TEXTURE_2D
+    public static void logTexObjBindTypes() {
+        for (PlanetAPI campaignPlanet : Global.getSector().getPlayerFleet().getContainingLocation().getPlanets()) {
+            TexReflection.logTexObjBindType("planet tex", PlanetTexType.PLANET, campaignPlanet);
+            TexReflection.logTexObjBindType("cloud tex", PlanetTexType.CLOUD, campaignPlanet);
+            TexReflection.logTexObjBindType("atmosphere tex", PlanetTexType.ATMOSPHERE, campaignPlanet);
+            TexReflection.logTexObjBindType("glow tex", PlanetTexType.GLOW, campaignPlanet);
+            TexReflection.logTexObjBindType("shield tex", PlanetTexType.SHIELD, campaignPlanet);
+            TexReflection.logTexObjBindType("shield2 tex", PlanetTexType.SHIELD2, campaignPlanet);
         }
     }
 
