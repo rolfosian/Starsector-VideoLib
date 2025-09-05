@@ -5,6 +5,7 @@ import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.PlanetAPI;
 
 // import data.scripts.buffers.OverlayingTextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
@@ -47,7 +48,19 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void afterGameSave() {
         for (PlanetProjector projector : planetProjectors) {
-            projector.restart();
+            if (projector.getCampaignPlanet() != null) {
+                PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
+                Global.getSector().addTransientScript(
+                    new PlanetProjector(target, projector.getVideoId(),
+                        projector.getDecoder().getCurrentVideoPts(),
+                        projector.getWidth(), projector.getHeight(), 
+                        projector.getTexType())
+                );
+                
+            } else {
+                projector.restart();
+            }
+
         }
         planetProjectors.clear();
     }
@@ -55,6 +68,18 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
+        for (PlanetProjector projector : new ArrayList<>(VideoUtils.getPlanetProjectors())) {
+            projector.finish();
+
+            PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
+
+            Global.getSector().addTransientScript(
+                new PlanetProjector(target, projector.getVideoId(),
+                    projector.getDecoder().getCurrentVideoPts(),
+                    projector.getWidth(), projector.getHeight(), 
+                    projector.getTexType())
+            );
+        }
     }
 
     public static Thread getMainThread() {

@@ -15,5 +15,8 @@ public interface Projector {
     public void finish();
     public Decoder getDecoder();
 
+    public int getWidth();
+    public int getHeight();
+
     public PlayerControlPanel getControlPanel();
 }

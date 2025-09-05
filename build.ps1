@@ -54,7 +54,7 @@ $javacArgs = @(
     "-target", "17"
     "-cp", $classpath
     "-d", $buildDir
-    # "-Xlint:deprecation"
+    "-Xlint:deprecation"
     $sourceFiles.FullName
 )
 
