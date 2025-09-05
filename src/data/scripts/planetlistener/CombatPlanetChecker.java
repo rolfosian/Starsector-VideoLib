@@ -39,7 +39,9 @@ public class CombatPlanetChecker implements EveryFrameCombatPlugin {
         engine = (CombatEngine) arg0;
     }
 
-    @Override
+    @Override /*  TODO: This requires optimization. PlanetProjectors are EveryFrameScript implementations - they do not run in combat. Also, the planet objects (and their specs) being rendered in combat
+    are *clones* of their originals. When the planets and their specs are cloned only the spec's tags are carried over, the planet's customData map is not. Therefore we cannot map directly to the projectors
+    and have to do this abhorrent iteration. Also, in case a new projector is instantiated during combat, we need to keep iterating like this.*/
     public void advance(float arg0, List<InputEventAPI> arg1) {
         if (Global.getCurrentState() != GameState.COMBAT || engine.isPaused()) return;
         planetSet.addAll(engine.getObjects().getList(Planet.class));
