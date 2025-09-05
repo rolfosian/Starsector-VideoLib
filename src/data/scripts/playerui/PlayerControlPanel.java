@@ -181,7 +181,7 @@ public class PlayerControlPanel {
         this.seekBarPlugin = new SeekBarPlugin();
         this.seekBarPanel = Global.getSettings().createCustom(width - 10, BTN_SIZE, this.seekBarPlugin);
         
-        this.controlPanel.addComponent(seekBarPanel).inTL(10f, 0f);
+        this.controlPanel.addComponent(seekBarPanel).inTL(0f, 0f);
 
         // if (withSound) {
 
