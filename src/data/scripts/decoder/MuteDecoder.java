@@ -47,7 +47,6 @@ public class MuteDecoder implements Decoder {
 
     private int currentVideoTextureId = 0;
     private long currentVideoPts = 0;
-    private long seekedTo = 0;
 
     public final Projector videoProjector;
 
