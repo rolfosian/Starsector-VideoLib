@@ -27,10 +27,13 @@ public class PlanetProjectorListener extends BaseCampaignEventListener {
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         SectorEntityToken target = dialog.getInteractionTarget();
         if (target == null) return;
+
         MemoryAPI mem = target.getMemoryWithoutUpdate();
         if (mem == null) return;
+
         projector = (PlanetProjector) mem.get(PlanetProjector.PLANET_PROJECTOR_MEM_KEY);
         if (projector == null) return;
+        
         projector.setRunWhilePaused(true);
     }
     
