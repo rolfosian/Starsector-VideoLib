@@ -224,6 +224,37 @@ public class MuteDecoder implements Decoder {
         return textureBuffer;
     }
 
+    public TextureBuffer startFrom(long target) {
+        if (running) return null;
+        print("Starting NoSoundDecoder for file", videoFilePath);
+        running = true;
+
+        pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, 0);
+        print("Opened FFmpeg pipe, ptr =", pipePtr);
+
+        if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
+
+        videoDurationSeconds = FFmpeg.getDurationSeconds(pipePtr);
+        videoDurationUs = FFmpeg.getDurationUs(pipePtr);
+
+        videoFps = FFmpeg.getVideoFps(pipePtr);
+        spf = 1 / videoFps;
+        print("Video Framerate =", videoFps);
+        print("Video Duration=", videoDurationSeconds);
+        print("Video DurationUs=", videoDurationUs);
+
+        decodeThread = new Thread(this::decodeLoop, "NoSoundDecoder");
+        decodeThread.start();
+        print("NoSoundDecoder decoderLoop thread started");
+        seek(target);
+        
+        while(textureBuffer.isEmpty()) sleep(1);
+        synchronized(textureBuffer) {
+            textureBuffer.convertFront(width, height);
+        }
+        return textureBuffer;
+    }
+
     public void finish() {
         print("Stopping NoSoundDecoder decoderLoop thread");
         running = false;

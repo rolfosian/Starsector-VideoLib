@@ -1,5 +1,6 @@
 package data.scripts;
 
+import java.util.*;
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
@@ -8,7 +9,9 @@ import com.fs.starfarer.api.Global;
 // import data.scripts.buffers.OverlayingTextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.planetlistener.PlanetProjectorListener;
+import data.scripts.projector.PlanetProjector;
 import data.scripts.util.TexReflection;
+import data.scripts.util.VideoUtils;
 
 public class VideoLibModPlugin extends BaseModPlugin {
     public static final Logger logger = Global.getLogger(VideoLibModPlugin.class);
@@ -31,6 +34,22 @@ public class VideoLibModPlugin extends BaseModPlugin {
         VideoPaths.populate();
         mainThread = Thread.currentThread();
 
+    }
+
+    private static List<PlanetProjector> planetProjectors = new ArrayList<>();
+
+    @Override
+    public void beforeGameSave() {
+        for (PlanetProjector projector : VideoUtils.getPlanetProjectors()) planetProjectors.add(projector);
+        for (PlanetProjector projector : planetProjectors) projector.finish();
+    }
+
+    @Override
+    public void afterGameSave() {
+        for (PlanetProjector projector : planetProjectors) {
+            projector.restart();
+        }
+        planetProjectors.clear();
     }
 
     @Override

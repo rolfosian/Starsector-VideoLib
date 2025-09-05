@@ -85,7 +85,7 @@ public class VideoUtils {
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final Map<String, PlanetProjector> videoLibPlanetTexIds = new HashMap<>();
 
-    public static String generateRandomId(PlanetProjector projector) {
+    public static String generateRandomPlanetProjectorId(PlanetProjector projector) {
         StringBuilder sb = new StringBuilder(6);
         
         for (int i = 0; i < 6; i++) {
@@ -94,7 +94,7 @@ public class VideoUtils {
         }
         String result = "vl_" + sb.toString();
 
-        if (videoLibPlanetTexIds.containsKey(result)) return generateRandomId(projector);
+        if (videoLibPlanetTexIds.containsKey(result)) return generateRandomPlanetProjectorId(projector);
         videoLibPlanetTexIds.put(result, projector);
 
         return result;
@@ -106,5 +106,9 @@ public class VideoUtils {
 
     public static PlanetProjector getPlanetProjector(String id) {
         return videoLibPlanetTexIds.get(id);
+    }
+
+    public static Collection<PlanetProjector> getPlanetProjectors() {
+        return videoLibPlanetTexIds.values();
     }
 }

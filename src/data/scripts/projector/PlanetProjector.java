@@ -81,7 +81,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomId(this);
+        this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
         this.ourPlanetSpec.addTag(ourPlanetTexObjId);
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
@@ -132,14 +132,14 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
-        this.ourPlanetTexObjId = VideoUtils.generateRandomId(this);
+        this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
         this.ourPlanetSpec.addTag(ourPlanetTexObjId);
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
         TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
 
-        TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
+        // TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
         planet.setSpec(ourPlanetSpec);
 
         this.videoFilePath = VideoPaths.get(videoId);
@@ -193,6 +193,28 @@ public class PlanetProjector implements EveryFrameScript, Projector {
             campaignPlanet.getMemory().unset(PLANET_PROJECTOR_MEM_KEY);
             TexReflection.setPlanetSpec(campaignPlanet, originalPlanetSpec);
         }
+    }
+
+    public void restart() {
+        this.ourPlanetSpec.getTags().remove(ourPlanetTexObjId);
+        this.ourPlanetTexObjId = VideoUtils.generateRandomPlanetProjectorId(this);
+        this.ourPlanetSpec.addTag(ourPlanetTexObjId);
+
+        TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
+        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
+
+        if (campaignPlanet != null) {
+            TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
+        }
+        planet.setSpec(ourPlanetSpec);
+
+        this.decoder.startFrom(decoder.getCurrentVideoPts());
+
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
+
+        isDone = false;
+        Global.getSector().addTransientScript(this);
     }
 
     @Override

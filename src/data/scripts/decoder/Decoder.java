@@ -26,6 +26,7 @@ public interface Decoder {
 
     public int getErrorStatus();
     public TextureBuffer start();
+    public TextureBuffer startFrom(long pts);
     public void stop();
     public void restart();
     public void finish();
