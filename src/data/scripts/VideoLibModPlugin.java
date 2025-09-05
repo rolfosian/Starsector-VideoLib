@@ -50,10 +50,11 @@ public class VideoLibModPlugin extends BaseModPlugin {
         for (PlanetProjector projector : planetProjectors) {
             if (projector.getCampaignPlanet() != null) {
                 PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
+
                 Global.getSector().addTransientScript(
                     new PlanetProjector(target, projector.getVideoId(),
+                        projector.getWidth(), projector.getHeight(),
                         projector.getDecoder().getCurrentVideoPts(),
-                        projector.getWidth(), projector.getHeight(), 
                         projector.getTexType())
                 );
                 
@@ -68,20 +69,25 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
-        for (PlanetProjector projector : new ArrayList<>(VideoUtils.getPlanetProjectors())) {
-            projector.finish();
+        Collection<PlanetProjector> projectors = VideoUtils.getPlanetProjectors();
 
-            if (projector.getCampaignPlanet() != null) {
-                PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
-
-                Global.getSector().addTransientScript(
-                    new PlanetProjector(target, projector.getVideoId(),
-                        projector.getDecoder().getCurrentVideoPts(),
-                        projector.getWidth(), projector.getHeight(), 
-                        projector.getTexType())
-                );
+        if (!projectors.isEmpty()) {
+            for (PlanetProjector projector : new ArrayList<>(projectors)) {
+                projector.finish();
+    
+                if (projector.getCampaignPlanet() != null) {
+                    PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
+    
+                    Global.getSector().addTransientScript(
+                        new PlanetProjector(target, projector.getVideoId(),
+                            projector.getWidth(), projector.getHeight(),
+                            projector.getDecoder().getCurrentVideoPts(),
+                            projector.getTexType())
+                    );
+                }
             }
         }
+
     }
 
     public static Thread getMainThread() {
