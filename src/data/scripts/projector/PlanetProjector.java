@@ -204,6 +204,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
 
         if (campaignPlanet != null) {
+            campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
             TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
         }
         planet.setSpec(ourPlanetSpec);
