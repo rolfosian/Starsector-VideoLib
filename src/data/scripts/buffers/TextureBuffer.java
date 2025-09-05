@@ -157,7 +157,7 @@ public class TextureBuffer {
         tail = 0;
     }
 
-       // this can only be called on hte main thread as we need to render these textures on the main thread and also GL11 is not thread safe
+    // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
     private int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
         if (frameBuffer == null) return -1;
         int textureId = GL11.glGenTextures();
