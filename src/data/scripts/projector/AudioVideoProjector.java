@@ -14,17 +14,19 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.VideoPaths;
 
 import data.scripts.decoder.Decoder;
-import data.scripts.decoder.MuteDecoder;
+import data.scripts.decoder.DecoderWithSound;
+
+import data.scripts.speakers.Speakers;
+import data.scripts.speakers.VideoProjectorSpeakers;
 
 import data.scripts.playerui.PlayerControlPanel;
-import data.scripts.speakers.VideoProjectorSpeakers;
+
 import data.scripts.buffers.TextureBuffer;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL15;
 
-public class MuteVideoProjector extends VideoProjector {
+public class AudioVideoProjector extends VideoProjector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
@@ -43,7 +45,8 @@ public class MuteVideoProjector extends VideoProjector {
     private EOFMode EOF_MODE;
 
     private CustomPanelAPI panel;
-    private MuteDecoder decoder;
+    private DecoderWithSound decoder;
+    private Speakers speakers;
     private PlayerControlPanel controlPanel = null;
 
     // private final int vboId;
@@ -66,7 +69,7 @@ public class MuteVideoProjector extends VideoProjector {
     private float topBound;
     private float bottomBound;
 
-    public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         this.videoFilePath = VideoPaths.get(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
@@ -74,11 +77,11 @@ public class MuteVideoProjector extends VideoProjector {
         this.width = width;
         this.height = height;
 
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath,  width, height, startingPlayMode, startingEOFMode);
-        this.decoder.start(0);
+        this.speakers = new VideoProjectorSpeakers(this, decoder, volume); 
 
-        // this.vboId = textureBuffer.getVboId();
-        // this.quadBuffer = textureBuffer.getQuadBuffer();
+        this.decoder = new DecoderWithSound(this, speakers, new TextureBuffer(60), videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
+        this.decoder.start(0);
+        
 
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
@@ -218,42 +221,6 @@ public class MuteVideoProjector extends VideoProjector {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
-
-        // GL11.glEnable(GL11.GL_TEXTURE_2D);
-        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
-    
-        // GL11.glEnable(GL11.GL_BLEND);
-        // GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        // GL11.glColor4f(1f, 1f, 1f, alphaMult);
-    
-        // quadBuffer.clear();
-        // quadBuffer.put(new float[] {
-        //     x, y + height, 0f, 0f,         // top-left
-        //     x + width, y + height, 1f, 0f, // top-right
-        //     x + width, y, 1f, 1f,          // bottom-right
-        //     x, y, 0f, 1f                   // bottom-left
-        // });
-        // quadBuffer.flip();
-    
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
-        // GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, quadBuffer);
-    
-        // GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-        // GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-    
-        // GL11.glVertexPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 0);
-        // GL11.glTexCoordPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 2 * Float.BYTES);
-    
-        // GL11.glDrawArrays(GL11.GL_QUADS, 0, 4);
-    
-        // GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-        // GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-    
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
-        // GL11.glColor4f(1f, 1f, 1f, 1f);
-        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-        // GL11.glDisable(GL11.GL_BLEND);
-        // GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
     public void pause() {
@@ -303,6 +270,10 @@ public class MuteVideoProjector extends VideoProjector {
 
     public Decoder getDecoder() {
         return this.decoder;
+    }
+
+    public Speakers getSpeakers() {
+        return this.speakers;
     }
 
     public boolean paused() {
@@ -357,9 +328,5 @@ public class MuteVideoProjector extends VideoProjector {
 
     public boolean isRendering() {
         return this.isRendering;
-    }
-
-    public VideoProjectorSpeakers getSpeakers() {
-        return null;
     }
 }

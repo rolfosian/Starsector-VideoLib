@@ -1,7 +1,8 @@
-package data.scripts.projector;
+package data.scripts.speakers;
 
 import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
+import data.scripts.projector.Projector;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL10;
@@ -14,9 +15,10 @@ import org.apache.log4j.Logger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.util.*;
 
-public class ProjectorSpeakers {
-    private static final Logger logger = Logger.getLogger(ProjectorSpeakers.class);
+public class VideoProjectorSpeakers implements Speakers {
+    private static final Logger logger = Logger.getLogger(VideoProjectorSpeakers.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < args.length; i++) {
@@ -36,19 +38,20 @@ public class ProjectorSpeakers {
     private int channels;
     private int format;
 
-    private AudioFrame currentFrame;
-
     private ALCdevice device;
     private ALCcontext context;
     private int sourceId;
     private IntBuffer bufferIds;
 
-    public ProjectorSpeakers(Projector videoProjector, Decoder decoder, float volume) {
-        if (true) throw new UnsupportedOperationException("UNIMPLEMENTED");
-        this.videoProjector = videoProjector;
+    private final Map<Integer, AudioFrame> bufferToFrame = new HashMap<>();
+    private final Queue<AudioFrame> playingFrames = new ArrayDeque<>();
+
+    public VideoProjectorSpeakers(Projector videoProjector, Decoder decoder, float volume) {
         this.decoder = decoder;
         this.volume = volume;
 
+        this.channels = decoder.getAudioChannels();
+        this.sampleRate = decoder.getSampleRate();
         this.format = (channels == 1) ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16;
 
         initOpenAL();
@@ -68,31 +71,30 @@ public class ProjectorSpeakers {
     }
 
     public long advance(AudioFrame frame) {
-        if (frame == null) return 0;
-
         int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
         while (processed-- > 0) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
-            if (queueNextChunk(bufferId, frame)) {
-                AL10.alSourceQueueBuffers(sourceId, bufferId);
+            AudioFrame done = bufferToFrame.remove(bufferId);
+            if (done != null) {
+                playingFrames.remove(done);
             }
         }
 
+        if (frame != null) {
+            int bufferId = AL10.alGenBuffers();
+            AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
+            bufferToFrame.put(bufferId, frame);
+            playingFrames.add(frame);
+            AL10.alSourceQueueBuffers(sourceId, bufferId);
+        }
+
         int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
-        if (state != AL10.AL_PLAYING) {
+        if (state != AL10.AL_PLAYING && !paused) {
             AL10.alSourcePlay(sourceId);
         }
 
-        return currentFrame.pts; // return currently playing frame pts for decoder audio clock
-    }
-
-    private boolean queueNextChunk(int bufferId, AudioFrame frame) {
-        if (frame == null) return false;
-
-        currentFrame = frame;
-
-        AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
-        return true;
+        AudioFrame current = playingFrames.peek();
+        return current != null ? current.pts : 0;
     }
 
     public void start() {
@@ -101,7 +103,6 @@ public class ProjectorSpeakers {
         this.sampleRate = decoder.getSampleRate();
         this.channels = decoder.getAudioChannels();
 
-        // prime buffer
         AL10.alBufferData(bufferIds.get(0), format, generateSilentBuffer(0.001f), sampleRate);
         AL10.alSourceQueueBuffers(sourceId, bufferIds);
 
@@ -124,11 +125,12 @@ public class ProjectorSpeakers {
         paused = true;
         AL10.alSourceStop(sourceId);
 
-        // Unqueue all buffers
         int queued;
         while ((queued = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_QUEUED)) > 0) {
-            AL10.alSourceUnqueueBuffers(sourceId);
+            int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
+            bufferToFrame.remove(bufferId);
         }
+        playingFrames.clear();
     }
 
     public void restart() {
@@ -149,11 +151,13 @@ public class ProjectorSpeakers {
         stop();
         AL10.alDeleteSources(sourceId);
         AL10.alDeleteBuffers(bufferIds);
+        bufferToFrame.clear();
+        playingFrames.clear();
     }
 
     private ByteBuffer generateSilentBuffer(float durationSeconds) {
         int totalSamples = (int) (sampleRate * durationSeconds);
-        int bytesPerSample = 2; // 16-bit PCM
+        int bytesPerSample = 2;
         ByteBuffer buffer = ByteBuffer.allocateDirect(totalSamples * channels * bytesPerSample);
         buffer.order(ByteOrder.nativeOrder());
 
@@ -178,5 +182,10 @@ public class ProjectorSpeakers {
     
         buffer.flip();
         return buffer;
+    }
+
+    @Override
+    public Decoder getDecoder() {
+        return this.decoder;
     }
 }

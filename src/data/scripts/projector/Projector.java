@@ -1,6 +1,7 @@
 package data.scripts.projector;
 
 import data.scripts.decoder.Decoder;
+import data.scripts.speakers.Speakers;
 import data.scripts.playerui.PlayerControlPanel;
 
 public interface Projector {
@@ -18,5 +19,6 @@ public interface Projector {
     public int getWidth();
     public int getHeight();
 
+    public Speakers getSpeakers();
     public PlayerControlPanel getControlPanel();
 }

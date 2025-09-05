@@ -1,4 +1,4 @@
-package data.scripts.buffers.unused;
+package data.scripts.buffers;
 
 import java.util.*;
 
@@ -44,7 +44,7 @@ public class AudioFrameBuffer {
 
     public int size() { return count; }
 
-    public boolean full() {
+    public boolean isFull() {
         return count == capacity;
     }
 }
