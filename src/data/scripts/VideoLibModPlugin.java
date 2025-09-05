@@ -71,14 +71,16 @@ public class VideoLibModPlugin extends BaseModPlugin {
         for (PlanetProjector projector : new ArrayList<>(VideoUtils.getPlanetProjectors())) {
             projector.finish();
 
-            PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
+            if (projector.getCampaignPlanet() != null) {
+                PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
 
-            Global.getSector().addTransientScript(
-                new PlanetProjector(target, projector.getVideoId(),
-                    projector.getDecoder().getCurrentVideoPts(),
-                    projector.getWidth(), projector.getHeight(), 
-                    projector.getTexType())
-            );
+                Global.getSector().addTransientScript(
+                    new PlanetProjector(target, projector.getVideoId(),
+                        projector.getDecoder().getCurrentVideoPts(),
+                        projector.getWidth(), projector.getHeight(), 
+                        projector.getTexType())
+                );
+            }
         }
     }
 
