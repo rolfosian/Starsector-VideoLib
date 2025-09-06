@@ -12,6 +12,12 @@
 #include <libavutil/channel_layout.h>
 #include <libavutil/audio_fifo.h>
 #include <pthread.h>
+#include <sys/stat.h>
+
+int test_path(const char *path) {
+    struct stat sb;
+    return stat(path, &sb) == 0; // 1 if exists, 0 if not
+}
 
 static jclass VideoFrameClass;
 static jmethodID VideoFrameClassCtor;
@@ -68,6 +74,14 @@ typedef struct {
 
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
+
+    if (!test_path(filename)) {
+        char error_msg[512];
+        snprintf(error_msg, sizeof(error_msg), "openImage: file does not exist: %s", filename);
+        printe(env, error_msg);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
 
     AVFormatContext *fmt_ctx = NULL;
     AVCodecContext *codec_ctx = NULL;
@@ -447,6 +461,14 @@ typedef struct {
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
+    if (!test_path(filename)) {
+        char error_msg[512];
+        snprintf(error_msg, sizeof(error_msg), "openPipeNoSound: file does not exist: %s", filename);
+        printe(env, error_msg);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
+
     AVFormatContext *fmt_ctx = NULL;
     if (avformat_open_input(&fmt_ctx, filename, NULL, NULL) < 0) {
         printe(env, "openPipeNoSound: failed to open input");
@@ -798,6 +820,14 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz,
     jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
+
+    if (!test_path(filename)) {
+        char error_msg[512];
+        snprintf(error_msg, sizeof(error_msg), "openPipe: file does not exist: %s", filename);
+        printe(env, error_msg);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
 
     AVFormatContext *fmt_ctx = NULL;
     if (avformat_open_input(&fmt_ctx, filename, NULL, NULL) < 0) {
