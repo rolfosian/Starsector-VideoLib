@@ -8,13 +8,17 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
+import data.scripts.playerui.AudioVideoPlayer;
 import data.scripts.playerui.MuteVideoPlayer;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.playerui.PlayerPanelPlugin;
 import data.scripts.playerui.MuteVideoPlayerWithControls;
+import data.scripts.playerui.AudioVideoPlayerWithControls;
 
+import data.scripts.projector.AudioVideoProjector;
 import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
+import data.scripts.speakers.Speakers;
 
 import java.awt.Color;
 import java.util.*;
@@ -41,8 +45,8 @@ public class VideoPlayerFactory {
         CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
-        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, false);
-        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight); //(0f);//(projectorPanel, 0f);
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, null);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
 
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
@@ -56,7 +60,7 @@ public class VideoPlayerFactory {
         CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
-        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, false, textColor, bgButtonColor);
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, null, textColor, bgButtonColor);
         masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
 
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
@@ -67,5 +71,44 @@ public class VideoPlayerFactory {
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         
         return new MuteVideoPlayer(projectorPanel, projectorPlugin);
+    }
+
+    public static AudioVideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
+
+        return new AudioVideoPlayer(projectorPanel, projectorPlugin);
+    }
+
+    public static AudioVideoPlayerWithControls createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
+        Speakers speakers = projectorPlugin.getSpeakers();
+
+        int controlsHeight = 70;
+        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
+
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, speakers);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+
+        return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
+    }
+
+    public static AudioVideoPlayerWithControls createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, Color textColor, Color bgButtonColor) {
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+        CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
+        Speakers speakers = projectorPlugin.getSpeakers();
+
+        int controlsHeight = 70;
+        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
+
+        PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, speakers, textColor, bgButtonColor);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+
+        return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
     }
 }

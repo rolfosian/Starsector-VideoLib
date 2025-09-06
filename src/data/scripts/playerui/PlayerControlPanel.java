@@ -14,6 +14,7 @@ import com.fs.starfarer.api.util.Misc;
 
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.projector.VideoProjector;
+import data.scripts.speakers.Speakers;
 import data.scripts.util.VideoUtils;
 
 import java.awt.Color;
@@ -48,8 +49,9 @@ public class PlayerControlPanel {
     private TooltipMakerAPI seekBarTt;
     private ButtonAPI seekButton;
 
-    // private CustomPanelAPI volumePanel;
-    // private VolumePlugin volumePlugin;
+    private Speakers speakers;
+    private CustomPanelAPI volumePanel;
+    private VolumePlugin volumePlugin;
 
     CustomPanelAPI playPauseStopPanel;
     TooltipMakerAPI playPauseStopHolder;
@@ -68,7 +70,7 @@ public class PlayerControlPanel {
         seekBarPlugin.init(seekBarPanel.getPosition());
     }
 
-    public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound, Color textColor, Color buttonBgColor) {
+    public PlayerControlPanel(VideoProjector projector, int width, int height, Speakers speakers, Color textColor, Color buttonBgColor) {
         this.projector = projector;
         this.playerControls = new PlayerControls();
         this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
@@ -123,12 +125,12 @@ public class PlayerControlPanel {
         
         this.controlPanel.addComponent(seekBarPanel).inTL(10f, 0f);
 
-        // if (withSound) {
-
-        // }
+        if (speakers != null) {
+            this.speakers = speakers;
+        }
     }
 
-    public PlayerControlPanel(VideoProjector projector, int width, int height, boolean withSound) {
+    public PlayerControlPanel(VideoProjector projector, int width, int height, Speakers speakers) {
         this.projector = projector;
         this.playerControls = new PlayerControls();
         this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
@@ -183,9 +185,9 @@ public class PlayerControlPanel {
         
         this.controlPanel.addComponent(seekBarPanel).inTL(0f, 0f);
 
-        // if (withSound) {
+        if (speakers != null) {
 
-        // }
+        }
     }
 
     public void play() {

@@ -77,11 +77,12 @@ public class AudioVideoProjector extends VideoProjector {
         this.width = width;
         this.height = height;
 
-        this.speakers = new VideoProjectorSpeakers(this, decoder, volume); 
-
-        this.decoder = new DecoderWithSound(this, speakers, new TextureBuffer(60), videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
+        this.decoder = new DecoderWithSound(this, new TextureBuffer(60), videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
         
+        this.speakers = new VideoProjectorSpeakers(this, decoder, volume); 
+        this.decoder.setSpeakers(speakers);
+        this.speakers.start();
 
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
@@ -225,19 +226,23 @@ public class AudioVideoProjector extends VideoProjector {
 
     public void pause() {
         paused = true;
+        speakers.pause();
         this.MODE = PlayMode.PAUSED;
     }
 
     public void unpause() {
         paused = false;
+        speakers.unpause();
     }
 
     public void play() {
         paused = false;
 
+        speakers.play();
         this.MODE = PlayMode.PLAYING;
         decoder.setEOFMode(this.EOF_MODE);
         isRendering = true;
+        
     }
 
     public void stop() {
@@ -245,6 +250,7 @@ public class AudioVideoProjector extends VideoProjector {
         paused = true;
 
         if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+        speakers.stop();
         decoder.stop();
         currentTextureId = decoder.getCurrentVideoTextureId();
         isRendering = false;
@@ -255,6 +261,7 @@ public class AudioVideoProjector extends VideoProjector {
             GL11.glDeleteTextures(currentTextureId);
             currentTextureId = 0;
         }
+        speakers.restart();
     }
 
     public void finish() {
@@ -265,6 +272,7 @@ public class AudioVideoProjector extends VideoProjector {
             currentTextureId = 0;
         }
 
+        speakers.finish();
         decoder.finish();
 	}
 

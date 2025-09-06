@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import data.scripts.decoder.Decoder;
 import data.scripts.projector.VideoProjector;
+import data.scripts.speakers.Speakers;
 
 public interface VideoPlayer {
     public PositionAPI addTo(UIPanelAPI parent);
@@ -14,6 +15,7 @@ public interface VideoPlayer {
     public CustomPanelAPI getMasterPanel();
     public CustomPanelAPI getProjectorPanel();
     public VideoProjector getProjector();
+    public Speakers getSpeakers();
     public Decoder getDecoder();
 
     public void setClickToPause(boolean clickToPause);

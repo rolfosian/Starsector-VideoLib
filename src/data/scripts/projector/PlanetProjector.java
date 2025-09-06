@@ -197,7 +197,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         VideoUtils.removeId(ourPlanetTexObjId);
 
         ourPlanetSpec.getTags().remove(ourPlanetTexObjId);
-        originalPlanetSpec.getTags().addAll(ourPlanetSpec.getTags());
+        originalPlanetSpec.getTags().addAll(ourPlanetSpec.getTags()); // in case a tag was added while this projector was active. this is a set so we don't need to worry about duplication
 
         planet.setSpec(originalPlanetSpec);
         if (campaignPlanet != null) {

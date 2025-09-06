@@ -5,6 +5,7 @@ import data.scripts.ffmpeg.AudioFrame;
 import data.scripts.projector.Projector;
 
 import org.lwjgl.BufferUtils;
+import org.lwjgl.openal.AL;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCcontext;
@@ -45,6 +46,7 @@ public class VideoProjectorSpeakers implements Speakers {
 
     private final Map<Integer, AudioFrame> bufferToFrame = new HashMap<>();
     private final Queue<AudioFrame> playingFrames = new ArrayDeque<>();
+    private final Queue<Integer> availableBuffers = new ArrayDeque<>();
 
     public VideoProjectorSpeakers(Projector videoProjector, Decoder decoder, float volume) {
         this.decoder = decoder;
@@ -64,8 +66,14 @@ public class VideoProjectorSpeakers implements Speakers {
 
         sourceId = AL10.alGenSources();
 
-        bufferIds = BufferUtils.createIntBuffer(1);
+        bufferIds = BufferUtils.createIntBuffer(12);
         AL10.alGenBuffers(bufferIds);
+        
+        // Initialize available buffers pool
+        availableBuffers.clear();
+        for (int i = 0; i < bufferIds.capacity(); i++) {
+            availableBuffers.offer(bufferIds.get(i));
+        }
 
         AL10.alSourcef(sourceId, AL10.AL_GAIN, volume);
     }
@@ -78,14 +86,53 @@ public class VideoProjectorSpeakers implements Speakers {
             if (done != null) {
                 playingFrames.remove(done);
             }
+            // Return buffer to available pool
+            availableBuffers.offer(bufferId);
         }
 
         if (frame != null) {
-            int bufferId = AL10.alGenBuffers();
-            AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
-            bufferToFrame.put(bufferId, frame);
-            playingFrames.add(frame);
-            AL10.alSourceQueueBuffers(sourceId, bufferId);
+            Integer bufferId = availableBuffers.poll();
+            if (bufferId != null) {
+                AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
+                bufferToFrame.put(bufferId, frame);
+                playingFrames.add(frame);
+                AL10.alSourceQueueBuffers(sourceId, bufferId);
+            }
+        }
+
+        int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
+        if (state != AL10.AL_PLAYING && !paused) {
+            AL10.alSourcePlay(sourceId);
+        }
+
+        AudioFrame current = playingFrames.peek();
+        return current != null ? current.pts : 0;
+    }
+
+    public long advance(AudioFrame[] frames) {
+        int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
+        while (processed-- > 0) {
+            int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
+            AudioFrame done = bufferToFrame.remove(bufferId);
+            if (done != null) {
+                playingFrames.remove(done);
+            }
+            // Return buffer to available pool
+            availableBuffers.offer(bufferId);
+        }
+
+        if (frames != null && frames.length > 0) {
+            for (AudioFrame frame : frames) {
+                if (frame != null) {
+                    Integer bufferId = availableBuffers.poll();
+                    if (bufferId != null) {
+                        AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
+                        bufferToFrame.put(bufferId, frame);
+                        playingFrames.add(frame);
+                        AL10.alSourceQueueBuffers(sourceId, bufferId);
+                    }
+                }
+            }
         }
 
         int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
@@ -103,12 +150,14 @@ public class VideoProjectorSpeakers implements Speakers {
         this.sampleRate = decoder.getSampleRate();
         this.channels = decoder.getAudioChannels();
 
-        AL10.alBufferData(bufferIds.get(0), format, generateSilentBuffer(0.001f), sampleRate);
-        AL10.alSourceQueueBuffers(sourceId, bufferIds);
-
         if (AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
             AL10.alSourcePlay(sourceId);
         }
+    }
+
+    public void play() {
+        paused = false;
+        AL10.alSourcePlay(sourceId);
     }
 
     public void pause() {
@@ -129,12 +178,14 @@ public class VideoProjectorSpeakers implements Speakers {
         while ((queued = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_QUEUED)) > 0) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
             bufferToFrame.remove(bufferId);
+            // Return buffer to available pool
+            availableBuffers.offer(bufferId);
         }
         playingFrames.clear();
     }
 
     public void restart() {
-        cleanup();
+        finish();
         initOpenAL();
         start();
     }
@@ -147,12 +198,13 @@ public class VideoProjectorSpeakers implements Speakers {
     public float getVolume() { return volume; }
     public void mute() { setVolume(0f); }
 
-    public void cleanup() {
+    public void finish() {
         stop();
         AL10.alDeleteSources(sourceId);
         AL10.alDeleteBuffers(bufferIds);
         bufferToFrame.clear();
         playingFrames.clear();
+        availableBuffers.clear();
     }
 
     private ByteBuffer generateSilentBuffer(float durationSeconds) {

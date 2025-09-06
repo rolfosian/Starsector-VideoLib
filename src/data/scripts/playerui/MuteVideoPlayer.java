@@ -7,6 +7,7 @@ import com.fs.starfarer.api.ui.UIPanelAPI;
 import data.scripts.VideoPaths;
 import data.scripts.decoder.Decoder;
 import data.scripts.projector.VideoProjector;
+import data.scripts.speakers.Speakers;
 
 public class MuteVideoPlayer implements VideoPlayer {
     private final CustomPanelAPI projectorPanel;
@@ -67,10 +68,14 @@ public class MuteVideoPlayer implements VideoPlayer {
     }
 
     public float getWidth() {
-        return (int) projectorPanel.getPosition().getWidth();
+        return projectorPanel.getPosition().getWidth();
     }
 
     public float getHeight() {
         return projectorPanel.getPosition().getHeight();
+    }
+
+    public Speakers getSpeakers() {
+        return null;
     }
 }

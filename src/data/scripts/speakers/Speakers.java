@@ -5,8 +5,10 @@ import data.scripts.ffmpeg.AudioFrame;
 
 public interface Speakers {
     public long advance(AudioFrame frame);
+    public long advance(AudioFrame[] frames);
     
     public void start();
+    public void play();
     public void stop();
     public void pause();
     public void unpause();
@@ -18,5 +20,5 @@ public interface Speakers {
 
     public Decoder getDecoder();
 
-    public void cleanup();
+    public void finish();
 }

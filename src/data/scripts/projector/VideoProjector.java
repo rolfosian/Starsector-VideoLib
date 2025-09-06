@@ -11,6 +11,7 @@ import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
 import data.scripts.playerui.PlayerControlPanel;
+import data.scripts.speakers.Speakers;
 
 public abstract class VideoProjector implements CustomUIPanelPlugin, Projector {
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
@@ -44,6 +45,7 @@ public abstract class VideoProjector implements CustomUIPanelPlugin, Projector {
     public abstract void setIsRendering(boolean rendering);
     public abstract void setControlPanel(PlayerControlPanel controlPanel);
     public abstract PlayerControlPanel getControlPanel();
+    public abstract Speakers getSpeakers();
 
     @Override
     public void render(float alphaMult) {}

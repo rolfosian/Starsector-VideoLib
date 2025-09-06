@@ -4,25 +4,25 @@ import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 
-import data.scripts.VideoPaths;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
 import data.scripts.projector.VideoProjector;
 import data.scripts.speakers.Speakers;
-import data.scripts.util.VideoUtils;
 
-public class MuteVideoPlayerWithControls implements VideoPlayer {
+public class AudioVideoPlayerWithControls implements VideoPlayer {
     private final CustomPanelAPI masterPanel;
     private final CustomPanelAPI projectorPanel;
 
     private final VideoProjector projector;
+    private final Speakers speakers;
     private final PlayerControlPanel controlPanel;
 
-    public MuteVideoPlayerWithControls(CustomPanelAPI masterPanel, PlayerControlPanel controlPanel, VideoProjector projector, CustomPanelAPI projectorPanel) {
+    public AudioVideoPlayerWithControls(CustomPanelAPI masterPanel, PlayerControlPanel controlPanel, Speakers speakers, VideoProjector projector, CustomPanelAPI projectorPanel) {
         this.masterPanel = masterPanel;
         this.controlPanel = controlPanel;
         this.projector = projector;
         this.projectorPanel = projectorPanel;
+        this.speakers = speakers;
 
         this.projector.setControlPanel(controlPanel);
     }
@@ -95,6 +95,6 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
     }
 
     public Speakers getSpeakers() {
-        return null;
+        return speakers;
     }
 }

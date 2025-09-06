@@ -67,7 +67,7 @@ public class VideoLibDemo implements BaseCommand {
         final Color[] controlsColor = new Color[1];
         final Color[] controlsTextColor = new Color[1];
 
-        if (splitArgs.contains("wc")) {
+        if (splitArgs.contains("wc")) { // with controls
             for (String arg : splitArgs) {
                 if (arg.startsWith("color:")) {
                     String[] colorArgs = arg.split(":")[1].split(",");
@@ -118,7 +118,7 @@ public class VideoLibDemo implements BaseCommand {
                 // If you want to rescale the video while it is playing, you should have openGL do it by calling videoPlayer.getProjectorPanel().getPosition().setSize(width, height)
                 int videoWidth;
                 int videoHeight;
-                
+
                 if (fileId == null) {
                     videoWidth = 960;
                     videoHeight = 540;
@@ -129,29 +129,57 @@ public class VideoLibDemo implements BaseCommand {
                     videoWidth = dimensions[0];
                     videoHeight = dimensions[1];
                 }
+                
+                
+                if (splitArgs.contains("ws")) { // with sound
+                    // with controls
+                    if (splitArgs.contains("wc")) {
+                                                                            // file ID defined in data/config/settings.json | vol |  starting PlayMode | starting EOFMode
+                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayerWithControls(fileId, videoWidth, videoHeight, 0.1f, PlayMode.PAUSED, EOFMode.LOOP, controlsTextColor[0], controlsColor[0]);
+                        videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
-                // with controls
-                if (splitArgs.contains("wc")) {                    
-                                                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
-                    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, controlsTextColor[0], controlsColor[0]);
-                    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
+                        PositionAPI masterPos = videoPlayer.getMasterPanel().getPosition();
+                        int parentWidth = (int) masterPos.getWidth();
+                        int parentHeight = (int) masterPos.getHeight();
 
-                    PositionAPI masterPos = videoPlayer.getMasterPanel().getPosition();
-                    int parentWidth = (int) masterPos.getWidth();
-                    int parentHeight = (int) masterPos.getHeight();
+                        parentPanel = showCustomPanelAndCenter(dialog, parentWidth, parentHeight);
+                        videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
+                        videoPlayer.init(); // init projector and controls so they know where/height/width to render
 
-                    parentPanel = showCustomPanelAndCenter(dialog, parentWidth, parentHeight);
-                    videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-                    videoPlayer.init(); // init projector and controls so they know where/height/width to render
-        
-                } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
-                    videoPlayer = VideoPlayerFactory.createMutePlayer(fileId, videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP);
-                    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
+                    } else {                                 // file ID defined in data/config/settings.json | vol | starting PlayMode | starting EOFMode
+                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayer(fileId, videoWidth, videoHeight, 0.1f, PlayMode.PLAYING, EOFMode.LOOP);
+                        videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
-                    parentPanel = showCustomPanelAndCenter(dialog, videoWidth, videoHeight);
-                    videoPlayer.addTo(parentPanel).inTL(0f,0f); // add to parent
-                    videoPlayer.init(); // init projector so it knows where/width/height to render
+                        parentPanel = showCustomPanelAndCenter(dialog, videoWidth, videoHeight);
+                        videoPlayer.addTo(parentPanel).inTL(0f,0f); // add to parent
+                        videoPlayer.init(); // init projector so it knows where/width/height to render
+                    }
+
+                } else { // no sound
+                    // with controls
+                    if (splitArgs.contains("wc")) {
+                                                                    // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
+                        videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, controlsTextColor[0], controlsColor[0]);
+                        videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
+
+                        PositionAPI masterPos = videoPlayer.getMasterPanel().getPosition();
+                        int parentWidth = (int) masterPos.getWidth();
+                        int parentHeight = (int) masterPos.getHeight();
+
+                        parentPanel = showCustomPanelAndCenter(dialog, parentWidth, parentHeight);
+                        videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
+                        videoPlayer.init(); // init projector and controls so they know where/height/width to render
+
+                    } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
+                        videoPlayer = VideoPlayerFactory.createMutePlayer(fileId, videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP);
+                        videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
+
+                        parentPanel = showCustomPanelAndCenter(dialog, videoWidth, videoHeight);
+                        videoPlayer.addTo(parentPanel).inTL(0f,0f); // add to parent
+                        videoPlayer.init(); // init projector so it knows where/width/height to render
+                    }
                 }
+
 
                 // ignore everything below this line if you value your sanity
                 currentVideoId = fileId;

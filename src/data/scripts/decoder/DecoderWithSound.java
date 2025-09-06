@@ -56,7 +56,7 @@ public class DecoderWithSound implements Decoder {
     private long currentAudioPts = 0;
 
     public final Projector videoProjector;
-    public final Speakers speakers;
+    public Speakers speakers;
 
     private int width;
     private int height;
@@ -66,12 +66,11 @@ public class DecoderWithSound implements Decoder {
 
     private float timeAccumulator = 0f;
 
-    public DecoderWithSound(Projector videoProjector, Speakers speakers, TextureBuffer textureBuffer, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public DecoderWithSound(Projector videoProjector, TextureBuffer textureBuffer, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing DecoderWithSound");
         this.videoFilePath = videoFilePath;
 
         this.videoProjector = videoProjector;
-        this.speakers = speakers;
 
         this.audioBuffer = new AudioFrameBuffer(60);
         this.textureBuffer = textureBuffer;
@@ -87,7 +86,7 @@ public class DecoderWithSound implements Decoder {
         print("DecoderWithSound decodeLoop started");
 
         while (running) {
-            if (!textureBuffer.isFull()) {
+            if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
                 Frame f = FFmpeg.read(pipePtr);
 
                 if (f == null) { // EOF / Error
@@ -161,41 +160,48 @@ public class DecoderWithSound implements Decoder {
         gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
+        if (!audioBuffer.isEmpty()) {
+            synchronized(audioBuffer) {
+                currentAudioPts = speakers.advance(audioBuffer.pop());
+            }
+        }
+
         synchronized(textureBuffer) {
             boolean switched = false;
-
+    
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
-                
-                while (currentVideoPts < currentAudioPts - 20000) { // this will result in infinite loop if popFront returns null too many times
-                    TextureFrame texture = textureBuffer.popFront(width, height);
-
-                    if (texture != null) {
-                        switched = true;
-                        if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
-
-                        currentVideoTextureId = 0;
-                        currentVideoTextureId = texture.id;
-                        currentVideoPts = texture.pts;
-                    }
+    
+                TextureFrame texture = textureBuffer.popFront(width, height);
+    
+                if (texture != null) {
+                    switched = true;
+                    if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+    
+                    currentVideoTextureId = texture.id;
+                    currentVideoPts = texture.pts;
+    
+                    // if (currentVideoPts < currentAudioPts - 5000) {
+                    //     while (currentVideoPts < currentAudioPts - 5000 && !textureBuffer.isEmpty()) {
+                    //         TextureFrame droppedTexture = textureBuffer.popFront(width, height);
+                    //         if (droppedTexture != null) {
+                    //             if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+                    //             currentVideoTextureId = droppedTexture.id;
+                    //             currentVideoPts = droppedTexture.pts;
+                    //         }
+                    //     }
+                    // }
                 }
             }
 
             if (!switched) {
-
                 if (gameFps <= videoFps) {
                     textureBuffer.convertFront(width, height);
-
-                } else {
-                    textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
+                } // else { 
+                    // textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
                 }
             }
-        }
-
-        synchronized(audioBuffer) {
-            currentAudioPts = speakers.advance(audioBuffer.pop());
-        }
-
+    
         return currentVideoTextureId;
     }
 
@@ -334,6 +340,10 @@ public class DecoderWithSound implements Decoder {
     }
     public int getSampleRate() {
         return this.audioSampleRate;
+    }
+
+    public void setSpeakers(Speakers speakers) {
+        this.speakers = speakers;
     }
 
     public Speakers getSpeakers() {

@@ -42,7 +42,27 @@ public class AudioFrameBuffer {
         return frame;
     }
 
+    public AudioFrame[] pop(int numFrames) {
+        if (count == 0 || numFrames <= 0) return null;
+        
+        int framesToPop = Math.min(numFrames, count);
+        AudioFrame[] frames = new AudioFrame[framesToPop];
+        
+        for (int i = 0; i < framesToPop; i++) {
+            frames[i] = buffer[head];
+            buffer[head] = null;
+            head = (head + 1) % capacity;
+            count--;
+        }
+        
+        return frames;
+    }
+
     public int size() { return count; }
+
+    public boolean isEmpty() {
+        return count == 0;
+    }
 
     public boolean isFull() {
         return count == capacity;
