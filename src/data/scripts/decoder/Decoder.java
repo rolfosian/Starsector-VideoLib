@@ -8,6 +8,7 @@ public interface Decoder {
     public long getFFmpegPipePtr();
     public int getErrorStatus();
     public void seek(long targetUs);
+    public void seekWithoutClearingBuffer(long targetUs);
     
     public double getDurationSeconds();
     public long getDurationUs();

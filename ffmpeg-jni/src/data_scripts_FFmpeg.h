@@ -159,6 +159,15 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels
 JNIEXPORT jintArray JNICALL Java_data_scripts_ffmpeg_FFmpeg_getWidthAndHeight
   (JNIEnv *, jclass, jstring);
 
+
+/*
+ * Class:     data_scripts_ffmpeg_FFmpeg
+ * Method:    getTotalFrameCount
+ * Signature: (J)V
+ */
+JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getTotalFrameCount
+  (JNIEnv *env, jclass clazz, jlong ptr);
+
 #ifdef __cplusplus
 }
 #endif

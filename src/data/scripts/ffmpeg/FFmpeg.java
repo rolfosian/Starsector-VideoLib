@@ -166,4 +166,5 @@ public class FFmpeg {
 
     public static native int getAudioSampleRate(long ptr);
     public static native int getAudioChannels(long ptr);
+    public static native long getTotalFrameCount(long ptr);
 }

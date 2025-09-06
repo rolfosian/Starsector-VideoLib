@@ -22,17 +22,17 @@ public class TextureBuffer {
         logger.info(sb.toString());
     }
 
-    private final VideoFrame[] videoFrames;
-    private final TextureFrame[] textures;
+    protected final VideoFrame[] videoFrames;
+    protected final TextureFrame[] textures;
 
-    // private final int pboId;
-    // private final int vboId;
-    // private final FloatBuffer quadBuffer;
+    // protected final int pboId;
+    // protected final int vboId;
+    // protected final FloatBuffer quadBuffer;
 
-    private int size;
-    private final int capacity;
-    private int head;
-    private int tail;
+    protected int size;
+    protected final int capacity;
+    protected int head;
+    protected int tail;
 
     public TextureBuffer(int capacity) {
         this.capacity = capacity;
@@ -158,7 +158,7 @@ public class TextureBuffer {
     }
 
     // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
-    private int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
+    protected int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
         if (frameBuffer == null) return -1;
         int textureId = GL11.glGenTextures();
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);

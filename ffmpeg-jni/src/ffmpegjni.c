@@ -409,6 +409,7 @@ typedef struct {
     uint8_t *rgb_buffer;
     int rgb_size;
     int64_t frame_count;
+    int64_t total_frame_count;
     float fps;
     double duration_seconds;
     int64_t duration_us;
@@ -586,6 +587,9 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->rgb_buffer = rgb_buffer;
     ctx->rgb_size = rgb_size;
     ctx->fps = fps;
+    
+    // Initialize total_frame_count to -1 to indicate it hasn't been calculated yet
+    ctx->total_frame_count = -1;
 
     if (fmt_ctx->duration > 0) {
         ctx->duration_us = fmt_ctx->duration;
@@ -1035,6 +1039,9 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
 
     ctx->frame_count = 0;
     ctx->fps = fps;
+    
+    // Initialize total_frame_count to -1 to indicate it hasn't been calculated yet
+    ctx->total_frame_count = -1;
 
     // duration in seconds and microseconds
     if (fmt_ctx->duration > 0) {
@@ -1474,6 +1481,43 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *en
     int result = ctx->error_status;
     pthread_mutex_unlock(&ctx->mutex);
 
+    return result;
+}
+
+JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getTotalFrameCount(JNIEnv *env, jclass clazz, jlong ptr) {
+    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    if (!ctx) {
+        printe(env, "getTotalFrameCount: null context pointer");
+        return 0;
+    }
+    
+    pthread_mutex_lock(&ctx->mutex);
+    
+    // Calculate frame count on-demand if not already calculated
+    if (ctx->total_frame_count == -1) {
+        // Try to get exact count from stream metadata first
+        AVStream *video_stream = ctx->fmt_ctx->streams[ctx->video_stream_index];
+        if (video_stream->nb_frames > 0) {
+            // Use exact frame count from stream metadata
+            ctx->total_frame_count = video_stream->nb_frames;
+            char msg[256];
+            snprintf(msg, sizeof(msg), "Using exact frame count from stream metadata: %lld", (long long)ctx->total_frame_count);
+            printe(env, msg);
+        } else if (ctx->fps > 0.0f && ctx->duration_seconds > 0.0) {
+            // Fallback to estimation if exact count not available
+            ctx->total_frame_count = (int64_t)(ctx->duration_seconds * ctx->fps);
+            char msg[256];
+            snprintf(msg, sizeof(msg), "Using estimated frame count (duration * fps): %lld", (long long)ctx->total_frame_count);
+            printe(env, msg);
+        } else {
+            ctx->total_frame_count = 0;
+            printe(env, "Could not determine frame count - using 0");
+        }
+    }
+    
+    int64_t result = ctx->total_frame_count;
+    pthread_mutex_unlock(&ctx->mutex);
+    
     return result;
 }
 
