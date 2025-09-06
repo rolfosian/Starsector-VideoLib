@@ -14,6 +14,7 @@ import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.campaign.CampaignPlanet;
+import com.fs.starfarer.campaign.RingBand;
 import com.fs.starfarer.combat.entities.terrain.Planet;
 import com.fs.starfarer.loading.specs.PlanetSpec;
 import com.fs.graphics.Sprite;
@@ -148,6 +149,8 @@ public class TexReflection {
     public static Object spriteTextureField;
     public static Object spriteTextureIdField;
 
+    public static Object ringBandTextureField;
+
     public static Object planetListToken1Field;
     public static Object planetListToken2Field;
     public static Object planetListToken3Field;
@@ -181,6 +184,14 @@ public class TexReflection {
                     
                     default:
                         break;
+                }
+            }
+
+            for (Object field : RingBand.class.getDeclaredFields()) {
+                if (getFieldName(field).equals("texture")) {
+                    ringBandTextureField = field;
+                    setFieldAccessibleHandle.invoke(field, true);
+                    break;
                 }
             }
 
@@ -485,6 +496,22 @@ public class TexReflection {
     public static Object getSpriteTexObj(Sprite sprite) {
         try {
             return getFieldHandle.invoke(spriteTextureField, sprite);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void setRingBandTexObj(RingBand ringBand, Object texObj) {
+        try {
+            setFieldHandle.invoke(ringBandTextureField, ringBand, texObj);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object getRingBandTexObj(RingBand ringBand) {
+        try {
+            return getFieldHandle.invoke(ringBandTextureField, ringBand);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
