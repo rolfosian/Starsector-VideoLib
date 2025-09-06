@@ -56,7 +56,7 @@ public class MuteDecoder implements Decoder {
     private float timeAccumulator = 0f;
 
     public MuteDecoder(Projector videoProjector, TextureBuffer textureBuffer, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        print("Initializing NoSoundDecoder");
+        print("Initializing MuteDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
 
@@ -70,7 +70,7 @@ public class MuteDecoder implements Decoder {
     }
 
     private void decodeLoop() {
-        print("NoSoundDecoder decodeLoop started");
+        print("MuteDecoder decodeLoop started");
 
         while (running) {
             if (!textureBuffer.isFull()) {
@@ -133,7 +133,7 @@ public class MuteDecoder implements Decoder {
                 sleep(1);
             }
         }
-        print("NoSoundDecoder decodeLoop ended");
+        print("MuteDecoder decodeLoop ended");
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
@@ -195,7 +195,7 @@ public class MuteDecoder implements Decoder {
 
     public void start(long startUs) {
         if (running) return;
-        print("Starting NoSoundDecoder for file", videoFilePath);
+        print("Starting MuteDecoder for file", videoFilePath);
         running = true;
 
         pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, startUs);
@@ -212,9 +212,9 @@ public class MuteDecoder implements Decoder {
         print("Video Duration=", videoDurationSeconds);
         print("Video DurationUs=", videoDurationUs);
 
-        decodeThread = new Thread(this::decodeLoop, "NoSoundDecoder");
+        decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();
-        print("NoSoundDecoder decoderLoop thread started");
+        print("MuteDecoder decoderLoop thread started");
 
         while(textureBuffer.isEmpty()) sleep(1);
         synchronized(textureBuffer) {
@@ -224,12 +224,12 @@ public class MuteDecoder implements Decoder {
     }
 
     public void finish() {
-        print("Stopping NoSoundDecoder decoderLoop thread");
+        print("Stopping MuteDecoder decoderLoop thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
 
-        print("Joining NoSoundDecoder decoderLoop thread");
+        print("Joining MuteDecoder decoderLoop thread");
         try {
             decodeThread.join();
         } catch(InterruptedException e) {
