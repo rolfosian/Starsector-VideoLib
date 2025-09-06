@@ -29,7 +29,11 @@ public class AudioFrameBuffer {
     }
 
     public void clear() {
-        for (int i = 0; i < capacity; i++) buffer[i] = null;
+        for (int i = 0; i < capacity; i++) {
+            buffer[i].freeBuffer();
+            buffer[i] = null;
+        }
+        
         head = tail = count = 0;
     }
 

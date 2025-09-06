@@ -3,10 +3,7 @@ package data.scripts.speakers;
 import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
 
-public interface Speakers {
-    public long advance(AudioFrame frame);
-    public long advance(AudioFrame[] frames);
-    
+public interface Speakers {   
     public void start();
     public void play();
     public void stop();
@@ -18,6 +15,7 @@ public interface Speakers {
     public void setVolume(float volume);
     public void mute();
 
+    public long getCurrentAudioPts();
     public Decoder getDecoder();
 
     public void finish();

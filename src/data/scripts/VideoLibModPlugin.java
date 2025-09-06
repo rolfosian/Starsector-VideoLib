@@ -34,7 +34,6 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
         VideoPaths.populate();
         mainThread = Thread.currentThread();
-
     }
 
     private static List<PlanetProjector> planetProjectors = new ArrayList<>();

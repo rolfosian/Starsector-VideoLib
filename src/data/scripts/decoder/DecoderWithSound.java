@@ -86,7 +86,8 @@ public class DecoderWithSound implements Decoder {
         print("DecoderWithSound decodeLoop started");
 
         while (running) {
-            if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
+            // if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
+            if (!audioBuffer.isFull()) {
                 Frame f = FFmpeg.read(pipePtr);
 
                 if (f == null) { // EOF / Error
@@ -138,9 +139,9 @@ public class DecoderWithSound implements Decoder {
 
                 } else {
                     if (f instanceof VideoFrame) {
-                        synchronized (textureBuffer) {
-                            textureBuffer.add((VideoFrame)f);
-                        }
+                    //     synchronized (textureBuffer) {
+                    //         textureBuffer.add((VideoFrame)f);
+                    //     }
 
                     } else {
                         synchronized(audioBuffer) {
@@ -160,12 +161,6 @@ public class DecoderWithSound implements Decoder {
         gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
-        if (!audioBuffer.isEmpty()) {
-            synchronized(audioBuffer) {
-                currentAudioPts = speakers.advance(audioBuffer.pop());
-            }
-        }
-
         synchronized(textureBuffer) {
             boolean switched = false;
     
@@ -180,48 +175,38 @@ public class DecoderWithSound implements Decoder {
     
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
-    
-                    // if (currentVideoPts < currentAudioPts - 5000) {
-                    //     while (currentVideoPts < currentAudioPts - 5000 && !textureBuffer.isEmpty()) {
-                    //         TextureFrame droppedTexture = textureBuffer.popFront(width, height);
-                    //         if (droppedTexture != null) {
-                    //             if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
-                    //             currentVideoTextureId = droppedTexture.id;
-                    //             currentVideoPts = droppedTexture.pts;
-                    //         }
-                    //     }
-                    // }
                 }
             }
 
             if (!switched) {
                 if (gameFps <= videoFps) {
                     textureBuffer.convertFront(width, height);
-                } // else { 
-                    // textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
+                } else { 
+                    textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
                 }
             }
+        }
     
         return currentVideoTextureId;
     }
 
     public int getCurrentVideoTextureId() {
-        while (textureBuffer.isEmpty()) sleep(1); 
+        // while (textureBuffer.isEmpty()) sleep(1); 
 
-        synchronized(textureBuffer) {
-            TextureFrame texture = textureBuffer.popFront(width, height);
+        // synchronized(textureBuffer) {
+        //     TextureFrame texture = textureBuffer.popFront(width, height);
 
-            if (texture != null) {
-                int oldTextureId = currentVideoTextureId;
+        //     if (texture != null) {
+        //         int oldTextureId = currentVideoTextureId;
 
-                currentVideoTextureId = texture.id;
-                currentVideoPts = texture.pts;
+        //         currentVideoTextureId = texture.id;
+        //         currentVideoPts = texture.pts;
 
-                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
+        //         if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
 
-                videoProjector.setIsRendering(true); // this is dumb, i dont like this
-            }
-        }
+        //         videoProjector.setIsRendering(true); // this is dumb, i dont like this
+        //     }
+        // }
         return currentVideoTextureId;
     }
 
@@ -255,10 +240,10 @@ public class DecoderWithSound implements Decoder {
         decodeThread.start();
         print("DecoderWithSound decoderLoop thread started");
 
-        while(textureBuffer.isEmpty()) sleep(1);
-        synchronized(textureBuffer) {
-            textureBuffer.convertFront(width, height);
-        }
+        // while(textureBuffer.isEmpty()) sleep(1);
+        // synchronized(textureBuffer) {
+        //     textureBuffer.convertFront(width, height);
+        // }
         return;
     }
 

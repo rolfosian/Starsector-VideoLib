@@ -1,5 +1,6 @@
 package data.scripts.speakers;
 
+import data.scripts.buffers.AudioFrameBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
 import data.scripts.projector.Projector;
@@ -11,6 +12,9 @@ import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCcontext;
 import org.lwjgl.openal.ALCdevice;
 
+import com.fs.starfarer.api.EveryFrameScript;
+import com.fs.starfarer.api.Global;
+
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -18,7 +22,7 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.*;
 
-public class VideoProjectorSpeakers implements Speakers {
+public class VideoProjectorSpeakers implements Speakers, EveryFrameScript {
     private static final Logger logger = Logger.getLogger(VideoProjectorSpeakers.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
@@ -28,12 +32,16 @@ public class VideoProjectorSpeakers implements Speakers {
         }
         logger.info(sb.toString());
     }
+    
+    private boolean isDone;
 
     private Projector videoProjector;
     private Decoder decoder;
 
     private float volume;
     private boolean paused = false;
+
+    private long currentAudioPts;
 
     private int sampleRate;
     private int channels;
@@ -44,13 +52,16 @@ public class VideoProjectorSpeakers implements Speakers {
     private int sourceId;
     private IntBuffer bufferIds;
 
+    private final AudioFrameBuffer audioFrameBuffer;
     private final Map<Integer, AudioFrame> bufferToFrame = new HashMap<>();
     private final Queue<AudioFrame> playingFrames = new ArrayDeque<>();
     private final Queue<Integer> availableBuffers = new ArrayDeque<>();
 
-    public VideoProjectorSpeakers(Projector videoProjector, Decoder decoder, float volume) {
+    public VideoProjectorSpeakers(Projector videoProjector, Decoder decoder, AudioFrameBuffer audioFrameBuffer, float volume) {
         this.decoder = decoder;
         this.volume = volume;
+
+        this.audioFrameBuffer = audioFrameBuffer;
 
         this.channels = decoder.getAudioChannels();
         this.sampleRate = decoder.getSampleRate();
@@ -66,7 +77,7 @@ public class VideoProjectorSpeakers implements Speakers {
 
         sourceId = AL10.alGenSources();
 
-        bufferIds = BufferUtils.createIntBuffer(12);
+        bufferIds = BufferUtils.createIntBuffer(4);
         AL10.alGenBuffers(bufferIds);
         
         // Initialize available buffers pool
@@ -78,70 +89,67 @@ public class VideoProjectorSpeakers implements Speakers {
         AL10.alSourcef(sourceId, AL10.AL_GAIN, volume);
     }
 
-    public long advance(AudioFrame frame) {
-        int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
-        while (processed-- > 0) {
-            int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
-            AudioFrame done = bufferToFrame.remove(bufferId);
-            if (done != null) {
-                playingFrames.remove(done);
-            }
-            // Return buffer to available pool
-            availableBuffers.offer(bufferId);
+    private AudioFrame getNextFrame() {
+        AudioFrame frame;
+        synchronized(audioFrameBuffer) {
+            frame = audioFrameBuffer.pop();
         }
-
-        if (frame != null) {
-            Integer bufferId = availableBuffers.poll();
-            if (bufferId != null) {
-                AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
-                bufferToFrame.put(bufferId, frame);
-                playingFrames.add(frame);
-                AL10.alSourceQueueBuffers(sourceId, bufferId);
-            }
-        }
-
-        int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
-        if (state != AL10.AL_PLAYING && !paused) {
-            AL10.alSourcePlay(sourceId);
-        }
-
-        AudioFrame current = playingFrames.peek();
-        return current != null ? current.pts : 0;
+        return frame;
     }
 
-    public long advance(AudioFrame[] frames) {
+    @Override
+    public void advance(float deltaTime) {
+        // Check processed buffers
         int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
+        
+        // Process completed buffers
         while (processed-- > 0) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
             AudioFrame done = bufferToFrame.remove(bufferId);
+            
             if (done != null) {
                 playingFrames.remove(done);
             }
-            // Return buffer to available pool
+            
+            // Return buffer to pool immediately
             availableBuffers.offer(bufferId);
         }
 
-        if (frames != null && frames.length > 0) {
-            for (AudioFrame frame : frames) {
-                if (frame != null) {
-                    Integer bufferId = availableBuffers.poll();
-                    if (bufferId != null) {
-                        AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
-                        bufferToFrame.put(bufferId, frame);
-                        playingFrames.add(frame);
-                        AL10.alSourceQueueBuffers(sourceId, bufferId);
+        AudioFrame frame = getNextFrame();
+        
+        // Pre-queue multiple buffers if possible
+        if (availableBuffers.size() >= 2) {  // Ensure we have enough buffers
+            if (frame != null) {
+                Integer bufferId = availableBuffers.poll();
+                if (bufferId != null) {
+                    AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
+                    bufferToFrame.put(bufferId, frame);
+                    playingFrames.add(frame);
+                    AL10.alSourceQueueBuffers(sourceId, bufferId);
+                    
+                    // Try to queue another buffer ahead of time
+                    AudioFrame nextFrame = getNextFrame();  // Implement this method
+                    if (nextFrame != null) {
+                        Integer nextBufferId = availableBuffers.poll();
+                        if (nextBufferId != null) {
+                            AL10.alBufferData(nextBufferId, format, nextFrame.buffer, sampleRate);
+                            bufferToFrame.put(nextBufferId, nextFrame);
+                            playingFrames.add(nextFrame);
+                            AL10.alSourceQueueBuffers(sourceId, nextBufferId);
+                        }
                     }
                 }
             }
         }
-
+        
+        // Maintain playback state
         int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
         if (state != AL10.AL_PLAYING && !paused) {
             AL10.alSourcePlay(sourceId);
         }
-
+        
         AudioFrame current = playingFrames.peek();
-        return current != null ? current.pts : 0;
+        currentAudioPts = current != null ? current.pts : 0;
     }
 
     public void start() {
@@ -150,9 +158,11 @@ public class VideoProjectorSpeakers implements Speakers {
         this.sampleRate = decoder.getSampleRate();
         this.channels = decoder.getAudioChannels();
 
+        Global.getSector().addTransientScript(this);
         if (AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE) != AL10.AL_PLAYING) {
             AL10.alSourcePlay(sourceId);
         }
+        
     }
 
     public void play() {
@@ -200,13 +210,17 @@ public class VideoProjectorSpeakers implements Speakers {
 
     public void finish() {
         stop();
+
         AL10.alDeleteSources(sourceId);
         AL10.alDeleteBuffers(bufferIds);
+        
+        audioFrameBuffer.clear();
         bufferToFrame.clear();
         playingFrames.clear();
         availableBuffers.clear();
     }
 
+    // unused - merely for debugging
     private ByteBuffer generateSilentBuffer(float durationSeconds) {
         int totalSamples = (int) (sampleRate * durationSeconds);
         int bytesPerSample = 2;
@@ -221,6 +235,7 @@ public class VideoProjectorSpeakers implements Speakers {
         return buffer;
     }
 
+    // unused - merely for debugging
     private ByteBuffer generateSineWave(float durationSeconds) {
         int totalSamples = (int) (sampleRate * durationSeconds);
         ByteBuffer buffer = ByteBuffer.allocateDirect(totalSamples * channels * 2).order(ByteOrder.nativeOrder());
@@ -239,5 +254,20 @@ public class VideoProjectorSpeakers implements Speakers {
     @Override
     public Decoder getDecoder() {
         return this.decoder;
+    }
+
+    @Override
+    public boolean isDone() {
+        return isDone;
+    }
+
+    @Override
+    public boolean runWhilePaused() {
+        return true;
+    }
+
+    @Override
+    public long getCurrentAudioPts() {
+        return this.currentAudioPts;
     }
 }
