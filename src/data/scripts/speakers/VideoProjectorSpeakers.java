@@ -14,6 +14,7 @@ import org.lwjgl.openal.ALCdevice;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
 
 import org.apache.log4j.Logger;
 
@@ -22,7 +23,7 @@ import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.*;
 
-public class VideoProjectorSpeakers implements Speakers, EveryFrameScript {
+public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implements Speakers, EveryFrameScript {
     private static final Logger logger = Logger.getLogger(VideoProjectorSpeakers.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
