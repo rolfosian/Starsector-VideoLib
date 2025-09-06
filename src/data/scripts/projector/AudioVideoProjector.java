@@ -69,7 +69,7 @@ public class AudioVideoProjector extends VideoProjector {
     private float topBound;
     private float bottomBound;
 
-    public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
         this.videoFilePath = VideoPaths.get(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
@@ -84,6 +84,7 @@ public class AudioVideoProjector extends VideoProjector {
         this.decoder.setSpeakers(speakers);
         this.speakers.start();
 
+        if (!keepAlive)
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
 

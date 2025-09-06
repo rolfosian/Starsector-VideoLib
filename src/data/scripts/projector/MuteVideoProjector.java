@@ -66,7 +66,7 @@ public class MuteVideoProjector extends VideoProjector {
     private float topBound;
     private float bottomBound;
 
-    public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
         this.videoFilePath = VideoPaths.get(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
@@ -80,6 +80,7 @@ public class MuteVideoProjector extends VideoProjector {
         // this.vboId = textureBuffer.getVboId();
         // this.quadBuffer = textureBuffer.getQuadBuffer();
 
+        if (!keepAlive)
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
 

@@ -37,8 +37,8 @@ public class VideoPlayerFactory {
         logger.info(sb.toString());
     }
 
-    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
+    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
@@ -52,8 +52,8 @@ public class VideoPlayerFactory {
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
 
-    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, Color textColor, Color bgButtonColor) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
+    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
@@ -67,24 +67,24 @@ public class VideoPlayerFactory {
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
 
-    public static VideoPlayer createMutePlayer(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode);
+    public static VideoPlayer createMutePlayer(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         
         return new MuteVideoPlayer(projectorPanel, projectorPlugin);
     }
 
-    public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+    public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         return new AudioVideoPlayer(projectorPanel, projectorPlugin);
     }
 
-    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode);
+    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
 
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         Speakers speakers = projectorPlugin.getSpeakers();
 
@@ -99,10 +99,10 @@ public class VideoPlayerFactory {
         return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
     }
 
-    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, Color textColor, Color bgButtonColor) {
-        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, textColor, bgButtonColor);
+    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, textColor, bgButtonColor);
 
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode);
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         Speakers speakers = projectorPlugin.getSpeakers();
 
