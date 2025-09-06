@@ -18,31 +18,36 @@ static jmethodID VideoFrameClassCtor;
 static jclass AudioFrameClass;
 static jmethodID AudioFrameClassCtor;
 
+static jclass FFmpegClass;
+static jmethodID printMid;
+
+static jclass ObjectClass;
+
+
+JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
+    jobjectArray args = (*env)->NewObjectArray(env, 1, ObjectClass, NULL);
+    jstring jmsg = (*env)->NewStringUTF(env, msg);
+
+    (*env)->SetObjectArrayElement(env, args, 0, jmsg);
+    (*env)->CallStaticVoidMethod(env, FFmpegClass, printMid, args);
+
+    (*env)->DeleteLocalRef(env, jmsg);
+    (*env)->DeleteLocalRef(env, args);
+}
+
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz) {
     VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame"));
     VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
 
     AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
     AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IIJ)V");
+
+    FFmpegClass = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
+    printMid = (*env)->GetStaticMethodID(env, FFmpegClass, "print", "([Ljava/lang/Object;)V");
+
+    ObjectClass = (*env)->FindClass(env, "java/lang/Object");
 }
 
-JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
-    jclass cls = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
-    jmethodID mid = (*env)->GetStaticMethodID(env, cls, "print", "([Ljava/lang/Object;)V");
-
-    jclass objectClass = (*env)->FindClass(env, "java/lang/Object");
-
-    jobjectArray args = (*env)->NewObjectArray(env, 1, objectClass, NULL);
-    jstring jmsg = (*env)->NewStringUTF(env, msg);
-    (*env)->SetObjectArrayElement(env, args, 0, jmsg);
-
-    (*env)->CallStaticVoidMethod(env, cls, mid, args);
-
-    (*env)->DeleteLocalRef(env, jmsg);
-    (*env)->DeleteLocalRef(env, args);
-    (*env)->DeleteLocalRef(env, cls);
-    (*env)->DeleteLocalRef(env, objectClass);
-}
 
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jobject buffer) {
     void *ptr = (*env)->GetDirectBufferAddress(env, buffer);
