@@ -16,6 +16,7 @@ import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.campaign.CampaignPlanet;
 import com.fs.starfarer.combat.entities.terrain.Planet;
 import com.fs.starfarer.loading.specs.PlanetSpec;
+import com.fs.graphics.Sprite;
 import com.fs.graphics.TextureLoader;
 import com.fs.graphics.util.GLListManager;
 import com.fs.graphics.util.GLListManager.GLListToken;
@@ -144,6 +145,9 @@ public class TexReflection {
         }
     }
 
+    public static Object spriteTextureField;
+    public static Object spriteTextureIdField;
+
     public static Object planetListToken1Field;
     public static Object planetListToken2Field;
     public static Object planetListToken3Field;
@@ -162,6 +166,24 @@ public class TexReflection {
     
     static {
         try {
+
+            for (Object field : Sprite.class.getDeclaredFields()) {
+                switch(getFieldName(field)) {
+                    case "texture":
+                        spriteTextureField = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        break;
+                    
+                    case "textureId":
+                        spriteTextureIdField = field;
+                        setFieldAccessibleHandle.invoke(field, true);
+                        break;
+                    
+                    default:
+                        break;
+                }
+            }
+
             for (Object field : CampaignPlanet.class.getDeclaredFields()) {
                 switch(getFieldName(field)) {
                     case "graphics":
@@ -407,7 +429,7 @@ public class TexReflection {
         }
     }
 
-    public static void logTexObjBindType(String typeName, Object field, PlanetAPI campaignPlanet) {
+    public static void logPlanetTexObjBindType(String typeName, Object field, PlanetAPI campaignPlanet) {
         Planet planet = getPlanetFromCampaignPlanet(campaignPlanet);
 
         try {
@@ -425,14 +447,46 @@ public class TexReflection {
     
     // runcode import data.scripts.util.TexReflection; TexReflection.logTexObjBindTypes(); 
     // All return GL11.GL_TEXTURE_2D afaik
-    public static void logTexObjBindTypes() {
+    public static void logPlanetTexObjBindTypes() {
         for (PlanetAPI campaignPlanet : Global.getSector().getPlayerFleet().getContainingLocation().getPlanets()) {
-            TexReflection.logTexObjBindType("planet tex", PlanetTexType.PLANET, campaignPlanet);
-            TexReflection.logTexObjBindType("cloud tex", PlanetTexType.CLOUD, campaignPlanet);
-            TexReflection.logTexObjBindType("atmosphere tex", PlanetTexType.ATMOSPHERE, campaignPlanet);
-            TexReflection.logTexObjBindType("glow tex", PlanetTexType.GLOW, campaignPlanet);
-            TexReflection.logTexObjBindType("shield tex", PlanetTexType.SHIELD, campaignPlanet);
-            TexReflection.logTexObjBindType("shield2 tex", PlanetTexType.SHIELD2, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("planet tex", PlanetTexType.PLANET, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("cloud tex", PlanetTexType.CLOUD, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("atmosphere tex", PlanetTexType.ATMOSPHERE, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("glow tex", PlanetTexType.GLOW, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("shield tex", PlanetTexType.SHIELD, campaignPlanet);
+            TexReflection.logPlanetTexObjBindType("shield2 tex", PlanetTexType.SHIELD2, campaignPlanet);
+        }
+    }
+
+    public static void setSpriteTexId(Sprite sprite, Object id) {
+        try {
+            setFieldHandle.invoke(spriteTextureIdField, sprite, id);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getSpriteTexId(Sprite sprite) {
+        try {
+            return (String) getFieldHandle.invoke(spriteTextureIdField, sprite);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void setSpriteTexObj(Sprite sprite, Object texObj) {
+        try {
+            setFieldHandle.invoke(spriteTextureField, sprite, texObj);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static Object getSpriteTexObj(Sprite sprite) {
+        try {
+            return getFieldHandle.invoke(spriteTextureField, sprite);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
         }
     }
 
