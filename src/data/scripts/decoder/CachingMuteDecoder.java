@@ -89,6 +89,7 @@ public class CachingMuteDecoder implements Decoder {
                 // EOF reached - create CachingTextureBuffer with all frames
                 print("EOF reached, creating CachingTextureBuffer with", allFrames.size(), "frames");
                 textureBuffer = new CachingTextureBuffer(width, height, allFrames);
+                print("Closing FFmpeg Pipe");
                 FFmpeg.closePipe(pipePtr);
                 pipePtr = 0;
                 print("CachingMuteDecoder decodeLoop ended - buffer filled");
@@ -180,19 +181,7 @@ public class CachingMuteDecoder implements Decoder {
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
-
-        print("Joining CachingMuteDecoder decoderLoop thread");
-        try {
-            decodeThread.join();
-        } catch(InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-
-        if (pipePtr != 0) {
-            print("Closing FFmpeg pipe");
-            FFmpeg.closePipe(pipePtr);
-            pipePtr = 0;
-        }
+        textureBuffer.clear();
     }
 
     public void stop() {
