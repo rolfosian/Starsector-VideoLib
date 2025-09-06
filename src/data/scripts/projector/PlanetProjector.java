@@ -259,6 +259,22 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         public static final Map<Object, Object> FIELD_MAP = new HashMap<>();
     }
 
+    public Object getOurTexObject() {
+        return this.ourPlanetTexObj;
+    }
+
+    public Object getOriginalTexObject() {
+        return this.originalPlanetTexObj;
+    }
+
+    public PlanetSpec getOriginalPlanetSpec() {
+        return this.originalPlanetSpec;
+    }
+
+    public PlanetSpec getOurPlanetSpec() {
+        return this.ourPlanetSpec;
+    }
+
     public Object getTexType() {
         return this.planetTexTypeField;
     }

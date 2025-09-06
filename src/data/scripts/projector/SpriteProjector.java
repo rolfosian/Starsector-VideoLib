@@ -56,7 +56,7 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoId, width, height, MODE, EOF_MODE);
+        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
 
         this.sprite = sprite;
@@ -196,6 +196,14 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
 
     public Sprite getSprite() {
         return this.sprite;
+    }
+
+    public Object getOurTexObject() {
+        return this.ourTexObj;
+    }
+
+    public Object getOriginalTexObject() {
+        return this.originalTexObj;
     }
     
 }
