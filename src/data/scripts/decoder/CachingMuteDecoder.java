@@ -18,6 +18,7 @@ import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
+/**probably dont use this it will take like 5GB of vram for a single 30fps 1 min long 720p video*/
 public class CachingMuteDecoder implements Decoder {
     private static final Logger logger = Logger.getLogger(CachingMuteDecoder.class);
     public static void print(Object... args) {
@@ -31,8 +32,6 @@ public class CachingMuteDecoder implements Decoder {
 
     private PlayMode PLAY_MODE;
     private EOFMode EOF_MODE;
-
-    private Object seekLock = new Object();
 
     private String videoFilePath;
     private volatile boolean running = false;
@@ -171,7 +170,8 @@ public class CachingMuteDecoder implements Decoder {
         print("CachingMuteDecoder decoderLoop thread started");
 
         // Wait for the buffer to be filled
-        while (textureBuffer == null) sleep(1);
+        while (textureBuffer == null || !textureBuffer.ready()) sleep(1);
+        textureBuffer.convertAll(width, height);
         print("CachingTextureBuffer filled, ready for playback");
         return;
     }

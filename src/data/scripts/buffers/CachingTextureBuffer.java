@@ -3,15 +3,20 @@ package data.scripts.buffers;
 import java.util.*;
 import data.scripts.ffmpeg.VideoFrame;
 
+/**probably dont use this it will take like 5GB of vram for a single 30fps 1 min long 720p video*/
 public class CachingTextureBuffer extends TextureBuffer {
     private int currentFrameIndex;
+    private boolean ready = false;
 
     public CachingTextureBuffer(int width, int height, List<VideoFrame> frames) {
         super(frames.size());
         for (int i = 0; i < textures.length; i++) add(frames.get(i));
-
-        convertAll(width, height);
         currentFrameIndex = 0;
+        ready = true;
+    }
+
+    public boolean ready() {
+        return ready;
     }
 
     @Override
