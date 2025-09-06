@@ -22,7 +22,7 @@ import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
 import data.scripts.util.TexReflection;
 
-public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Projector, EveryFrameScript {
+public class SpriteProjector extends BaseEveryFrameCombatPlugin implements EveryFrameScript, Projector {
     private boolean isDone = false;
     private boolean runWhilePaused = false;
 
@@ -66,6 +66,9 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Proje
 
         this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
         TexReflection.setSpriteTexObj(sprite, ourTexObj);
+
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(ourTexObj, currentTextureId);
     }
 
     @Override
