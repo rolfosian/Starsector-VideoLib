@@ -28,13 +28,14 @@ public class ImagePlugin implements CustomUIPanelPlugin {
     private int advancingValue = 0;
     private int checkAdvancing = 0;
 
-    public ImagePlugin(String fileName, int width, int height) {
+    public ImagePlugin(String fileName, int width, int height, boolean keepAlive) {
         this.fileName = fileName;
         this.width = width;
         this.height = height;
         this.ptr = FFmpeg.openImage(fileName, width, height);
         this.textureId = createGLTextureFromFrame(FFmpeg.getImageBuffer(ptr), width, height);
 
+        if (!keepAlive)
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;
 
