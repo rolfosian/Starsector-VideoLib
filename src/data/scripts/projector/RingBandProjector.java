@@ -19,10 +19,7 @@ import data.scripts.speakers.Speakers;
 
 import data.scripts.util.TexReflection;
 
-/** Untested */
 public class RingBandProjector implements EveryFrameScript, Projector {
-
-
     private boolean isDone = false;
     private boolean runWhilePaused = false;
 
