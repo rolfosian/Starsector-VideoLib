@@ -70,6 +70,7 @@ typedef struct {
     int height;
     uint8_t *rgb_buffer;
     int rgb_size;
+    int rgb_type; // 0=RGB, 1=RGBA
     jobject byte_buffer; // GlobalRef to DirectByteBuffer wrapping rgb_buffer
 } FFmpegImageContext;
 
@@ -155,10 +156,19 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, j
         return 0;
     }
 
+    // Determine if source has alpha channel and choose appropriate output format
+    int rgb_type = 0;
+    {
+        enum AVPixelFormat pix_fmt = codec_ctx->pix_fmt;
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+        rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
+    }
+    enum AVPixelFormat target_fmt = (rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+
     // Create scaler to requested size
     sws_ctx = sws_getContext(
         codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
-        width, height, AV_PIX_FMT_RGB24,
+        width, height, target_fmt,
         SWS_BILINEAR, NULL, NULL, NULL
     );
     if (!sws_ctx) {
@@ -171,7 +181,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, j
         return 0;
     }
 
-    rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, width, height, 1);
+    rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
     rgb_buffer = (uint8_t*)av_malloc(rgb_size);
     if (!rgb_buffer) {
         printe(env, "openImage: alloc rgb buffer failed");
@@ -183,7 +193,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, j
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
-    av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, AV_PIX_FMT_RGB24, width, height, 1);
+    av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1);
 
     // Decode first frame
     AVPacket *pkt = av_packet_alloc();
@@ -238,6 +248,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, j
     ctx->height = height;
     ctx->rgb_buffer = rgb_buffer;
     ctx->rgb_size = rgb_size;
+    ctx->rgb_type = rgb_type;
     ctx->byte_buffer = (*env)->NewDirectByteBuffer(env, ctx->rgb_buffer, ctx->rgb_size);
     if (ctx->byte_buffer) {
         ctx->byte_buffer = (*env)->NewGlobalRef(env, ctx->byte_buffer);
@@ -296,6 +307,16 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_getImageBuffer(JNIEnv 
     return ctx->byte_buffer;
 }
 
+JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isImageRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
+    FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
+    if (!ctx) {
+        printe(env, "isImageRGBA: null context pointer");
+        return JNI_FALSE;
+    }
+    
+    return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, jclass clazz, jlong ptr, jint newWidth, jint newHeight) {
     FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
     if (!ctx || !ctx->rgb_buffer || ctx->width <= 0 || ctx->height <= 0) {
@@ -307,7 +328,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
         return;
     }
 
-    // Source frame backed by existing RGB24 buffer
+    // Source frame backed by existing RGB/RGBA buffer
     AVFrame *src = av_frame_alloc();
     AVFrame *dst = av_frame_alloc();
     if (!src || !dst) {
@@ -317,14 +338,15 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
         return;
     }
     src->data[0] = ctx->rgb_buffer;
-    src->linesize[0] = ctx->width * 3;
+    src->linesize[0] = ctx->width * (ctx->rgb_type == 1 ? 4 : 3); // 4 for RGBA, 3 for RGB
     src->width = ctx->width;
     src->height = ctx->height;
-    src->format = AV_PIX_FMT_RGB24;
+    src->format = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
 
+    enum AVPixelFormat target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
     struct SwsContext *sws = sws_getContext(
-        ctx->width, ctx->height, AV_PIX_FMT_RGB24,
-        newWidth, newHeight, AV_PIX_FMT_RGB24,
+        ctx->width, ctx->height, src->format,
+        newWidth, newHeight, target_fmt,
         SWS_BILINEAR, NULL, NULL, NULL
     );
     if (!sws) {
@@ -334,10 +356,11 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
         return;
     }
 
-    int new_size = newWidth * newHeight * 3;
+    int bytes_per_pixel = (ctx->rgb_type == 1) ? 4 : 3; // 4 for RGBA, 3 for RGB
+    int new_size = newWidth * newHeight * bytes_per_pixel;
     // If shrinking or same size, reuse existing buffer; otherwise allocate new
     uint8_t *target_buffer = NULL;
-    int target_linesize = newWidth * 3;
+    int target_linesize = newWidth * bytes_per_pixel;
     int will_realloc = (new_size > ctx->rgb_size);
 
     if (!will_realloc) {
@@ -362,7 +385,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
     }
     dst->width = newWidth;
     dst->height = newHeight;
-    dst->format = AV_PIX_FMT_RGB24;
+    dst->format = target_fmt;
     dst->linesize[0] = target_linesize;
     dst->data[0] = target_buffer;
 
@@ -404,7 +427,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, 
     ctx->height = newHeight;
     if (ctx->rgb_frame) {
         if (av_image_fill_arrays(ctx->rgb_frame->data, ctx->rgb_frame->linesize,
-                                 ctx->rgb_buffer, AV_PIX_FMT_RGB24,
+                                 ctx->rgb_buffer, target_fmt,
                                  ctx->width, ctx->height, 1) < 0) {
             printe(env, "resizeImage: failed to update frame arrays");
         }

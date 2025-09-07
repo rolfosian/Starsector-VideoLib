@@ -146,6 +146,7 @@ public class FFmpeg {
     public static native void closeImage(long ptr);
     public static native ByteBuffer getImageBuffer(long ptr);
     public static native void resizeImage(long ptr, int newWidth, int newHeight);
+    public static native boolean isImageRGBA(long ptr);
 
     // general video functions compatible with both sound and no sound context pointers
     public static native int getErrorStatus(long ptr);
