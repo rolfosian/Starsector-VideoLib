@@ -487,6 +487,16 @@ public class PlayerControlPanel {
                     if (this.seeking && this.isAdvanced && event.isMouseUpEvent()) {
                         this.seeking = false;
 
+                        if (!(seekX == mouseX)) {
+
+                            this.pendingSeekTarget = getSeekPositionFromX(mouseX);
+                        
+                            float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
+                            seekButton.getPosition().inTL(newX, this.seekButtonY);
+        
+                            this.seek();
+                        }
+
                         projector.setPlayMode(oldProjectorMode);
                         projector.getDecoder().setPlayMode(oldDecoderMode);
                         seekButton.setEnabled(true);
