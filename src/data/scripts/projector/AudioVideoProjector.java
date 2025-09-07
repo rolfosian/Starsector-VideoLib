@@ -77,7 +77,7 @@ public class AudioVideoProjector extends VideoProjector {
         this.width = width;
         this.height = height;
 
-        this.decoder = new DecoderWithSound(this, new TextureBuffer(60), videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
+        this.decoder = new DecoderWithSound(this, videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
 
         this.speakers = new VideoProjectorSpeakers(this, decoder, decoder.getAudioFrameBuffer(), volume); 

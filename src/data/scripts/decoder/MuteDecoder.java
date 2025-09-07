@@ -7,7 +7,7 @@ import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.Projector;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
-
+import data.scripts.buffers.RGBATextureBuffer;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.buffers.TextureFrame;
 
@@ -55,12 +55,10 @@ public class MuteDecoder implements Decoder {
 
     private float timeAccumulator = 0f;
 
-    public MuteDecoder(Projector videoProjector, TextureBuffer textureBuffer, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public MuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing MuteDecoder");
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
-
-        this.textureBuffer = textureBuffer;
 
         this.width = width;
         this.height = height;
@@ -211,6 +209,10 @@ public class MuteDecoder implements Decoder {
         print("Video Framerate =", videoFps);
         print("Video Duration=", videoDurationSeconds);
         print("Video DurationUs=", videoDurationUs);
+
+        boolean isRGBA = FFmpeg.isRGBA(pipePtr);
+        print("isRGBA=", isRGBA);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(60) : new TextureBuffer(60);
 
         decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();

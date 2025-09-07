@@ -74,7 +74,7 @@ public class MuteVideoProjector extends VideoProjector {
         this.width = width;
         this.height = height;
 
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath,  width, height, startingPlayMode, startingEOFMode);
+        this.decoder = new MuteDecoder(this, videoFilePath,  width, height, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
 
         // this.vboId = textureBuffer.getVboId();

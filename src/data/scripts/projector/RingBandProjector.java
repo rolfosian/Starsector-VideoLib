@@ -53,7 +53,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, MODE, EOF_MODE);
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
 
         this.ringBand = ringBand;

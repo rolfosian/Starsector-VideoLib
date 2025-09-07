@@ -152,6 +152,7 @@ public class FFmpeg {
     public static native float getVideoFps(long ptr);
     public static native double getDurationSeconds(long ptr);
     public static native long getDurationUs(long ptr);
+    public static native boolean isRGBA(long ptr);
 
     public static native void seek(long ptr, long targetUs);
     public static native void closePipe(long ptr);

@@ -11,7 +11,7 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.buffers.TextureFrame;
 import data.scripts.buffers.AudioFrameBuffer;
-
+import data.scripts.buffers.RGBATextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.Frame;
 import data.scripts.ffmpeg.VideoFrame;
@@ -66,14 +66,13 @@ public class DecoderWithSound implements Decoder {
 
     private float timeAccumulator = 0f;
 
-    public DecoderWithSound(Projector videoProjector, TextureBuffer textureBuffer, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
+    public DecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing DecoderWithSound");
         this.videoFilePath = videoFilePath;
 
         this.videoProjector = videoProjector;
 
         this.audioBuffer = new AudioFrameBuffer(60);
-        this.textureBuffer = textureBuffer;
 
         this.width = width;
         this.height = height;
@@ -230,6 +229,10 @@ public class DecoderWithSound implements Decoder {
         print("Video Framerate =", videoFps);
         print("Video Duration=", videoDurationSeconds);
         print("Video DurationUs=", videoDurationUs);
+
+        boolean isRGBA = FFmpeg.isRGBA(pipePtr);
+        print("isRGBA=", isRGBA);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(60) : new TextureBuffer(60);
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);
         audioSampleRate = FFmpeg.getAudioSampleRate(pipePtr);

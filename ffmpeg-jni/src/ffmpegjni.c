@@ -6,6 +6,7 @@
 #include <libavutil/avutil.h>
 #include <libavutil/rational.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/pixdesc.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
@@ -427,6 +428,7 @@ typedef struct {
     int height;
     uint8_t *rgb_buffer;
     int rgb_size;
+    int rgb_type;
     int64_t frame_count;
     int64_t total_frame_count;
     float fps;
@@ -457,6 +459,16 @@ typedef struct {
 
     pthread_mutex_t mutex;
 } FFmpegPipeContext;
+
+JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
+    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    if (!ctx) {
+        printe(env, "isRGBA: null context pointer");
+        return 0;
+    }
+    
+    return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
+}
 
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
@@ -533,58 +545,9 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         return 0;
     }
 
-    struct SwsContext *sws_ctx = sws_getContext(
-        codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
-        width, height, AV_PIX_FMT_RGB24,
-        SWS_BILINEAR, NULL, NULL, NULL
-    );
-    if (!sws_ctx) {
-        printe(env, "openPipeNoSound: failed to create scaler context");
-        av_frame_free(&frame);
-        av_frame_free(&rgb_frame);
-        avcodec_free_context(&codec_ctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
-
-    int rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, width, height, 1);
-    uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
-    if (!rgb_buffer) {
-        printe(env, "openPipeNoSound: failed to allocate RGB buffer");
-        sws_freeContext(sws_ctx);
-        av_frame_free(&frame);
-        av_frame_free(&rgb_frame);
-        avcodec_free_context(&codec_ctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
-    if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, AV_PIX_FMT_RGB24, width, height, 1) < 0) {
-        printe(env, "openPipeNoSound: failed to fill image arrays");
-        av_free(rgb_buffer);
-        sws_freeContext(sws_ctx);
-        av_frame_free(&frame);
-        av_frame_free(&rgb_frame);
-        avcodec_free_context(&codec_ctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
-
-    // Calculate FPS
-    AVStream *video_stream = fmt_ctx->streams[video_stream_index];
-    AVRational r_frame_rate = video_stream->r_frame_rate;
-    float fps = 0.0f;
-    if (r_frame_rate.den != 0) {
-        fps = (float) r_frame_rate.num / (float) r_frame_rate.den;
-    }
-
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)malloc(sizeof(FFmpegPipeContext));
     if (!ctx) {
         printe(env, "openPipeNoSound: failed to allocate context structure");
-        av_free(rgb_buffer);
-        sws_freeContext(sws_ctx);
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
         avcodec_free_context(&codec_ctx);
@@ -592,7 +555,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
-    
+
     ctx->audio_ctx = NULL;
     ctx->audio_frame = NULL;
     ctx->swr_ctx = NULL;
@@ -601,21 +564,79 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->audio_next_pts_us = -1;
     ctx->audio_stream_index = -1;
     memset(&ctx->out_ch_layout, 0, sizeof(AVChannelLayout));
-    
+
     ctx->fmt_ctx = fmt_ctx;
     ctx->video_ctx = codec_ctx;
     ctx->video_frame = frame;
     ctx->rgb_frame = rgb_frame;
-    ctx->sws_ctx = sws_ctx;
     ctx->video_stream_index = video_stream_index;
     ctx->width = width;
     ctx->height = height;
     ctx->frame_count = 0;
+
+    {
+        enum AVPixelFormat pix_fmt = ctx->video_ctx->pix_fmt;
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+        ctx->rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
+    }
+
+    enum AVPixelFormat target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+
+    struct SwsContext *sws_ctx = sws_getContext(
+        codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
+        width, height, target_fmt,
+        SWS_BILINEAR, NULL, NULL, NULL
+    );
+    if (!sws_ctx) {
+        printe(env, "openPipeNoSound: failed to create scaler context");
+        free(ctx);
+        av_frame_free(&frame);
+        av_frame_free(&rgb_frame);
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
+
+    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
+    uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
+    if (!rgb_buffer) {
+        printe(env, "openPipeNoSound: failed to allocate RGB buffer");
+        sws_freeContext(sws_ctx);
+        free(ctx);
+        av_frame_free(&frame);
+        av_frame_free(&rgb_frame);
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
+    if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
+        printe(env, "openPipeNoSound: failed to fill image arrays");
+        av_free(rgb_buffer);
+        sws_freeContext(sws_ctx);
+        free(ctx);
+        av_frame_free(&frame);
+        av_frame_free(&rgb_frame);
+        avcodec_free_context(&codec_ctx);
+        avformat_close_input(&fmt_ctx);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
+
+    ctx->sws_ctx = sws_ctx;
     ctx->rgb_buffer = rgb_buffer;
     ctx->rgb_size = rgb_size;
+
+    // Calculate FPS
+    AVStream *video_stream = fmt_ctx->streams[video_stream_index];
+    AVRational r_frame_rate = video_stream->r_frame_rate;
+    float fps = 0.0f;
+    if (r_frame_rate.den != 0) {
+        fps = (float) r_frame_rate.num / (float) r_frame_rate.den;
+    }
     ctx->fps = fps;
-    
-    // Initialize total_frame_count to -1 to indicate it hasn't been calculated yet
+
     ctx->total_frame_count = -1;
 
     if (fmt_ctx->duration > 0) {
@@ -629,13 +650,13 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->seek_target_us = -1;
     ctx->seeking = 0;
     ctx->error_status = 0;
-    
+
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
         printe(env, "openPipeNoSound: failed to initialize mutex");
-        free(ctx);
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
+        free(ctx);
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
         avcodec_free_context(&codec_ctx);
@@ -644,7 +665,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         return 0;
     }
 
-    // Optionally seek to starting timestamp (microseconds)
     if (startUs > 0) {
         int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
         int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
@@ -652,7 +672,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "openPipeNoSound: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
             printe(env, error_msg);
-            // continue without seek
         } else {
             avcodec_flush_buffers(codec_ctx);
             ctx->seek_target_us = (int64_t)startUs;
@@ -664,6 +683,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
     return (jlong)(intptr_t)ctx;
 }
+
 
 JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
@@ -927,7 +947,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
                 avcodec_free_context(&actx);
                 actx = NULL;
             } else {
-                // setup resampler to signed 16-bit interleaved at input sample rate, same channels
                 AVChannelLayout in_layout = actx->ch_layout;
                 out_ch_layout = in_layout;
                 out_sample_rate = actx->sample_rate;
@@ -964,7 +983,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         }
     }
 
-    // Video frames and scaler
+    // Video frames
     AVFrame *vframe = av_frame_alloc();
     AVFrame *rgb = av_frame_alloc();
     if (!vframe || !rgb) {
@@ -980,10 +999,19 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
-    
+
+    // Determine RGB vs RGBA first
+    int rgb_type = 0;
+    {
+        enum AVPixelFormat pix_fmt = vctx->pix_fmt;
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+        rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0;
+    }
+    enum AVPixelFormat target_fmt = (rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+
     struct SwsContext *sws = sws_getContext(
         vctx->width, vctx->height, vctx->pix_fmt,
-        width, height, AV_PIX_FMT_RGB24,
+        width, height, target_fmt,
         SWS_BILINEAR, NULL, NULL, NULL
     );
     if (!sws) {
@@ -1000,7 +1028,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         return 0;
     }
     
-    int rgb_size = av_image_get_buffer_size(AV_PIX_FMT_RGB24, width, height, 1);
+    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
     uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
     if (!rgb_buffer) {
         printe(env, "openPipe: failed to allocate RGB buffer");
@@ -1017,7 +1045,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         return 0;
     }
     
-    if (av_image_fill_arrays(rgb->data, rgb->linesize, rgb_buffer, AV_PIX_FMT_RGB24, width, height, 1) < 0) {
+    if (av_image_fill_arrays(rgb->data, rgb->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
         printe(env, "openPipe: failed to fill image arrays");
         av_free(rgb_buffer);
         sws_freeContext(sws);
@@ -1071,14 +1099,12 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
 
     ctx->rgb_buffer = rgb_buffer;
     ctx->rgb_size = rgb_size;
+    ctx->rgb_type = rgb_type;
 
     ctx->frame_count = 0;
     ctx->fps = fps;
-    
-    // Initialize total_frame_count to -1 to indicate it hasn't been calculated yet
     ctx->total_frame_count = -1;
 
-    // duration in seconds and microseconds
     if (fmt_ctx->duration > 0) {
         ctx->duration_us = fmt_ctx->duration;
         ctx->duration_seconds = (double)fmt_ctx->duration / (double)AV_TIME_BASE;
@@ -1097,11 +1123,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     ctx->out_sample_fmt = out_sample_fmt;
     ctx->out_sample_rate = out_sample_rate;
     ctx->out_channels = out_channels;
-    ctx->audio_next_pts_us = -1;
-    ctx->audio_target_samples = (out_sample_rate > 0 ? out_sample_rate / 4 : 0);
-    ctx->audio_out_buffer = NULL;
-    ctx->audio_out_capacity_bytes = 0;
-
     ctx->audio_next_pts_us = -1;
     ctx->audio_target_samples = (out_sample_rate > 0 ? out_sample_rate / 4 : 0);
     ctx->audio_out_buffer = NULL;
@@ -1129,7 +1150,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         return 0;
     }
     
-    // Optionally seek to starting timestamp (microseconds)
     if (startUs > 0) {
         int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
         int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
@@ -1137,7 +1157,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
             printe(env, error_msg);
-            // continue without seek
         } else {
             avcodec_flush_buffers(vctx);
             if (actx) avcodec_flush_buffers(actx);

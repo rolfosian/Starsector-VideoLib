@@ -116,7 +116,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start(startVideoUs);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
@@ -169,7 +169,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
-        this.decoder = new MuteDecoder(this, new TextureBuffer(60), videoFilePath, width, height, this.MODE, this.EOF_MODE);
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start(startVideoUs);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
