@@ -48,7 +48,7 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
     private Object ourTexObj;
 
     public SpriteProjector(Sprite sprite, String videoId, int width, int height, long startVideoUs) {
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.videoId = videoId;
         this.width = width;
         this.height = height;

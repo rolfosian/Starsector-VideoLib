@@ -99,7 +99,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         planet.setSpec(ourPlanetSpec);
 
         this.videoId = videoId;
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
 
         // if (planetTexTypeField == PlanetTexType.SHIELD) { // TODO: DETERMINE METHOD TO OVERLAY SHIELD TEXTURE PER VIDEO FRAME
             // this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);
@@ -152,7 +152,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         planet.setSpec(ourPlanetSpec);
 
         this.videoId = videoId;
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
 
         // if (planetTexTypeField == PlanetTexType.SHIELD) { // TODO: DETERMINE METHOD TO OVERLAY SHIELD TEXTURE PER VIDEO FRAME
             // this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, planetTexObj);

@@ -45,7 +45,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
     private Object ourTexObj;
 
     public RingBandProjector(RingBand ringBand, String videoId, int width, int height, long startVideoUs) {
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.videoId = videoId;
         this.width = width;
         this.height = height;

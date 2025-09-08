@@ -67,7 +67,7 @@ public class MuteVideoProjector extends VideoProjector {
     private float bottomBound;
 
     public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
 

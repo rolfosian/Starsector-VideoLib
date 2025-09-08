@@ -12,15 +12,18 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 
+import data.scripts.VideoPaths;
 import data.scripts.ffmpeg.FFmpeg;
 
 /**Supports JPEG, PNG, WEBP, and GIF (stills) */
 public class ImagePlugin implements CustomUIPanelPlugin {
+    protected String fileId;
     protected int textureId;
     protected int width;
     protected int height;
-    protected String fileName;
+    
     protected long ptr;
+    protected String filePath;
 
     private float x;
     private float y;
@@ -28,11 +31,13 @@ public class ImagePlugin implements CustomUIPanelPlugin {
     private int advancingValue = 0;
     private int checkAdvancing = 0;
 
-    public ImagePlugin(String fileName, int width, int height, boolean keepAlive) {
-        this.fileName = fileName;
+    public ImagePlugin(String fileId, int width, int height, boolean keepAlive) {
+        this.fileId = fileId;
+        this.filePath = VideoPaths.getImagePath(fileId);
         this.width = width;
         this.height = height;
-        this.ptr = FFmpeg.openImage(fileName, width, height);
+        
+        this.ptr = FFmpeg.openImage(filePath, width, height);
         this.textureId = createGLTextureFromFrame(FFmpeg.getImageBuffer(ptr), width, height);
 
         if (!keepAlive)
@@ -63,14 +68,15 @@ public class ImagePlugin implements CustomUIPanelPlugin {
         });
     }
 
-    public void setImage(String fileName, int width, int height) {
+    public void setImage(String fileId, int width, int height) {
         GL11.glDeleteTextures(textureId);
         FFmpeg.closeImage(ptr);
 
-        this.fileName = fileName;
+        this.fileId = fileId;
+        this.filePath = VideoPaths.getImagePath(fileId);
         this.width = width;
         this.height = height;
-        this.ptr = FFmpeg.openImage(fileName, width, height);
+        this.ptr = FFmpeg.openImage(filePath, width, height);
 
         this.textureId = createGLTextureFromFrame(FFmpeg.getImageBuffer(ptr), width, height);
     }

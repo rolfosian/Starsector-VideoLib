@@ -57,7 +57,7 @@ public class AudioVideoPlayer implements VideoPlayer {
 
     @Override
     public void openNewVideo(String videoId, int width, int height) {
-        String videoFilePath = VideoPaths.get(videoId);
+        String videoFilePath = VideoPaths.getVideoPath(videoId);
 
         Decoder decoder = this.projector.getDecoder();
         decoder.setVideoFilePath(videoFilePath);

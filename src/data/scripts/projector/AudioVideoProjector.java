@@ -70,7 +70,7 @@ public class AudioVideoProjector extends VideoProjector {
     private float bottomBound;
 
     public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        this.videoFilePath = VideoPaths.get(videoId);
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
 

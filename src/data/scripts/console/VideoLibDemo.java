@@ -57,7 +57,7 @@ public class VideoLibDemo implements BaseCommand {
         if (context != CommandContext.CAMPAIGN_MAP) return CommandResult.WRONG_CONTEXT;
         List<String> splitArgs = Arrays.asList(args.split(" "));
 
-        for (String id : VideoPaths.keys()) {
+        for (String id : VideoPaths.videoKeys()) {
             if (splitArgs.contains(id)) {
                 fileId = id;
                 break;
@@ -125,7 +125,7 @@ public class VideoLibDemo implements BaseCommand {
                     fileId = "video_lib_demo";
 
                 } else {
-                    int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.get(fileId));
+                    int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.getVideoPath(fileId));
                     videoWidth = dimensions[0];
                     videoHeight = dimensions[1];
                 }
@@ -192,7 +192,7 @@ public class VideoLibDemo implements BaseCommand {
                     UITable table = (UITable) tt.beginTable(c1, c2, Misc.getHighlightedOptionColor(), 30f, false, true,
                     new Object[]{"Available Videos by Id", 200f});
     
-                    String[] videoFileIds = VideoPaths.keys();
+                    String[] videoFileIds = VideoPaths.videoKeys();
                     float yOffset = 0f;
                     
                     for (String fileId : videoFileIds) {
@@ -205,7 +205,7 @@ public class VideoLibDemo implements BaseCommand {
                             public void buttonPressed(Object buttonId) {
                                 if (!currentVideoId.equals(fileId)) {
                                     currentVideoId = fileId;
-                                    String path = VideoPaths.get(fileId);
+                                    String path = VideoPaths.getVideoPath(fileId);
     
                                     int[] size = FFmpeg.getWidthAndHeight(path);
     

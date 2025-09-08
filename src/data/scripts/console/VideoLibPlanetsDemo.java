@@ -29,7 +29,7 @@ public class VideoLibPlanetsDemo implements BaseCommand {
         List<String> splitArgs = Arrays.asList(args.split(" "));
 
         String fileId = null;
-        for (String id : VideoPaths.keys()) {
+        for (String id : VideoPaths.videoKeys()) {
             if (splitArgs.contains(id)) {
                 fileId = id;
                 break;
