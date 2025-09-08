@@ -11,6 +11,7 @@
 ## Example Usage for a Video UI panel
 
 [Examples](./src/data/scripts/console/)
+[For video file path resolution use settings.json](./data/config/settings.json)
 
 - Example usage for Video UI
 
@@ -21,7 +22,7 @@ VideoPlayer videoplayer;
 // with controls
 if (splitArgs.contains("wc")) {
                                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, Color.WHITE, Misc.getDarkPlayerColor());
+    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("video_lib_demo", videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, Color.WHITE, Misc.getDarkPlayerColor());
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
@@ -29,7 +30,7 @@ if (splitArgs.contains("wc")) {
 
 // no controls, just a video by itself on loop
 } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayer(fileId, videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
+    videoPlayer = VideoPlayerFactory.createMutePlayer("video_lib_demo", videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
