@@ -7,6 +7,7 @@
 #include <libavutil/rational.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/pixdesc.h>
+#include <libavutil/intreadwrite.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
@@ -30,7 +31,6 @@ static jmethodID printMid;
 
 static jclass ObjectClass;
 
-
 JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     jobjectArray args = (*env)->NewObjectArray(env, 1, ObjectClass, NULL);
     jstring jmsg = (*env)->NewStringUTF(env, msg);
@@ -49,10 +49,15 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
     AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IIJ)V");
 
-    FFmpegClass = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
+    jclass localFFmpeg = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
+    FFmpegClass = (*env)->NewGlobalRef(env, localFFmpeg);
+    (*env)->DeleteLocalRef(env, localFFmpeg);
+    
+    jclass localObject = (*env)->FindClass(env, "java/lang/Object");
+    ObjectClass = (*env)->NewGlobalRef(env, localObject);
+    (*env)->DeleteLocalRef(env, localObject);
+    
     printMid = (*env)->GetStaticMethodID(env, FFmpegClass, "print", "([Ljava/lang/Object;)V");
-
-    ObjectClass = (*env)->FindClass(env, "java/lang/Object");
 }
 
 
@@ -491,6 +496,49 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, j
     }
     
     return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
+}
+
+// vp9 alpha channel is in a separate stream
+int is_alpha_channel(AVFormatContext *fmt_ctx) {
+    AVPacket *pkt = av_packet_alloc();
+    if (!pkt) {
+        return 0;
+    }
+
+    while (1) {
+        int ret = av_read_frame(fmt_ctx, pkt);
+        if (ret < 0) {
+            av_packet_free(&pkt);
+            return ret;
+        }
+
+        size_t side_data_size = 0;
+        uint8_t *side_data = av_packet_get_side_data(
+            pkt,
+            AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL,
+            &side_data_size
+        );
+
+        if (side_data_size < 8) {
+            // av_seek_frame(fmt_ctx, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY);
+            av_packet_unref(pkt);
+            av_packet_free(&pkt);
+            return 0;
+        }
+
+        const uint64_t additional_id = AV_RB64(side_data);
+        if (additional_id != 1) {
+            // av_seek_frame(fmt_ctx, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY);
+            av_packet_unref(pkt);
+            av_packet_free(&pkt);
+            return 0;
+        }
+
+        // av_seek_frame(fmt_ctx, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY);
+        av_packet_unref(pkt);
+        av_packet_free(&pkt);
+        return 1;
+    }
 }
 
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
