@@ -13,7 +13,7 @@ import com.fs.starfarer.api.ModSpecAPI;
 @SuppressWarnings("unchecked")
 public class VideoPaths {
     public static boolean populated = false;
-    
+
     private static Map<String, String> videoMap = new HashMap<>();
     private static String[] videoKeys;
 
@@ -60,7 +60,7 @@ public class VideoPaths {
                     logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
                 }
 
-                JSONObject imageFilePaths = settings.getJSONObject(modId).getJSONObject("images");
+                JSONObject imageFilePaths = pathData.getJSONObject("images");
                 fileIds = imageFilePaths.keys();
 
                 while (fileIds.hasNext()) {
