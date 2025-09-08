@@ -158,7 +158,7 @@ public class VideoLibDemo implements BaseCommand {
                 } else { // no sound
                     // with controls
                     if (splitArgs.contains("wc")) {
-                                                                    // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
+                                                                    // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
                         videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(fileId, videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, controlsTextColor[0], controlsColor[0]);
                         videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
@@ -170,7 +170,7 @@ public class VideoLibDemo implements BaseCommand {
                         videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
                         videoPlayer.init(); // init projector and controls so they know where/height/width to render
 
-                    } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode
+                    } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
                         videoPlayer = VideoPlayerFactory.createMutePlayer(fileId, videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
                         videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
