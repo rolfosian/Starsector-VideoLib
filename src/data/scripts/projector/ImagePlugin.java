@@ -36,12 +36,12 @@ public class ImagePlugin implements CustomUIPanelPlugin {
         this.filePath = VideoPaths.getImagePath(fileId);
         this.width = width;
         this.height = height;
-        
+
         this.ptr = FFmpeg.openImage(filePath, width, height);
         this.textureId = createGLTextureFromFrame(FFmpeg.getImageBuffer(ptr), width, height);
 
         if (!keepAlive)
-        Global.getSector().addTransientScript(new EveryFrameScript() {
+        Global.getSector().addScript(new EveryFrameScript() {
             private boolean isDone = false;
 
             @Override
@@ -52,7 +52,7 @@ public class ImagePlugin implements CustomUIPanelPlugin {
                     GL11.glDeleteTextures(textureId);
                     FFmpeg.closeImage(ptr);
                     isDone = true;
-                    Global.getSector().removeTransientScript(this);
+                    Global.getSector().removeScript(this);
                 }
             }
 

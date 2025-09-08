@@ -85,7 +85,7 @@ public class AudioVideoProjector extends VideoProjector {
         this.speakers.start();
 
         if (!keepAlive)
-        Global.getSector().addTransientScript(new EveryFrameScript() {
+        Global.getSector().addScript(new EveryFrameScript() {
             private boolean isDone = false;
 
             @Override
@@ -95,7 +95,7 @@ public class AudioVideoProjector extends VideoProjector {
                 if (!(checkAdvancing == advancingValue)) { // as soon as this becomes misaligned with the value that is flipped in projector's advance then we finish and clean up
                     finish();
                     isDone = true;
-                    Global.getSector().removeTransientScript(this);
+                    Global.getSector().removeScript(this);
                 }
             }
 
