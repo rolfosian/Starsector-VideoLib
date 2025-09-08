@@ -16,6 +16,7 @@
 
 ```java
 CustomPanelAPI parentPanel = ...
+VideoPlayer videoplayer;
 
 // with controls
 if (splitArgs.contains("wc")) {
