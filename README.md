@@ -10,7 +10,8 @@
 
 ## Example Usage for a Video UI panel
 
-[Examples](./src/data/scripts/console/)\n
+[Examples](./src/data/scripts/console/)
+
 [For video file path resolution use settings.json](./data/config/settings.json)
 
 - Example usage for Video UI
