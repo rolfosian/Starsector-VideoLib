@@ -14,7 +14,7 @@
 
 [For video file path resolution use settings.json](./data/config/settings.json)
 
-- Example usage for Video UI
+- Example usage for a Video UI Component
 
 ```java
 CustomPanelAPI parentPanel = ...
@@ -27,7 +27,7 @@ if (splitArgs.contains("wc")) {
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-    videoPlayer.init(); // init projector and controls so they know where/height/width to render
+    videoPlayer.init(); // init projector and controls so they know where/height/width to render. *Make sure 'parentPanel' is positioned properly before calling this
 
 // no controls, just a video by itself on loop
 } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
@@ -35,7 +35,7 @@ if (splitArgs.contains("wc")) {
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-    videoPlayer.init(); // init projector so it knows where/width/height to render
+    videoPlayer.init(); // init projector so it knows where/width/height to render *Make sure 'parentPanel' is positioned properly before calling this
 }
 ```
 
@@ -46,7 +46,7 @@ if (splitArgs.contains("wc")) {
   - Test with different encodings, use videos with a good balance of bitrate and keyframe density - will possibly see dramatic differences in seeking performance
   - Only use the `PlanetTexType.SHIELD` parameter for PlanetProjector if you are absolutely sure the planet wont be using, or obtaining a Planetary Shield during the projector's lifetime. Use `PlanetTexType.SHIELD2` if the planet has a shield, and it will replace the texture layer below it.
   - if using `PlanetTexType.SHIELD` or `PlanetTexType.SHIELD2`, black pixels are chroma keyed by the Planet Renderer and rendered transparent. Use this to your advantage for some cool effects
-  - ***IMPORTANT***: As the projectors use threaded decoders, it is absolutely imperative to call the `finish()` method on the projector when you are done with it. Failure to do so will result in the decoder thread running indefinitely, the ringbuffer leaking memory, and the variables not being reset. It is especially important to do this for the `PlanetProjector` to reset the instance specific `PlanetSpec` clones. For standard Video UI Panels such as in the above example, if the `keepAlive` parameter is specified `true`, then you must manually call `finish()` on the projector to clean up when desired. Otherwise, if `keepAlive` is specified `false` then the projector will finish and clean itself up automatically as soon as it stops advancing (usually when the panel component is removed from its parent and stops rendering).
+  - ***IMPORTANT***: As the projectors use threaded decoders, it is absolutely imperative to call the `finish()` method on the projector when you are done with it. Failure to do so will result in the decoder thread running indefinitely, the ringbuffer leaking memory, and the variables not being reset in the case of `RingBandProjector`, `PlanetProjector`, `SpriteProjector` etc. It is especially important to do this for the `PlanetProjector` to reset the instance specific `PlanetSpec` clones. For standard Video UI Panels such as in the above example, if the `keepAlive` parameter is specified `true`, then you must manually call `finish()` on the projector to clean up when desired. Otherwise, if `keepAlive` is specified `false` then the projector will finish and clean itself up automatically as soon as it stops advancing (usually when the panel component is removed from its parent and stops rendering).
 
 ## TODO
 - Audio support coming soon™, hopefully. impl TBD `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` Do NOT use the current audio stuff; it does not work.
