@@ -650,9 +650,9 @@ static int merge_alpha_packet(JNIEnv *env, FFmpegPipeContext *ctx, AVPacket *pkt
         av_freep(&scaled_alpha_data[0]);
     
     } else {
-        for (int y = 0; y < ctx->video_ctx->height; y++) {
+        for (int y = 0; y < ctx->height; y++) {
             uint8_t *rgba_row = dst_data[0] + y * dst_linesize[0];
-            for (int x = 0; x < ctx->video_ctx->width; x++) {
+            for (int x = 0; x < ctx->width; x++) {
                 rgba_row[x * 4 + 3] = 255;
             }
         }
