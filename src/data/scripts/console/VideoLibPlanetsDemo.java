@@ -39,7 +39,7 @@ public class VideoLibPlanetsDemo implements BaseCommand {
         int videoWidth = 512;
         int videoHeight = 256;
 
-        if (fileId == null) fileId = "video_lib_planets_demo";
+        if (fileId == null) fileId = "vl_ufos";
 
         List<PlanetProjector> projectors = new ArrayList<>();
         

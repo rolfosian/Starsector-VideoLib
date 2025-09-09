@@ -98,11 +98,26 @@ public class VideoLibDemo implements BaseCommand {
                     int blue = Integer.parseInt(colorArgs[2]);
                     
                     controlsTextColor[0] = new Color(red, green, blue);
+
                 }
+                
             }
 
             if (controlsTextColor[0] == null) controlsTextColor[0] = Misc.getTextColor();
             if (controlsColor[0] == null) controlsColor[0] = Misc.getDarkPlayerColor();
+        }
+
+        final int[] argWidth = new int[1];
+        argWidth[0] = 0;
+        final int[] argHeight = new int[1];
+        argHeight[0] = 0;
+        for (String arg : splitArgs) {
+            if (arg.startsWith("width:")) {
+                argWidth[0] = Integer.parseInt(arg.split(":")[1]);
+
+            } else if (arg.startsWith("height:")) {
+                argHeight[0] = Integer.parseInt(arg.split(":")[1]);
+            }
         }
 
         InteractionDialogPlugin interactionPlugin = new InteractionDialogPlugin() {
@@ -119,10 +134,14 @@ public class VideoLibDemo implements BaseCommand {
                 int videoWidth;
                 int videoHeight;
 
-                if (fileId == null) {
+                if (argWidth[0] != 0 && argHeight[0] != 0) {
+                    videoWidth = argWidth[0];
+                    videoHeight = argHeight[0];
+
+                } else if (fileId == null) {
                     videoWidth = 960;
                     videoHeight = 540;
-                    fileId = "video_lib_demo";
+                    fileId = "vl_demo";
 
                 } else {
                     int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.getVideoPath(fileId));
