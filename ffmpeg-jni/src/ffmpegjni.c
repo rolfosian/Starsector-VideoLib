@@ -612,15 +612,43 @@ static int merge_alpha_packet(JNIEnv *env, FFmpegPipeContext *ctx, AVPacket *pkt
               dst_linesize);
 
     if (got_alpha) {
-        uint8_t *alpha_plane = got_alpha->data[0];
-        int alpha_linesize = got_alpha->linesize[0];
-        for (int y = 0; y < ctx->video_ctx->height; y++) {
+        uint8_t *scaled_alpha_data[4] = { NULL };
+        int scaled_alpha_linesize[4];
+        
+        if (av_image_alloc(scaled_alpha_data, scaled_alpha_linesize,
+                           ctx->width, ctx->height, AV_PIX_FMT_GRAY8, 1) < 0) {
+            printe(env, "merge_alpha_packet: av_image_alloc for scaled alpha failed");
+            ret = AVERROR(ENOMEM);
+            goto failed;
+        }
+        
+        const uint8_t *const src_alpha_plane[4] = {
+            got_alpha->data[0],
+            NULL, NULL, NULL
+        };
+        const int src_alpha_linesize[4] = {
+            got_alpha->linesize[0],
+            0, 0, 0
+        };
+        
+        sws_scale(ctx->alpha_sws_ctx,
+                  src_alpha_plane,
+                  src_alpha_linesize,   
+                  0,
+                  got_alpha->height,
+                  scaled_alpha_data,
+                  scaled_alpha_linesize);
+        
+        for (int y = 0; y < ctx->height; y++) {
             uint8_t *rgba_row = dst_data[0] + y * dst_linesize[0];
-            uint8_t *alpha_row = alpha_plane + y * alpha_linesize;
-            for (int x = 0; x < ctx->video_ctx->width; x++) {
+            uint8_t *alpha_row = scaled_alpha_data[0] + y * scaled_alpha_linesize[0];
+            for (int x = 0; x < ctx->width; x++) {
                 rgba_row[x * 4 + 3] = alpha_row[x];
             }
         }
+        
+        av_freep(&scaled_alpha_data[0]);
+    
     } else {
         for (int y = 0; y < ctx->video_ctx->height; y++) {
             uint8_t *rgba_row = dst_data[0] + y * dst_linesize[0];
@@ -845,7 +873,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         
         ctx->alpha_ctx->width  = ctx->video_ctx->width;
         ctx->alpha_ctx->height = ctx->video_ctx->height;
-        ctx->alpha_ctx->pix_fmt = AV_PIX_FMT_YUVA420P;
+        ctx->alpha_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
         ctx->alpha_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
         ctx->alpha_ctx->time_base = ctx->video_ctx->time_base;
         
@@ -872,8 +900,8 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         );
 
         ctx->alpha_sws_ctx = sws_getContext(
-            ctx->alpha_ctx->width, ctx->alpha_ctx->height, AV_PIX_FMT_YUVA420P,
-            width, height, target_fmt,
+            ctx->alpha_ctx->width, ctx->alpha_ctx->height, AV_PIX_FMT_GRAY8,
+            width, height, AV_PIX_FMT_GRAY8,
             SWS_BILINEAR, NULL, NULL, NULL
         );
 
