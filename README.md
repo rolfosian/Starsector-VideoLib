@@ -2,17 +2,20 @@
 - Audio support coming soon™, hopefully. impl TBD. Do NOT use the current audio stuff; it does not work in any way.
 
 ## Video Lib
-### Small UI lib for Starsector with a couple of rudimentary CustomUIPanelPlugin implementations that render videos or images utilizing some basic JNI+FFmpeg C glue code
-- Each video is converted into an OpenGL texture in real time via a ringbuffer hooked up to a threaded decoder with static ffmpeg+JNI glue binaries
-- Supports H264, HEVC, VP8, VP9, PNG, JPEG, GIF, and WEBP
-- Protip: Do not use (loosely) variable framerate videos or else you will probably encounter issues; if they are very tight variables it probably won't matter
+### A video library for Starsector with a few rudimentary implementations that render videos or images utilizing some basic? JNI-FFmpeg C glue code
+
+- Each video frame is converted into an OpenGL texture in real time via a ringbuffer wired to a decoder on a worker thread calling from static FFmpeg-JNI glue binaries
+- Supports H264, HEVC, VP8, VP9, PNG, JPEG, GIF, and WEBP. Support for alpha channel YUVA420P (WEBM/VP9 - See data/videos/convert_to_alpha.py) and animated GIF conversion to OpenGL RGBA textures also.
+- Protip: Do not use (loosely) variable framerate videos or else you will probably encounter issues; if they are very tight variables it probably won't matter though.
 - Anything you can put a `CustomPanelAPI` on, you can put a video on.
+- Anything that uses a `Sprite` object you can turn into a video with a bit of finesse.
+- Planet Projectors also work, we can replace any layer of planet textures with a video (Planet, Cloud, Atmosphere, Glow, Shield, Shield2). Ringband textures can also be replaced with videos. More to come maybe?
 
 ## Example Usage for a Video UI panel
 
 [Examples](./src/data/scripts/console/)
 
-[For video file path resolution use settings.json](./data/config/settings.json)
+[For image/video file path resolution use settings.json](./data/config/settings.json)
 
 - Example usage for a Video UI Component
 
@@ -23,7 +26,7 @@ VideoPlayer videoplayer;
 // with controls
 if (splitArgs.contains("wc")) {
                                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("video_lib_demo", videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, Color.WHITE, Misc.getDarkPlayerColor());
+    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("vl_demo", videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, Color.WHITE, Misc.getDarkPlayerColor());
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
@@ -31,7 +34,7 @@ if (splitArgs.contains("wc")) {
 
 // no controls, just a video by itself on loop
 } else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayer("video_lib_demo", videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
+    videoPlayer = VideoPlayerFactory.createMutePlayer("vl_demo", videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
     videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
     videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
@@ -45,7 +48,7 @@ if (splitArgs.contains("wc")) {
   - Use videos with framerates lower than 60 fps to give more breathing room for texture upload and seeking
   - Test with different encodings, use videos with a good balance of bitrate and keyframe density - will possibly see dramatic differences in seeking performance
   - Only use the `PlanetTexType.SHIELD` parameter for PlanetProjector if you are absolutely sure the planet wont be using, or obtaining a Planetary Shield during the projector's lifetime. Use `PlanetTexType.SHIELD2` if the planet has a shield, and it will replace the texture layer below it.
-  - if using `PlanetTexType.SHIELD` or `PlanetTexType.SHIELD2`, black pixels are chroma keyed by the Planet Renderer and rendered transparent. Use this to your advantage for some cool effects
+  - if using `PlanetTexType.SHIELD` or `PlanetTexType.SHIELD2`, black pixels are chroma keyed by the Planet Renderer and rendered transparent. Use this to your advantage for some cool effects, although alpha channel support for YUVA420P (only vp9/webm tested) and GIF has since been added.
   - ***IMPORTANT***: As the projectors use threaded decoders, it is absolutely imperative to call the `finish()` method on the projector when you are done with it. Failure to do so will result in the decoder thread running indefinitely, the ringbuffer leaking memory, and the variables not being reset in the case of `RingBandProjector`, `PlanetProjector`, `SpriteProjector` etc. It is especially important to do this for the `PlanetProjector` to reset the instance specific `PlanetSpec` clones. For standard Video UI Panels such as in the above example, if the `keepAlive` parameter is specified `true`, then you must manually call `finish()` on the projector to clean up when desired. Otherwise, if `keepAlive` is specified `false` then the projector will finish and clean itself up automatically as soon as it stops advancing (usually when the panel component is removed from its parent and stops rendering).
 
 ## TODO
@@ -53,7 +56,6 @@ if (splitArgs.contains("wc")) {
 - Documentation, Examples?
 - Polish gui?
 - Thorough testing
-
 
 ## Notes:
 - Sound buffers cannot be queued to AL10 device buffers from outside the main thread as they will then conflict with the game's own music player
