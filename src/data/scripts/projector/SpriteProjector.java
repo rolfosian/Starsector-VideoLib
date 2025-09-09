@@ -21,6 +21,7 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
 import data.scripts.util.TexReflection;
+import data.scripts.util.VideoUtils;
 
 public class SpriteProjector extends BaseEveryFrameCombatPlugin implements EveryFrameScript, Projector {
     private boolean isDone = false;
@@ -69,6 +70,8 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourTexObj, currentTextureId);
+
+        VideoUtils.getRingBandAndSpriteProjectors().add(this);
     }
 
     @Override
@@ -98,6 +101,18 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
     }
 
     @Override
+    public void restart() {
+        TexReflection.setSpriteTexObj(sprite, ourTexObj);
+
+        this.decoder.start(decoder.getCurrentVideoPts());
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(ourTexObj, currentTextureId);
+
+        Global.getSector().addTransientScript(this);
+        VideoUtils.getRingBandAndSpriteProjectors().add(this);
+    }
+
+    @Override
     public void finish() {
         TexReflection.setSpriteTexObj(sprite, originalTexObj);
         TexReflection.setSpriteTexId(sprite, originalTexId);
@@ -111,6 +126,7 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
         decoder.finish();
         Global.getSector().removeTransientScript(this);
         Global.getCombatEngine().removePlugin(this);
+        VideoUtils.getRingBandAndSpriteProjectors().remove(this);
     }
 
     @Override

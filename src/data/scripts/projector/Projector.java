@@ -13,6 +13,7 @@ public interface Projector {
     public void pause();
     public void unpause();
     public void setIsRendering(boolean isRendering);
+    public void restart();
     public void finish();
     public Decoder getDecoder();
 

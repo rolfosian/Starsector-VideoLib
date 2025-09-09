@@ -3,7 +3,10 @@ package data.scripts.util;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+import com.fs.starfarer.api.EveryFrameScript;
+
 import data.scripts.projector.PlanetProjector;
+import data.scripts.projector.Projector;
 
 public class VideoUtils {
     public static String formatTime(long us) {
@@ -110,5 +113,12 @@ public class VideoUtils {
 
     public static Collection<PlanetProjector> getPlanetProjectors() {
         return videoLibPlanetTexIds.values();
+    }
+
+
+    private static Set<EveryFrameScript> ringBandAndSpriteProjectors = new HashSet<>();
+
+    public static Set<EveryFrameScript> getRingBandAndSpriteProjectors() {
+        return ringBandAndSpriteProjectors;
     }
 }

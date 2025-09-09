@@ -4,6 +4,7 @@ import java.util.*;
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 
@@ -11,6 +12,7 @@ import com.fs.starfarer.api.campaign.PlanetAPI;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.planetlistener.PlanetProjectorListener;
 import data.scripts.projector.PlanetProjector;
+import data.scripts.projector.Projector;
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
@@ -37,11 +39,15 @@ public class VideoLibModPlugin extends BaseModPlugin {
     }
 
     private static List<PlanetProjector> planetProjectors = new ArrayList<>();
+    private static List<Object> ringBandAndSpriteProjectors = new ArrayList<>();
 
     @Override
     public void beforeGameSave() {
         for (PlanetProjector projector : VideoUtils.getPlanetProjectors()) planetProjectors.add(projector);
         for (PlanetProjector projector : planetProjectors) projector.finish();
+
+        for (EveryFrameScript projector : VideoUtils.getRingBandAndSpriteProjectors()) ringBandAndSpriteProjectors.add(projector);
+        for (Object projector : ringBandAndSpriteProjectors) ((Projector)projector).finish();
     }
 
     @Override
@@ -63,6 +69,11 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
         }
         planetProjectors.clear();
+
+        for (Object projector : ringBandAndSpriteProjectors) {
+            ((Projector)projector).restart();
+        }
+        ringBandAndSpriteProjectors.clear();
     }
 
     @Override
@@ -87,6 +98,9 @@ public class VideoLibModPlugin extends BaseModPlugin {
             }
         }
 
+        for (EveryFrameScript projector : VideoUtils.getRingBandAndSpriteProjectors()) {
+            ((Projector)projector).restart();
+        }
     }
 
     public static Thread getMainThread() {

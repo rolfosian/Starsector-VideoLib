@@ -18,6 +18,7 @@ import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
 
 import data.scripts.util.TexReflection;
+import data.scripts.util.VideoUtils;
 
 public class RingBandProjector implements EveryFrameScript, Projector {
     private boolean isDone = false;
@@ -58,14 +59,14 @@ public class RingBandProjector implements EveryFrameScript, Projector {
 
         this.ringBand = ringBand;
         this.originalTexObj = TexReflection.getRingBandTexObj(ringBand);
-        // this.originalTexId = TexReflection.getRingBandTexId(ringBand);
-        // TexReflection.setRingBandTexId(ringBand, null);
 
         this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
         TexReflection.setRingBandTexObj(ringBand, ourTexObj);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourTexObj, currentTextureId);
+
+        VideoUtils.getRingBandAndSpriteProjectors().add(this);
     }
 
     @Override
@@ -82,6 +83,18 @@ public class RingBandProjector implements EveryFrameScript, Projector {
     }
 
     @Override
+    public void restart() {
+        TexReflection.setRingBandTexObj(ringBand, ourTexObj);
+
+        this.decoder.start(decoder.getCurrentVideoPts());
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(ourTexObj, currentTextureId);
+
+        Global.getSector().addTransientScript(this);
+        VideoUtils.getRingBandAndSpriteProjectors().add(this);
+    }
+
+    @Override
     public void finish() {
         TexReflection.setRingBandTexObj(ringBand, originalTexObj);
         // TexReflection.setRingBandTexId(ringBand, originalTexId);
@@ -94,6 +107,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         isDone = true;
         decoder.finish();
         Global.getSector().removeTransientScript(this);
+        VideoUtils.getRingBandAndSpriteProjectors().remove(this);
     }
 
     @Override
