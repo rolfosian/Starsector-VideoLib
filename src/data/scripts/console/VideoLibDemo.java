@@ -257,7 +257,7 @@ public class VideoLibDemo implements BaseCommand {
                         button.setOpacity(0.1f);
                         overlayPanel.addUIElement(buttonHolder);
     
-                        yOffset = yOffset == 0 ? yOffset + 29f: yOffset + 31f;
+                        yOffset += 29f;
                         tt.addComponent(overlayPanel).inTL(rowPos.getX(), yOffset);
                     }
     
