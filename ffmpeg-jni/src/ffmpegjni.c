@@ -1168,6 +1168,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                 char error_msg[256];
                 snprintf(error_msg, sizeof(error_msg), "readFrameNoSound: failed to receive frame, error %d", ret);
                 printe(env, error_msg);
+                ctx->error_status = ret;
             }
         } else {
             av_packet_unref(pkt);
