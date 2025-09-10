@@ -127,7 +127,7 @@ public class FFmpeg {
             System.load(binDir + "ffmpegjni.so"); // our bridge
 
         } else if (osName.startsWith("mac")) {
-            String binDir = cwd + "/mods/VideoLib/ffmpeg-jni/bin/mac/";
+            String binDir = cwd.replace("/Contents/Resources/Java", "") + "/mods/VideoLib/ffmpeg-jni/bin/mac/";
 
             System.load(binDir + "ffmpegjni.dylib"); // our bridge
 
@@ -153,7 +153,7 @@ public class FFmpeg {
     public static native float getVideoFps(long ptr);
     public static native double getDurationSeconds(long ptr);
     public static native long getDurationUs(long ptr);
-    public static native boolean isRGBA(long ptr);
+    public static native boolean isRGBA(long ptr); // YUVA420P and GIF alpha channel support
 
     public static native void seek(long ptr, long targetUs);
     public static native void closePipe(long ptr);
