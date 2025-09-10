@@ -18,7 +18,7 @@ import org.apache.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-/**probably dont use this it will take like 5GB of vram for a single 30fps 1 min long 720p video*/
+/**Definitely do not use this it will take like 5GB of vram for a single 30fps 1 min long 720p video lmao*/
 public class CachingMuteDecoder implements Decoder {
     private static final Logger logger = Logger.getLogger(CachingMuteDecoder.class);
     public static void print(Object... args) {
