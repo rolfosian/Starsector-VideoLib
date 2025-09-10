@@ -15,6 +15,7 @@ import org.lwjgl.openal.ALCdevice;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
+import com.fs.starfarer.api.input.InputEventAPI;
 
 import org.apache.log4j.Logger;
 
@@ -99,58 +100,14 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     }
 
     @Override
-    public void advance(float deltaTime) {
-        // Check processed buffers
-        int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
-        
-        // Process completed buffers
-        while (processed-- > 0) {
-            int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
-            AudioFrame done = bufferToFrame.remove(bufferId);
-            
-            if (done != null) {
-                playingFrames.remove(done);
-            }
-            
-            // Return buffer to pool immediately
-            availableBuffers.offer(bufferId);
-        }
+    public void advance(float deltaTime, List<InputEventAPI> events) {
 
-        AudioFrame frame = getNextFrame();
-        
-        // Pre-queue multiple buffers if possible
-        if (availableBuffers.size() >= 2) {  // Ensure we have enough buffers
-            if (frame != null) {
-                Integer bufferId = availableBuffers.poll();
-                if (bufferId != null) {
-                    AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
-                    bufferToFrame.put(bufferId, frame);
-                    playingFrames.add(frame);
-                    AL10.alSourceQueueBuffers(sourceId, bufferId);
-                    
-                    // Try to queue another buffer ahead of time
-                    AudioFrame nextFrame = getNextFrame();  // Implement this method
-                    if (nextFrame != null) {
-                        Integer nextBufferId = availableBuffers.poll();
-                        if (nextBufferId != null) {
-                            AL10.alBufferData(nextBufferId, format, nextFrame.buffer, sampleRate);
-                            bufferToFrame.put(nextBufferId, nextFrame);
-                            playingFrames.add(nextFrame);
-                            AL10.alSourceQueueBuffers(sourceId, nextBufferId);
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Maintain playback state
-        int state = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
-        if (state != AL10.AL_PLAYING && !paused) {
-            AL10.alSourcePlay(sourceId);
-        }
-        
-        AudioFrame current = playingFrames.peek();
-        currentAudioPts = current != null ? current.pts : 0;
+    }
+
+    @Override
+    public void advance(float deltaTime) {
+
+        currentAudioPts = 0;
     }
 
     public void start() {
