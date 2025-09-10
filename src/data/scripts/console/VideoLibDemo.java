@@ -107,19 +107,6 @@ public class VideoLibDemo implements BaseCommand {
             if (controlsColor[0] == null) controlsColor[0] = Misc.getDarkPlayerColor();
         }
 
-        final int[] argWidth = new int[1];
-        argWidth[0] = 0;
-        final int[] argHeight = new int[1];
-        argHeight[0] = 0;
-        for (String arg : splitArgs) {
-            if (arg.startsWith("width:")) {
-                argWidth[0] = Integer.parseInt(arg.split(":")[1]);
-
-            } else if (arg.startsWith("height:")) {
-                argHeight[0] = Integer.parseInt(arg.split(":")[1]);
-            }
-        }
-
         InteractionDialogPlugin interactionPlugin = new InteractionDialogPlugin() {
             private String currentVideoId;
 
@@ -128,15 +115,27 @@ public class VideoLibDemo implements BaseCommand {
                 CustomPanelAPI parentPanel;
                 // ***THE MEAT AND POTATOES***
 
+                int argWidth = 0;
+                int argHeight = 0;
+                for (String arg : splitArgs) {
+                    if (arg.startsWith("width:")) {
+                        argWidth = Integer.parseInt(arg.split(":")[1]);
+        
+                    } else if (arg.startsWith("height:")) {
+                        argHeight = Integer.parseInt(arg.split(":")[1]);
+                    }
+                }
+        
+
                 // Video width and height, should be the same as the encoded video file's resolution.
                 // Width and height CAN be variable, but will incur non-negligible rescaling overhead in ffmpeg if not the same as the video's actual resolution, price especially noticeable while seeking
                 // If you want to rescale the video while it is playing, you should have openGL do it by calling videoPlayer.getProjectorPanel().getPosition().setSize(width, height)
                 int videoWidth;
                 int videoHeight;
 
-                if (argWidth[0] != 0 && argHeight[0] != 0) {
-                    videoWidth = argWidth[0];
-                    videoHeight = argHeight[0];
+                if (argWidth != 0 && argHeight != 0) {
+                    videoWidth = argWidth;
+                    videoHeight = argHeight;
 
                 } else if (fileId == null) {
                     videoWidth = 960;
