@@ -18,7 +18,6 @@ try:
         input_file
     ]
     bitrate_str = subprocess.check_output(cmd_probe).decode().strip()
-    
 
     if not bitrate_str or bitrate_str == "N/A":
         print("Bitrate not found, using a default of 2000k")
