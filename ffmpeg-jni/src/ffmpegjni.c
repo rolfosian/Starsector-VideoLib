@@ -662,6 +662,7 @@ int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
             (AVRational){1, 1000000},
             ctx->fmt_ctx->streams[ctx->video_stream_index]->time_base
         );
+        ctx->audio_next_pts_us = -1;
         ctx->seek_target_us = (int64_t)startUs;
         ctx->seeking = 1;
     }
@@ -699,6 +700,9 @@ int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
 
     av_seek_frame(ctx->fmt_ctx, ctx->video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
     avcodec_flush_buffers(ctx->video_ctx);
+    if (ctx->audio_ctx) avcodec_flush_buffers(ctx->audio_ctx);
+    if (ctx->audio_fifo) av_audio_fifo_reset(ctx->audio_fifo);
+
     av_packet_unref(pkt);
     av_packet_free(&pkt);
     return 1;
@@ -748,21 +752,26 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx) {
         printe(env, "openPipeNoSound: failed to allocate codec context");
+
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
         printe(env, "openPipeNoSound: failed to copy codec parameters");
+
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
         printe(env, "openPipeNoSound: failed to open codec");
+
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -771,10 +780,13 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     AVFrame *rgb_frame = av_frame_alloc();
     if (!frame || !rgb_frame) {
         printe(env, "openPipeNoSound: failed to allocate frames");
+
         if (frame) av_frame_free(&frame);
         if (rgb_frame) av_frame_free(&rgb_frame);
+
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -782,10 +794,13 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)malloc(sizeof(FFmpegPipeContext));
     if (!ctx) {
         printe(env, "openPipeNoSound: failed to allocate context structure");
+
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
+
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -831,20 +846,38 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->seeking = 0;
     ctx->error_status = 0;
 
+    int is_vpx = isVpx(codec->name);
+
     struct SwsContext *sws_ctx;
     enum AVPixelFormat target_fmt;
-    if (isVpx(codec->name) && isAlphaChannel(env, ctx, startUs)) {
+    if (is_vpx && isAlphaChannel(env, ctx, startUs)) {
         ctx->vpx_alpha_channel = 1;
 
         const AVCodec *codec = avcodec_find_decoder(ctx->video_ctx->codec_id);
         if (!codec) {
             printe(env, "Failed to find VPx decoder for alpha channel");
+
+            av_frame_free(&frame);
+            av_frame_free(&rgb_frame);
+
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+
+            free(ctx);
             return AVERROR_DECODER_NOT_FOUND;
         }
         
         ctx->alpha_ctx = avcodec_alloc_context3(codec);
         if (!ctx->alpha_ctx) {
             printe(env, "Failed to allocate alpha decoder context");
+
+            av_frame_free(&frame);
+            av_frame_free(&rgb_frame);
+    
+            avcodec_free_context(&codec_ctx);
+            avformat_close_input(&fmt_ctx);
+
+            free(ctx);
             return AVERROR(ENOMEM);
         }
         
@@ -859,12 +892,16 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
         int ret = avcodec_open2(ctx->alpha_ctx, codec, NULL);
         if (ret < 0) {
             printe(env, "Failed to open alpha decoder context");
-            free(ctx);
+            
             av_frame_free(&frame);
             av_frame_free(&rgb_frame);
+            av_frame_free(&ctx->alpha_frame);
+
             avcodec_free_context(&codec_ctx);
             if (ctx->alpha_ctx) avcodec_free_context(&ctx->alpha_ctx);
             avformat_close_input(&fmt_ctx);
+
+            free(ctx);
             (*env)->ReleaseStringUTFChars(env, jfilename, filename);
             return 0;
         }
@@ -886,13 +923,19 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
         if (!ctx->alpha_sws_ctx) {
             printe(env, "openPipeNoSound: failed to create scaler context for vpx alpha channel");
-            free(ctx);
+            
+
             av_frame_free(&frame);
             av_frame_free(&rgb_frame);
+            av_frame_free(&ctx->alpha_frame);
+
             avcodec_free_context(&codec_ctx);
-            if (ctx->alpha_ctx) avcodec_free_context(&ctx->alpha_ctx);
+            avcodec_free_context(&ctx->alpha_ctx);
             avformat_close_input(&fmt_ctx);
+
             (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+            free(ctx);
+            return 0;
         }
 
     } else {
@@ -913,13 +956,22 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
     if (!sws_ctx) {
         printe(env, "openPipeNoSound: failed to create scaler context");
-        free(ctx);
+
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
+
         avcodec_free_context(&codec_ctx);
-        if (ctx->alpha_ctx) avcodec_free_context(&ctx->alpha_ctx);
+
+        if (ctx->alpha_ctx) {
+            avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
+            sws_freeContext(ctx->alpha_sws_ctx);
+        }
+
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
         return 0;
     }
 
@@ -927,37 +979,43 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
     if (!rgb_buffer) {
         printe(env, "openPipeNoSound: failed to allocate RGB buffer");
+
         sws_freeContext(sws_ctx);
-        free(ctx);
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
         avcodec_free_context(&codec_ctx);
 
         if (ctx->alpha_ctx) {
             avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
             sws_freeContext(ctx->alpha_sws_ctx);
         }
 
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
         return 0;
     }
     if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
         printe(env, "openPipeNoSound: failed to fill image arrays");
+
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
-        free(ctx);
+
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
+
         avcodec_free_context(&codec_ctx);
 
         if (ctx->alpha_ctx) {
             avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
             sws_freeContext(ctx->alpha_sws_ctx);
         }
 
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
         return 0;
     }
 
@@ -968,21 +1026,41 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
         printe(env, "openPipeNoSound: failed to initialize mutex");
+
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
-        free(ctx);
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
 
         avcodec_free_context(&codec_ctx);
-                if (ctx->alpha_ctx) {
+
+        if (ctx->alpha_ctx) {
             avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
             sws_freeContext(ctx->alpha_sws_ctx);
         }
 
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
         return 0;
+    }
+
+    if (!is_vpx && startUs > 0) {
+        int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
+        int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
+
+        if (seek_result < 0) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
+            printe(env, error_msg);
+
+        } else {
+            avcodec_flush_buffers(ctx->video_ctx);
+            ctx->audio_next_pts_us = -1;
+            ctx->seek_target_us = (int64_t)startUs;
+            ctx->seeking = 1;
+        }
     }
 
     (*env)->ReleaseStringUTFChars(env, jfilename, filename);
@@ -1028,7 +1106,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     void *copy = malloc(ctx->rgb_size);
                     if (!copy) {
                         ctx->seeking = 0;
-                        printe(env, "returning null last frame");
+                        printe(env, "readVpxAlphaChannelNoSound: failed to allocate memory for copy buffer, returning null last frame");
                         av_frame_unref(last_alpha_frame);
                         av_frame_unref(last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
@@ -1166,7 +1244,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
             
             if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
                 char error_msg[256];
-                snprintf(error_msg, sizeof(error_msg), "readFrameNoSound: failed to receive frame, error %d", ret);
+                snprintf(error_msg, sizeof(error_msg), "readVpxAlphaChannelNoSound: failed to receive frame, error %d", ret);
                 printe(env, error_msg);
                 ctx->error_status = ret;
             }
@@ -1219,7 +1297,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     void *copy = malloc(ctx->rgb_size);
                     if (!copy) {
                         ctx->seeking = 0;
-                        printe(env, "returning null last frame");
+                        printe(env, "readFrameNoSound: failed to allocate memory for buffer copy, returning null last frame");
                         av_frame_unref(last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&pkt);
@@ -1358,6 +1436,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         char error_msg[256];
         snprintf(error_msg, sizeof(error_msg), "openPipe: failed to find stream info, error %d", stream_info_result);
         printe(env, error_msg);
+
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -1366,8 +1445,9 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     int video_stream_index = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
     int audio_stream_index = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if (video_stream_index < 0) {
-        avformat_close_input(&fmt_ctx);
         printe(env, "Failed to get stream index");
+
+        avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -1376,14 +1456,16 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     AVCodecParameters *vpar = fmt_ctx->streams[video_stream_index]->codecpar;
     const AVCodec *vcodec = avcodec_find_decoder(vpar->codec_id);
     if (!vcodec) {
-        avformat_close_input(&fmt_ctx);
         printe(env, "Failed to get vcodec");
+
+        avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     AVCodecContext *vctx = avcodec_alloc_context3(vcodec);
     if (!vctx) {
         printe(env, "openPipe: failed to allocate video codec context");
+
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -1391,16 +1473,20 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     
     if (avcodec_parameters_to_context(vctx, vpar) < 0) {
         printe(env, "openPipe: failed to copy video codec parameters");
+
         avcodec_free_context(&vctx);
         avformat_close_input(&fmt_ctx);
+        
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     
     if (avcodec_open2(vctx, vcodec, NULL) < 0) {
         printe(env, "Failed to open codec context with codec");
+
         avcodec_free_context(&vctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -1482,78 +1568,20 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
 
     // Video frames
     AVFrame *vframe = av_frame_alloc();
-    AVFrame *rgb = av_frame_alloc();
-    if (!vframe || !rgb) {
+    AVFrame *rgb_frame = av_frame_alloc();
+    if (!vframe || !rgb_frame) {
         printe(env, "openPipe: failed to allocate video frames");
+
         if (vframe) av_frame_free(&vframe);
-        if (rgb) av_frame_free(&rgb);
+        if (rgb_frame) av_frame_free(&rgb_frame);
         if (actx) avcodec_free_context(&actx);
         if (aframe) av_frame_free(&aframe);
         if (swr) swr_free(&swr);
         if (fifo) av_audio_fifo_free(fifo);
-        avcodec_free_context(&vctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
 
-    // Determine RGB vs RGBA first
-    int rgb_type = 0;
-    {
-        enum AVPixelFormat pix_fmt = vctx->pix_fmt;
-        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
-        rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0;
-    }
-    enum AVPixelFormat target_fmt = (rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+        avcodec_free_context(&vctx);
+        avformat_close_input(&fmt_ctx);
 
-    struct SwsContext *sws = sws_getContext(
-        vctx->width, vctx->height, vctx->pix_fmt,
-        width, height, target_fmt,
-        SWS_BILINEAR, NULL, NULL, NULL
-    );
-    if (!sws) {
-        printe(env, "openPipe: failed to create video scaler context");
-        av_frame_free(&vframe);
-        av_frame_free(&rgb);
-        if (actx) avcodec_free_context(&actx);
-        if (aframe) av_frame_free(&aframe);
-        if (swr) swr_free(&swr);
-        if (fifo) av_audio_fifo_free(fifo);
-        avcodec_free_context(&vctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
-    
-    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
-    uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
-    if (!rgb_buffer) {
-        printe(env, "openPipe: failed to allocate RGB buffer");
-        sws_freeContext(sws);
-        av_frame_free(&vframe);
-        av_frame_free(&rgb);
-        if (actx) avcodec_free_context(&actx);
-        if (aframe) av_frame_free(&aframe);
-        if (swr) swr_free(&swr);
-        if (fifo) av_audio_fifo_free(fifo);
-        avcodec_free_context(&vctx);
-        avformat_close_input(&fmt_ctx);
-        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-        return 0;
-    }
-    
-    if (av_image_fill_arrays(rgb->data, rgb->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
-        printe(env, "openPipe: failed to fill image arrays");
-        av_free(rgb_buffer);
-        sws_freeContext(sws);
-        av_frame_free(&vframe);
-        av_frame_free(&rgb);
-        if (actx) avcodec_free_context(&actx);
-        if (aframe) av_frame_free(&aframe);
-        if (swr) swr_free(&swr);
-        if (fifo) av_audio_fifo_free(fifo);
-        avcodec_free_context(&vctx);
-        avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -1569,16 +1597,18 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)malloc(sizeof(FFmpegPipeContext));
     if (!ctx) {
         printe(env, "openPipe: failed to allocate context structure");
-        av_free(rgb_buffer);
-        sws_freeContext(sws);
+
         av_frame_free(&vframe);
-        av_frame_free(&rgb);
+        av_frame_free(&rgb_frame);
+
         if (actx) avcodec_free_context(&actx);
         if (aframe) av_frame_free(&aframe);
         if (swr) swr_free(&swr);
         if (fifo) av_audio_fifo_free(fifo);
+
         avcodec_free_context(&vctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
@@ -1588,15 +1618,10 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     ctx->video_stream_index = video_stream_index;
     ctx->video_ctx = vctx;
     ctx->video_frame = vframe;
-    ctx->rgb_frame = rgb;
+    ctx->rgb_frame = rgb_frame;
 
-    ctx->sws_ctx = sws;
     ctx->width = width;
     ctx->height = height;
-
-    ctx->rgb_buffer = rgb_buffer;
-    ctx->rgb_size = rgb_size;
-    ctx->rgb_type = rgb_type;
 
     ctx->frame_count = 0;
     ctx->fps = fps;
@@ -1628,36 +1653,257 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     ctx->seek_target_us = -1;
     ctx->seeking = 0;
     ctx->error_status = 0;
+
+    int is_vpx = isVpx(vcodec->name);
+
+    struct SwsContext *sws_ctx;
+    enum AVPixelFormat target_fmt;
+    if (is_vpx && isAlphaChannel(env, ctx, startUs)) {
+        ctx->vpx_alpha_channel = 1;
+
+        const AVCodec *codec = avcodec_find_decoder(ctx->video_ctx->codec_id);
+        if (!codec) {
+            printe(env, "Failed to find VPx decoder for alpha channel");
+
+            av_frame_free(&vframe);
+            av_frame_free(&rgb_frame);
+            if (actx) avcodec_free_context(&actx);
+            if (aframe) av_frame_free(&aframe);
+            if (swr) swr_free(&swr);
+            if (fifo) av_audio_fifo_free(fifo);
+            avcodec_free_context(&vctx);
+            avformat_close_input(&fmt_ctx);
+            (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+
+            return AVERROR_DECODER_NOT_FOUND;
+        }
+        
+        ctx->alpha_ctx = avcodec_alloc_context3(codec);
+        if (!ctx->alpha_ctx) {
+            printe(env, "Failed to allocate alpha decoder context");
+
+            av_frame_free(&vframe);
+            av_frame_free(&rgb_frame);
+
+            if (actx) avcodec_free_context(&actx);
+            if (aframe) av_frame_free(&aframe);
+            if (swr) swr_free(&swr);
+            if (fifo) av_audio_fifo_free(fifo);
+
+            avcodec_free_context(&vctx);
+            avformat_close_input(&fmt_ctx);
+
+            (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+
+            return AVERROR(ENOMEM);
+        }
+        
+        ctx->alpha_ctx->width  = ctx->video_ctx->width;
+        ctx->alpha_ctx->height = ctx->video_ctx->height;
+        ctx->alpha_ctx->pix_fmt = AV_PIX_FMT_GRAY8;
+        ctx->alpha_ctx->codec_type = AVMEDIA_TYPE_VIDEO;
+        ctx->alpha_ctx->time_base = ctx->video_ctx->time_base;
+
+        ctx->alpha_frame = av_frame_alloc();
+        
+        int ret = avcodec_open2(ctx->alpha_ctx, codec, NULL);
+        if (ret < 0) {
+            printe(env, "Failed to open alpha decoder context");
+
+            av_frame_free(&vframe);
+            av_frame_free(&rgb_frame);
+            av_frame_free(&ctx->alpha_frame);
+            avcodec_free_context(&vctx);
+
+            if (actx) avcodec_free_context(&actx);
+            if (aframe) av_frame_free(&aframe);
+            if (swr) swr_free(&swr);
+            if (fifo) av_audio_fifo_free(fifo);
+
+            avcodec_free_context(&ctx->alpha_ctx);
+            avformat_close_input(&fmt_ctx);
+
+            (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+            free(ctx);
+            return 0;
+        }
     
-    int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
-    if (mutex_init_result != 0) {
-        printe(env, "openPipe: failed to initialize mutex");
-        free(ctx);
-        av_free(rgb_buffer);
-        sws_freeContext(sws);
+        ctx->rgb_type = 1;
+        target_fmt = AV_PIX_FMT_RGBA;
+        
+        sws_ctx = sws_getContext(
+            vctx->width, vctx->height, AV_PIX_FMT_YUV420P,
+            width, height, target_fmt,
+            SWS_BILINEAR, NULL, NULL, NULL
+        );
+
+        ctx->alpha_sws_ctx = sws_getContext(
+            ctx->alpha_ctx->width, ctx->alpha_ctx->height, AV_PIX_FMT_GRAY8,
+            width, height, AV_PIX_FMT_GRAY8,
+            SWS_BILINEAR, NULL, NULL, NULL
+        );
+
+        if (!ctx->alpha_sws_ctx) {
+            printe(env, "openPipeNoSound: failed to create scaler context for vpx alpha channel");
+            
+            av_frame_free(&vframe);
+            av_frame_free(&rgb_frame);
+            av_frame_free(&ctx->alpha_frame);
+            avcodec_free_context(&vctx);
+
+            if (actx) avcodec_free_context(&actx);
+            if (aframe) av_frame_free(&aframe);
+            if (swr) swr_free(&swr);
+            if (fifo) av_audio_fifo_free(fifo);
+
+            avcodec_free_context(&ctx->alpha_ctx);
+            avformat_close_input(&fmt_ctx);
+            
+            avcodec_free_context(&ctx->alpha_ctx);
+            (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+            free(ctx);
+            return 0;
+        }
+
+    } else {
+        ctx->vpx_alpha_channel = 0;
+
+        enum AVPixelFormat pix_fmt = ctx->video_ctx->pix_fmt;
+        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
+        ctx->rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
+        
+        target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+
+        sws_ctx = sws_getContext(
+            vctx->width, vctx->height, vctx->pix_fmt,
+            width, height, target_fmt,
+            SWS_BILINEAR, NULL, NULL, NULL
+        );
+    }
+
+    if (!sws_ctx) {
+        printe(env, "openPipe: failed to create video scaler context");
+
         av_frame_free(&vframe);
-        av_frame_free(&rgb);
+        av_frame_free(&rgb_frame);
+
         if (actx) avcodec_free_context(&actx);
         if (aframe) av_frame_free(&aframe);
         if (swr) swr_free(&swr);
         if (fifo) av_audio_fifo_free(fifo);
+
+        if (ctx->alpha_ctx) {
+            avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
+            sws_freeContext(ctx->alpha_sws_ctx);
+        }
+
         avcodec_free_context(&vctx);
         avformat_close_input(&fmt_ctx);
+
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     
-    if (startUs > 0) {
+    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
+    uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
+    if (!rgb_buffer) {
+        printe(env, "openPipe: failed to allocate RGB buffer");
+
+        sws_freeContext(sws_ctx);
+        av_frame_free(&vframe);
+        av_frame_free(&rgb_frame);
+
+        if (actx) avcodec_free_context(&actx);
+        if (aframe) av_frame_free(&aframe);
+        if (swr) swr_free(&swr);
+        if (fifo) av_audio_fifo_free(fifo);
+
+        if (ctx->alpha_ctx) {
+            avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
+            sws_freeContext(ctx->alpha_sws_ctx);
+        }
+
+        avcodec_free_context(&vctx);
+        avformat_close_input(&fmt_ctx);
+
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        return 0;
+    }
+    
+    if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
+        printe(env, "openPipe: failed to fill image arrays");
+
+        av_free(rgb_buffer);
+        av_frame_free(&vframe);
+        av_frame_free(&rgb_frame);
+        sws_freeContext(sws_ctx);
+
+        if (actx) avcodec_free_context(&actx);
+        if (aframe) av_frame_free(&aframe);
+        if (swr) swr_free(&swr);
+        if (fifo) av_audio_fifo_free(fifo);
+
+        if (ctx->alpha_ctx) {
+            avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
+            sws_freeContext(ctx->alpha_sws_ctx);
+        }
+
+        avcodec_free_context(&vctx);
+        avformat_close_input(&fmt_ctx);
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
+        return 0;
+    }
+
+    ctx->sws_ctx = sws_ctx;
+    ctx->rgb_buffer = rgb_buffer;
+    ctx->rgb_size = rgb_size;
+    
+    int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
+    if (mutex_init_result != 0) {
+        printe(env, "openPipe: failed to initialize mutex");
+
+        av_free(rgb_buffer);
+        sws_freeContext(sws_ctx);
+        av_frame_free(&vframe);
+        av_frame_free(&rgb_frame);
+
+        if (actx) avcodec_free_context(&actx);
+        if (aframe) av_frame_free(&aframe);
+        if (swr) swr_free(&swr);
+        if (fifo) av_audio_fifo_free(fifo);
+
+        if (ctx->alpha_ctx) {
+            avcodec_free_context(&ctx->alpha_ctx);
+            av_frame_free(&ctx->alpha_frame);
+            sws_freeContext(ctx->alpha_sws_ctx);
+        }
+
+        avcodec_free_context(&vctx);
+        avformat_close_input(&fmt_ctx);
+
+        (*env)->ReleaseStringUTFChars(env, jfilename, filename);
+        free(ctx);
+        return 0;
+    }
+    
+    if (!is_vpx && startUs > 0) {
         int64_t ts = av_rescale_q((int64_t)startUs, (AVRational){1, 1000000}, fmt_ctx->streams[video_stream_index]->time_base);
         int seek_result = av_seek_frame(fmt_ctx, video_stream_index, ts, AVSEEK_FLAG_BACKWARD);
+
         if (seek_result < 0) {
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
             printe(env, error_msg);
+
         } else {
             avcodec_flush_buffers(vctx);
             if (actx) avcodec_flush_buffers(actx);
             if (fifo) av_audio_fifo_reset(fifo);
+
             ctx->audio_next_pts_us = -1;
             ctx->seek_target_us = (int64_t)startUs;
             ctx->seeking = 1;
@@ -1761,6 +2007,255 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass 
     ctx->seeking = 1;
 
     pthread_mutex_unlock(&ctx->mutex);
+}
+
+jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
+    AVPacket *pkt = av_packet_alloc();
+    AVPacket *alpha_pkt = av_packet_alloc();
+
+    if (!pkt) {
+        printe(env, "readVpxAlphaChannel: failed to allocate packet");
+        return NULL;
+    }
+
+    jobject result = NULL;
+
+    pthread_mutex_lock(&ctx->mutex);
+
+    AVFrame *last_frame = NULL;
+    AVFrame *last_alpha_frame = NULL;
+    while (1) {
+        int ret = av_read_frame(ctx->fmt_ctx, pkt);
+        if (ret < 0) {
+            // EOF or error
+            ctx->error_status = ret;
+
+            if (ret == AVERROR_EOF) {
+                if (ctx->seeking && last_frame && last_alpha_frame) {
+                    
+                    if (!merge_alpha_frame(env, ctx, last_alpha_frame, last_frame)) {
+                        printe(env, "readVpxAlphaChannel: failed to merge alpha frame");
+                        av_frame_unref(last_alpha_frame);
+                        av_frame_unref(last_frame);
+                        pthread_mutex_unlock(&ctx->mutex);
+                        av_packet_free(&alpha_pkt);
+                        av_packet_free(&pkt);
+                        return NULL;
+                    }
+
+                    void *copy = malloc(ctx->rgb_size);
+                    if (!copy) {
+                        ctx->seeking = 0;
+                        printe(env, "readVpxAlphaChannel: failed to allocate memory for buffer copy, returning null last frame");
+                        av_frame_unref(last_alpha_frame);
+                        av_frame_unref(last_frame);
+                        pthread_mutex_unlock(&ctx->mutex);
+                        av_packet_free(&alpha_pkt);
+                        av_packet_free(&pkt);
+                        return NULL;
+                    }
+                    memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
+            
+                    jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
+                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
+                    ctx->seeking = 0;
+                    av_frame_unref(last_alpha_frame);
+                    av_frame_unref(last_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&alpha_pkt);
+                    av_packet_free(&pkt);
+                    return result;
+                }
+
+            } else {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), "readVpxAlphaChannel: failed to read frame, error %d", ret);
+                printe(env, error_msg);
+            }
+
+            av_packet_free(&alpha_pkt);
+            av_packet_free(&pkt);
+            pthread_mutex_unlock(&ctx->mutex);
+            return NULL;
+        }
+
+        if (pkt->stream_index == ctx->video_stream_index) {
+            ret = avcodec_send_packet(ctx->video_ctx, pkt);
+            
+            if (!extract_alpha_packet(env, ctx, pkt, &alpha_pkt)) {
+                printe(env, "readVpxAlphaChannel: failed to extract alpha packet");
+                continue;
+            }
+
+            av_packet_unref(pkt);
+
+            if (ret < 0) {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), "readVpxAlphaChannel: failed to send packet, error %d", ret);
+                printe(env, error_msg);
+                continue;
+            }
+
+            ret = avcodec_send_packet(ctx->alpha_ctx, alpha_pkt);
+            if (ret < 0) {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), "readVpxAlphaChannel: failed to send alpha packet, error %d", ret);
+                printe(env, error_msg);
+                continue;
+            }
+            av_packet_unref(alpha_pkt);
+
+            while ((ret = avcodec_receive_frame(ctx->video_ctx, ctx->video_frame)) >= 0 
+                && avcodec_receive_frame(ctx->alpha_ctx, ctx->alpha_frame) >= 0) {
+                
+                // compute PTS in microseconds
+                int64_t pts = av_rescale_q(ctx->video_frame->pts,
+                                           ctx->fmt_ctx->streams[ctx->video_stream_index]->time_base,
+                                           AV_TIME_BASE_Q);
+
+                // if seeking: skip until first frame >= seek target
+                if (ctx->seeking && pts < ctx->seek_target_us) {
+                    if (last_frame) av_frame_free(&last_frame);
+                    if (last_alpha_frame) av_frame_free(&last_alpha_frame);
+                    last_frame = av_frame_clone(ctx->video_frame);
+                    last_alpha_frame = av_frame_clone(ctx->alpha_frame);
+
+                    av_frame_unref(ctx->video_frame);
+                    av_frame_unref(ctx->alpha_frame);
+                    continue;
+                }
+                ctx->seeking = 0;
+                if (last_frame) av_frame_free(&last_frame);
+                if (last_alpha_frame) av_frame_free(&last_alpha_frame);
+
+                if (!merge_alpha_frame(env, ctx, ctx->alpha_frame, ctx->video_frame)) {
+                    printe(env, "readVpxAlphaChannel: failed to merge alpha frame");
+                    av_frame_unref(ctx->video_frame);
+                    av_frame_unref(ctx->alpha_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&alpha_pkt);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+
+                void *copy = malloc(ctx->rgb_size);
+                if (!copy) {
+                    printe(env, "readVpxAlphaChannel: failed to allocate frame copy buffer");
+                    av_frame_unref(ctx->video_frame);
+                    av_frame_unref(ctx->alpha_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&alpha_pkt);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+                memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
+                
+                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
+                if (!byteBuffer) {
+                    printe(env, "readVpxAlphaChannel: failed to create DirectByteBuffer");
+                    free(copy);
+                    av_frame_unref(ctx->video_frame);
+                    av_frame_unref(ctx->alpha_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&alpha_pkt);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+                
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
+                if (!result) {
+                    printe(env, "readVpxAlphaChannel: failed to create VideoFrame object");
+                    free(copy);
+                    av_frame_unref(ctx->video_frame);
+                    av_frame_unref(ctx->alpha_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&alpha_pkt);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+
+                av_frame_unref(ctx->video_frame);
+                av_frame_unref(ctx->alpha_frame);
+                pthread_mutex_unlock(&ctx->mutex);
+                av_packet_free(&alpha_pkt);
+                av_packet_free(&pkt);
+                return result;
+            }
+            
+            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+                char error_msg[256];
+                snprintf(error_msg, sizeof(error_msg), "readVpxAlphaChannel: failed to receive frame, error %d", ret);
+                printe(env, error_msg);
+                ctx->error_status = ret;
+            }
+        } else if (pkt->stream_index == ctx->audio_stream_index && ctx->audio_ctx) {
+            ret = avcodec_send_packet(ctx->audio_ctx, pkt);
+            av_packet_unref(pkt);
+            if (ret < 0) continue;
+
+            while ((ret = avcodec_receive_frame(ctx->audio_ctx, ctx->audio_frame)) >= 0) {
+                int dst_nb_samples = av_rescale_rnd(
+                    swr_get_delay(ctx->swr_ctx, ctx->audio_ctx->sample_rate) + ctx->audio_frame->nb_samples,
+                    ctx->out_sample_rate,
+                    ctx->audio_ctx->sample_rate,
+                    AV_ROUND_UP
+                );
+
+                uint8_t **converted = NULL;
+                if (av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
+                                                       dst_nb_samples, ctx->out_sample_fmt, 0) < 0) {
+                    av_frame_unref(ctx->audio_frame);
+                    continue;
+                }
+
+                int converted_samples = swr_convert(ctx->swr_ctx, converted, dst_nb_samples,
+                                                    (const uint8_t **)ctx->audio_frame->data,
+                                                    ctx->audio_frame->nb_samples);
+                if (converted_samples < 0) {
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    continue;
+                }
+
+                int buffer_size = av_samples_get_buffer_size(NULL, ctx->out_channels,
+                                                             converted_samples, ctx->out_sample_fmt, 1);
+                if (buffer_size < 0) {
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    continue;
+                }
+
+                if (ctx->audio_out_capacity_bytes < buffer_size) {
+                    if (ctx->audio_out_buffer) av_free(ctx->audio_out_buffer);
+                    ctx->audio_out_buffer = (uint8_t *)av_malloc(buffer_size);
+                    ctx->audio_out_capacity_bytes = buffer_size;
+                }
+                memcpy(ctx->audio_out_buffer, converted[0], buffer_size);
+
+                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ctx->audio_out_buffer, buffer_size);
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jint)converted_samples,
+                                           (jlong)av_rescale_q(ctx->audio_frame->pts,
+                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
+                                           AV_TIME_BASE_Q));
+
+                av_freep(&converted[0]);
+                av_freep(&converted);
+                av_frame_unref(ctx->audio_frame);
+
+                pthread_mutex_unlock(&ctx->mutex);
+                av_packet_free(&pkt);
+                return result;
+            }
+        } else {
+            av_packet_unref(pkt);
+        }
+    }
+
+    pthread_mutex_unlock(&ctx->mutex);
+    av_packet_free(&pkt);
+    return NULL;
 }
 
 JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
