@@ -37,7 +37,6 @@ public class AudioVideoPlayerWithControls implements VideoPlayer {
     public void init() {
         this.controlPanel.init();
         this.projector.init(this.projectorPanel.getPosition(), this.projectorPanel);
-        ((PlayerPanelPlugin)this.masterPanel.getPlugin()).init(masterPanel.getPosition());
 
         if (projector.getPlayMode() == PlayMode.PLAYING) controlPanel.play();
     }
@@ -52,6 +51,7 @@ public class AudioVideoPlayerWithControls implements VideoPlayer {
         // this.projectorPanel.getPosition().setSize(width, height);
         // this.projector.setWidth(width);
         // this.projector.setHeight(height);
+        // this.projector.setIsrendering(true);
         
         // this.masterPanel.getPosition().setSize(width, this.controlPanel.setSize(width, height) + height + 5f);
 

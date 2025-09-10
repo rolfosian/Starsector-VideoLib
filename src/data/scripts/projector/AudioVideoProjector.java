@@ -43,14 +43,12 @@ public class AudioVideoProjector extends VideoProjector {
     private PlayMode MODE;
     private PlayMode OLD_MODE;
     private EOFMode EOF_MODE;
+    private EOFMode OLD_EOF_MODE;
 
     private CustomPanelAPI panel;
     private DecoderWithSound decoder;
     private Speakers speakers;
     private PlayerControlPanel controlPanel = null;
-
-    // private final int vboId;
-    // private final FloatBuffer quadBuffer;
 
     // playback/texture state
     private int currentTextureId = 0;
@@ -72,7 +70,9 @@ public class AudioVideoProjector extends VideoProjector {
     public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
         this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.MODE = startingPlayMode;
+        this.OLD_MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
+        this.OLD_EOF_MODE = startingEOFMode;
 
         this.width = width;
         this.height = height;
@@ -219,43 +219,65 @@ public class AudioVideoProjector extends VideoProjector {
         GL11.glVertex2f(x, y + height);
         GL11.glEnd();
     
-        GL11.glColor4f(1f, 1f, 1f, 1f); // reset color
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
     public void pause() {
+        if (paused) return;
+
         paused = true;
         speakers.pause();
         this.MODE = PlayMode.PAUSED;
+
+        // this.OLD_EOF_MODE = this.EOF_MODE;
+        // this.EOF_MODE = EOFMode.PAUSE;
+        // this.decoder.setEOFMode(EOF_MODE);
     }
 
     public void unpause() {
         paused = false;
         speakers.unpause();
+        this.MODE = PlayMode.PLAYING;
+        // this.EOF_MODE = this.OLD_EOF_MODE;
+        // this.decoder.setEOFMode(EOF_MODE);
     }
+
 
     public void play() {
         paused = false;
-
-        speakers.play();
-        this.MODE = PlayMode.PLAYING;
-        decoder.setEOFMode(this.EOF_MODE);
         isRendering = true;
-        
+
+        if (this.MODE == PlayMode.STOPPED && currentTextureId != 0) {
+            GL11.glDeleteTextures(currentTextureId);
+            this.currentTextureId = decoder.getCurrentVideoTextureId();
+        }
+        this.speakers.play();
+
+        if (OLD_EOF_MODE != EOFMode.PAUSE) {
+            this.EOF_MODE = OLD_EOF_MODE;
+        }
+
+        this.OLD_MODE = this.MODE;
+        this.MODE = PlayMode.PLAYING;
     }
 
     public void stop() {
-        isRendering = false;
         paused = true;
 
-        if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
-        speakers.stop();
-        decoder.stop();
-        currentTextureId = decoder.getCurrentVideoTextureId();
-        isRendering = false;
+        this.OLD_MODE = this.MODE;
+        this.MODE = PlayMode.STOPPED;
+        this.speakers.stop();
+        decoder.seek(0);
+
+        if (currentTextureId != 0) {
+            GL11.glDeleteTextures(currentTextureId);
+            this.currentTextureId = decoder.getCurrentVideoTextureId();
+        }
     }
+
 
     public void restart() {
         if (currentTextureId != 0) {

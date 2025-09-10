@@ -41,13 +41,11 @@ public class MuteVideoProjector extends VideoProjector {
     private PlayMode MODE;
     private PlayMode OLD_MODE;
     private EOFMode EOF_MODE;
+    private EOFMode OLD_EOF_MODE;
 
     private CustomPanelAPI panel;
     private MuteDecoder decoder;
     private PlayerControlPanel controlPanel = null;
-
-    // private final int vboId;
-    // private final FloatBuffer quadBuffer;
 
     // playback/texture state
     private int currentTextureId = 0;
@@ -69,16 +67,15 @@ public class MuteVideoProjector extends VideoProjector {
     public MuteVideoProjector(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
         this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.MODE = startingPlayMode;
+        this.OLD_MODE = startingPlayMode;
         this.EOF_MODE = startingEOFMode;
+        this.OLD_EOF_MODE = startingEOFMode;
 
         this.width = width;
         this.height = height;
 
         this.decoder = new MuteDecoder(this, videoFilePath,  width, height, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
-
-        // this.vboId = textureBuffer.getVboId();
-        // this.quadBuffer = textureBuffer.getQuadBuffer();
 
         if (!keepAlive)
         Global.getSector().addScript(new EveryFrameScript() {
@@ -186,7 +183,7 @@ public class MuteVideoProjector extends VideoProjector {
                 MODE = OLD_MODE;
             }
             return;
-        } 
+        }
         currentTextureId = decoder.getCurrentVideoTextureId(amount);
     }
 
@@ -219,69 +216,54 @@ public class MuteVideoProjector extends VideoProjector {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
-
-        // GL11.glEnable(GL11.GL_TEXTURE_2D);
-        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
-    
-        // GL11.glEnable(GL11.GL_BLEND);
-        // GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        // GL11.glColor4f(1f, 1f, 1f, alphaMult);
-    
-        // quadBuffer.clear();
-        // quadBuffer.put(new float[] {
-        //     x, y + height, 0f, 0f,         // top-left
-        //     x + width, y + height, 1f, 0f, // top-right
-        //     x + width, y, 1f, 1f,          // bottom-right
-        //     x, y, 0f, 1f                   // bottom-left
-        // });
-        // quadBuffer.flip();
-    
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
-        // GL15.glBufferSubData(GL15.GL_ARRAY_BUFFER, 0, quadBuffer);
-    
-        // GL11.glEnableClientState(GL11.GL_VERTEX_ARRAY);
-        // GL11.glEnableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-    
-        // GL11.glVertexPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 0);
-        // GL11.glTexCoordPointer(2, GL11.GL_FLOAT, 4 * Float.BYTES, 2 * Float.BYTES);
-    
-        // GL11.glDrawArrays(GL11.GL_QUADS, 0, 4);
-    
-        // GL11.glDisableClientState(GL11.GL_VERTEX_ARRAY);
-        // GL11.glDisableClientState(GL11.GL_TEXTURE_COORD_ARRAY);
-    
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
-        // GL11.glColor4f(1f, 1f, 1f, 1f);
-        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-        // GL11.glDisable(GL11.GL_BLEND);
-        // GL11.glDisable(GL11.GL_TEXTURE_2D);
     }
 
     public void pause() {
+        if (paused) return;
+
         paused = true;
         this.MODE = PlayMode.PAUSED;
+
+        // this.OLD_EOF_MODE = this.EOF_MODE;
+        // this.EOF_MODE = EOFMode.PAUSE;
+        // this.decoder.setEOFMode(EOF_MODE);
     }
 
     public void unpause() {
         paused = false;
+        this.MODE = PlayMode.PLAYING;
+        // this.EOF_MODE = this.OLD_EOF_MODE;
+        // this.decoder.setEOFMode(EOF_MODE);
     }
 
     public void play() {
         paused = false;
-
-        this.MODE = PlayMode.PLAYING;
-        decoder.setEOFMode(this.EOF_MODE);
         isRendering = true;
+
+        if (this.MODE == PlayMode.STOPPED && currentTextureId != 0) {
+            GL11.glDeleteTextures(currentTextureId);
+            this.currentTextureId = decoder.getCurrentVideoTextureId();
+        }
+
+        if (OLD_EOF_MODE != EOFMode.PAUSE) {
+            this.EOF_MODE = OLD_EOF_MODE;
+        }
+
+        this.OLD_MODE = this.MODE;
+        this.MODE = PlayMode.PLAYING;
     }
 
     public void stop() {
-        isRendering = false;
         paused = true;
 
-        if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
-        decoder.stop();
-        currentTextureId = decoder.getCurrentVideoTextureId();
-        isRendering = false;
+        this.OLD_MODE = this.MODE;
+        this.MODE = PlayMode.STOPPED;
+        decoder.seek(0);
+
+        if (currentTextureId != 0) {
+            GL11.glDeleteTextures(currentTextureId);
+            this.currentTextureId = decoder.getCurrentVideoTextureId();
+        }
     }
 
     public void restart() {

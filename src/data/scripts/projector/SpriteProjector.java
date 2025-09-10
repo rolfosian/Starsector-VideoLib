@@ -221,5 +221,21 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
     public Object getOriginalTexObject() {
         return this.originalTexObj;
     }
+
+    @Override
+    public PlayMode getPlayMode() {
+        return this.MODE;
+    }
+
+    @Override
+    public EOFMode getEOFMode() {
+        return this.EOF_MODE;
+    }
+
+    @Override
+    public void setPlayMode(PlayMode mode) {}
+
+    @Override
+    public void setEOFMode(EOFMode mode) {}
     
 }

@@ -365,4 +365,20 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         }
         return null;
     }
+
+    @Override
+    public PlayMode getPlayMode() {
+        return this.MODE;
+    }
+
+    @Override
+    public EOFMode getEOFMode() {
+        return this.EOF_MODE;
+    }
+
+    @Override
+    public void setPlayMode(PlayMode mode) {}
+
+    @Override
+    public void setEOFMode(EOFMode mode) {}
 }

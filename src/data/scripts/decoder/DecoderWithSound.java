@@ -15,6 +15,7 @@ import data.scripts.buffers.RGBATextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.Frame;
 import data.scripts.ffmpeg.VideoFrame;
+import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.ffmpeg.AudioFrame;
 
 import data.scripts.projector.Projector;
@@ -104,33 +105,75 @@ public class DecoderWithSound implements Decoder {
 
                     if (!(this.PLAY_MODE == PlayMode.SEEKING)) {
                         synchronized(seekLock) {
-                            outer:
-                            switch(this.EOF_MODE) {
-                                case LOOP:
-                                    seekWithoutClearingBuffer(0);
-                                    break;
-                                
-                                case PLAY_UNTIL_END:
-                                    seekWithoutClearingBuffer(0);
-                                    if (videoProjector.getControlPanel() != null) videoProjector.getControlPanel().stop();
-                                    else videoProjector.stop();
-                                    break;
-    
-                                case PAUSE:
-                                    while (!textureBuffer.isEmpty()) {
-                                        sleep(1);
-                                        if (videoProjector.paused()) break outer;
-                                        if (!videoProjector.isRendering()) break outer;
-                                    }
+                            if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
+                                PlayerControlPanel controlPanel = videoProjector.getControlPanel();
 
-                                    if (videoProjector.getControlPanel() != null) videoProjector.getControlPanel().pause();
-                                    else videoProjector.pause();
-                                    seekWithoutClearingBuffer(0);
-                                    break;
+                                if (controlPanel != null) {
+                                    if (!videoProjector.paused()) {
+                                        while (!textureBuffer.isEmpty()) {
+                                            sleep(1);
+                                            if (videoProjector.paused()) break;
+                                            if (!videoProjector.isRendering()) break;
+                                        }
+                                        seekWithoutClearingBuffer(0);
         
-                                default:
-                                    break;
+                                        if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
+                                            videoProjector.pause();
+                                            
+                                            controlPanel.setProgressDisplay(currentVideoPts);
+                                            controlPanel.getPlayButton().setEnabled(true);
+                                            controlPanel.getPauseButton().setEnabled(false);
+                                            controlPanel.getStopButton().setEnabled(true);
+                                        }
+    
+                                    } else {
+                                        while (!textureBuffer.isEmpty()) {
+                                            sleep(1);
+                                            if (videoProjector.paused()) break;
+                                            if (!videoProjector.isRendering()) break;
+                                        }
+                                        controlPanel.setProgressDisplay(currentVideoPts);
+                                        controlPanel.getPlayButton().setEnabled(true);
+                                        controlPanel.getPauseButton().setEnabled(false);
+                                        controlPanel.getStopButton().setEnabled(true);
+                                        
+                                        seekWithoutClearingBuffer(0);
+                                        continue;
+                                    }
+                                } else {
+                                    switch(this.EOF_MODE) {
+                                        case PLAY_UNTIL_END:
+                                            while (!textureBuffer.isEmpty()) {
+                                                sleep(1);
+                                                if (videoProjector.paused()) break;
+                                                if (!videoProjector.isRendering()) break;
+                                            }
+                                            seekWithoutClearingBuffer(0);
+                                            videoProjector.pause();
+                                            videoProjector.setPlayMode(PlayMode.SEEKING);
+                                            videoProjector.setIsRendering(false);
+                                            break;
+
+                                        case PAUSE:
+                                            while (!textureBuffer.isEmpty()) {
+                                                sleep(1);
+                                                if (videoProjector.paused()) break;
+                                                if (!videoProjector.isRendering()) break;
+                                            }
+                                            seekWithoutClearingBuffer(0);
+                                            videoProjector.pause();
+                                            break;
+
+                                        default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
+                                            sleep(1);
+                                            break;
+
+                                    }
+                                }
+                            } else {
+                                seekWithoutClearingBuffer(0);
                             }
+                            
                         }
                         sleep(1);
                         continue;

@@ -69,6 +69,7 @@ public class AudioVideoPlayer implements VideoPlayer {
         this.projector.setVideoFilePath(videoFilePath);
         this.projector.setWidth(width);
         this.projector.setHeight(height);
+        this.projector.setIsRendering(true);
 
         if (this.projector.paused()) {
             this.projector.setCurrentTextureId(this.projector.getDecoder().getCurrentVideoTextureId());

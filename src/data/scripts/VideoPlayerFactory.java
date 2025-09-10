@@ -11,7 +11,6 @@ import data.scripts.VideoModes.PlayMode;
 import data.scripts.playerui.AudioVideoPlayer;
 import data.scripts.playerui.MuteVideoPlayer;
 import data.scripts.playerui.PlayerControlPanel;
-import data.scripts.playerui.PlayerPanelPlugin;
 import data.scripts.playerui.VideoPlayer;
 import data.scripts.playerui.MuteVideoPlayerWithControls;
 import data.scripts.playerui.AudioVideoPlayerWithControls;
@@ -42,12 +41,11 @@ public class VideoPlayerFactory {
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
-        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
-        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, null);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, null);
-        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + 30f); // 30f height of seek bar panel
 
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
@@ -57,12 +55,11 @@ public class VideoPlayerFactory {
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
-        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
-        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, null);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, null, textColor, bgButtonColor);
-        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + 30f); // 30f height of seek bar panel
 
         return new MuteVideoPlayerWithControls(masterPanel, controlPanel, projectorPlugin, projectorPanel);
     }
@@ -89,12 +86,11 @@ public class VideoPlayerFactory {
         Speakers speakers = projectorPlugin.getSpeakers();
 
         int controlsHeight = 70;
-        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
-        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, null);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, speakers);
-        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + 30f); // 30f height of seek bar panel
 
         return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
     }
@@ -107,12 +103,11 @@ public class VideoPlayerFactory {
         Speakers speakers = projectorPlugin.getSpeakers();
 
         int controlsHeight = 70;
-        PlayerPanelPlugin panelPlugin = new PlayerPanelPlugin();
-        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, panelPlugin);
+        CustomPanelAPI masterPanel = Global.getSettings().createCustom(width, height + 5f + controlsHeight, null);
         masterPanel.addComponent(projectorPanel).inTL(0f, 0f);
 
         PlayerControlPanel controlPanel = new PlayerControlPanel(projectorPlugin, width, controlsHeight, speakers, textColor, bgButtonColor);
-        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + controlsHeight);
+        masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + 30f); // 30f height of seek bar panel
 
         return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
     }
