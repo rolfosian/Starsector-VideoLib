@@ -7,6 +7,7 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.PlanetAPI;
+import com.fs.starfarer.api.characters.PersonAPI;
 
 // import data.scripts.buffers.OverlayingTextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
@@ -40,6 +41,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     private static List<PlanetProjector> planetProjectors = new ArrayList<>();
     private static List<Object> ringBandAndSpriteProjectors = new ArrayList<>();
+    private static PersonAPI playerPerson;
 
     @Override
     public void beforeGameSave() {
@@ -76,16 +78,47 @@ public class VideoLibModPlugin extends BaseModPlugin {
         ringBandAndSpriteProjectors.clear();
     }
 
+    @Override 
+    public void onNewGame() {
+        Collection<PlanetProjector> projectors = VideoUtils.getPlanetProjectors();
+        Set<EveryFrameScript> projectorz = VideoUtils.getRingBandAndSpriteProjectors();
+
+        if (!projectors.isEmpty()) {
+            for (PlanetProjector projector : new ArrayList<>(projectors)) {
+                projector.finish();
+            }
+        }
+
+        if (!projectorz.isEmpty()) {
+            for (EveryFrameScript projector : new ArrayList<>(projectorz)) {
+                ((Projector)projector).finish();
+            }
+        }
+        playerPerson = Global.getSector().getPlayerPerson();
+
+    }
+
+    private boolean isSameSave() {
+        PersonAPI sectorPerson = Global.getSector().getPlayerPerson();
+        if (playerPerson != null && playerPerson.getId().equals(sectorPerson.getId())
+            && playerPerson.getName().getFullName().equals(sectorPerson.getName().getFullName())) return true;
+        return false;
+    }
+
     @Override
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
+        if (newGame) return;
         Collection<PlanetProjector> projectors = VideoUtils.getPlanetProjectors();
+        Set<EveryFrameScript> projectorz = VideoUtils.getRingBandAndSpriteProjectors();
+
+        boolean isSameSave = isSameSave();
 
         if (!projectors.isEmpty()) {
             for (PlanetProjector projector : new ArrayList<>(projectors)) {
                 projector.finish();
     
-                if (projector.getCampaignPlanet() != null) {
+                if (isSameSave && projector.getCampaignPlanet() != null ) {
                     PlanetAPI target = (PlanetAPI) Global.getSector().getEntityById(projector.getCampaignPlanet().getId());
     
                     Global.getSector().addTransientScript(
@@ -98,9 +131,22 @@ public class VideoLibModPlugin extends BaseModPlugin {
             }
         }
 
-        for (EveryFrameScript projector : VideoUtils.getRingBandAndSpriteProjectors()) {
-            ((Projector)projector).restart();
+        if (!projectorz.isEmpty()) {
+            if (isSameSave) {
+                for (EveryFrameScript projector : new ArrayList<>(projectorz)) {
+                    Projector proj = (Projector) projector;
+                    proj.finish();
+                    proj.restart();
+                }
+            } else {
+                for (EveryFrameScript projector : new ArrayList<>(projectorz)) {
+                    Projector proj = (Projector) projector;
+                    proj.finish();
+                }
+            }
+
         }
+        playerPerson = Global.getSector().getPlayerPerson();
     }
 
     public static Thread getMainThread() {
