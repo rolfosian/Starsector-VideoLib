@@ -514,6 +514,7 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, j
 }
 
 // vpx alpha channel is in side data, we need to extract it and then merge and then finally convert to rgba to put in buffer
+// impl adapted from JEEB's vp8 alpha detection and decode https://github.com/jeeb/ffmpeg/commit/1c8bdb404c67bdd36611afb66bd925fad6588660
 static int extract_alpha_packet(JNIEnv *env, FFmpegPipeContext *ctx, AVPacket *pkt, AVPacket **out_pkt) {
     int ret = AVERROR_BUG2;
     AVPacket *alpha_packet = NULL;
@@ -592,7 +593,7 @@ static int merge_alpha_frame(JNIEnv *env, FFmpegPipeContext *ctx, AVFrame *alpha
         
         if (av_image_alloc(scaled_alpha_data, scaled_alpha_linesize,
                            ctx->width, ctx->height, AV_PIX_FMT_GRAY8, 1) < 0) {
-            printe(env, "merge_alpha_packet: av_image_alloc for scaled alpha failed");
+            printe(env, "merge_alpha_frame: av_image_alloc for scaled alpha failed");
             ret = AVERROR(ENOMEM);
             goto failed;
         }
