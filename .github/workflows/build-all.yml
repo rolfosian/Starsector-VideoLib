@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - .github/workflows/build-all.yml
-      - ffmpeg-jni/src/ffmpegjni.c
   pull_request:
     paths:
       - .github/workflows/build-all.yml
