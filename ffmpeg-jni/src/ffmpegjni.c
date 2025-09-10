@@ -513,7 +513,7 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, j
     return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
 }
 
-// vpx alpha channel is in side data, we need to extract it and then merge and then finally convert to rgba to put in buffer
+// vpx alpha channel is in side data, we need to extract it to then merge and then finally convert to rgba to put in buffer
 // impl adapted from JEEB's vp8 alpha detection and decode https://github.com/jeeb/ffmpeg/commit/1c8bdb404c67bdd36611afb66bd925fad6588660
 static int extract_alpha_packet(JNIEnv *env, FFmpegPipeContext *ctx, AVPacket *pkt, AVPacket **out_pkt) {
     int ret = AVERROR_BUG2;
@@ -637,6 +637,12 @@ static int merge_alpha_frame(JNIEnv *env, FFmpegPipeContext *ctx, AVFrame *alpha
 
 failed:
     ctx->error_status = ret;
+    return 0;
+}
+
+int isVpx(const char *codecName) {
+    if (codecName == NULL) return 0;
+    if (strcmp(codecName, "vp9") == 0 || strcmp(codecName, "vp8") == 0) return 1;
     return 0;
 }
 
@@ -827,7 +833,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
     struct SwsContext *sws_ctx;
     enum AVPixelFormat target_fmt;
-    if (isAlphaChannel(env, ctx, startUs)) {
+    if (isVpx(codec->name) && isAlphaChannel(env, ctx, startUs)) {
         ctx->vpx_alpha_channel = 1;
 
         const AVCodec *codec = avcodec_find_decoder(ctx->video_ctx->codec_id);
@@ -1949,11 +1955,8 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv
         printe(env, "getAudioSampleRate: null context pointer");
         return 0;
     }
-    
-    pthread_mutex_lock(&ctx->mutex);
-    int result = ctx->out_sample_rate;
-    pthread_mutex_unlock(&ctx->mutex);
-    return result;
+
+    return ctx->out_sample_rate;
 }
 
 JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *env, jclass clazz, jlong ptr) {
@@ -1962,11 +1965,8 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *
         printe(env, "getAudioChannels: null context pointer");
         return 0;
     }
-    
-    pthread_mutex_lock(&ctx->mutex);
-    int result = ctx->out_channels;
-    pthread_mutex_unlock(&ctx->mutex);
-    return result;
+
+    return ctx->out_channels;
 }
 
 JNIEXPORT jfloat JNICALL Java_data_scripts_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env, jclass clazz, jlong ptr) {
@@ -1975,19 +1975,9 @@ JNIEXPORT jfloat JNICALL Java_data_scripts_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env
         return 0.0f;
     }
     
-    // Try to cast as FFmpegPipeContext first
-    FFmpegPipeContext *ctx_no_sound = (FFmpegPipeContext *)(intptr_t)ptr;
-    if (ctx_no_sound && ctx_no_sound->fps > 0.0f) {
-        return ctx_no_sound->fps;
-    }
-    
-    // Try to cast as FFmpegPipeContext
-    FFmpegPipeContext *ctx_with_sound = (FFmpegPipeContext *)(intptr_t)ptr;
-    if (ctx_with_sound && ctx_with_sound->fps > 0.0f) {
-        pthread_mutex_lock(&ctx_with_sound->mutex);
-        float result = ctx_with_sound->fps;
-        pthread_mutex_unlock(&ctx_with_sound->mutex);
-        return result;
+    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    if (ctx && ctx->fps > 0.0f) {
+        return ctx->fps;
     }
     
     printe(env, "getVideoFps: invalid context or no FPS information");
@@ -2000,12 +1990,8 @@ JNIEXPORT jdouble JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationSeconds(JNI
         printe(env, "getDurationSeconds: null context pointer");
         return 0.0;
     }
-    
-    pthread_mutex_lock(&ctx->mutex);
-    double result = ctx->duration_seconds;
-    pthread_mutex_unlock(&ctx->mutex);
 
-    return result;
+    return ctx->duration_seconds;
 }
 
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, jclass clazz, jlong ptr) {
@@ -2014,12 +2000,8 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *en
         printe(env, "getDurationUs: null context pointer");
         return 0;
     }
-    
-    pthread_mutex_lock(&ctx->mutex);
-    int64_t result = ctx->duration_us;
-    pthread_mutex_unlock(&ctx->mutex);
 
-    return result;
+    return ctx->duration_us;
 }
 
 JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, jclass clazz, jlong ptr) {
