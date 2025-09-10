@@ -212,7 +212,7 @@ public class MuteDecoder implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(60) : new TextureBuffer(60);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
 
         decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();
