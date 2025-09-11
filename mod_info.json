@@ -3,7 +3,7 @@
     "name": "VideoLib",
     "author": "rolfos",
     "version": "0.0.1",
-    "description": "Panel plugin for custom ui panels to render video and images.",
+    "description": "Library with plugins to render videos on panels/planets/ringbands.",
     "gameVersion": "0.98a-RC8",
     "modPlugin": "data.scripts.VideoLibModPlugin",
     "jars": ["jars/VideoLib.jar"]
