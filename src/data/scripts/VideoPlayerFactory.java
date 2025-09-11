@@ -14,8 +14,9 @@ import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.playerui.VideoPlayer;
 import data.scripts.playerui.MuteVideoPlayerWithControls;
 import data.scripts.playerui.AudioVideoPlayerWithControls;
-
+import data.scripts.playerui.ImagePanel;
 import data.scripts.projector.AudioVideoProjector;
+import data.scripts.projector.ImagePlugin;
 import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
 import data.scripts.speakers.Speakers;
@@ -110,5 +111,12 @@ public class VideoPlayerFactory {
         masterPanel.addComponent(controlPanel.getControlPanel()).inTL(0f, height + 30f); // 30f height of seek bar panel
 
         return new AudioVideoPlayerWithControls(masterPanel, controlPanel, speakers, projectorPlugin, projectorPanel);
+    }
+
+    public static ImagePanel createImagePanel(String imageId, int width, int height, boolean keepAlive) {
+        ImagePlugin imagePlugin = new ImagePlugin(imageId, width, height, keepAlive);
+        CustomPanelAPI panel = Global.getSettings().createCustom(width, height, imagePlugin);
+
+        return new ImagePanel(panel, imagePlugin);
     }
 }

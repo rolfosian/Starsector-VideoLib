@@ -1,3 +1,4 @@
 command,class,tags,syntax,help
 vl_demo,data.scripts.console.VideoLibDemo,"ui",vl_demo wc,"Opens an Interaction Dialog with a muted video playing on loop once console is closed. Optional Args: wc - with controls - 'color:r,g,b' and 'textcolor:r,g,b' optional arguments for control color scheme. Optional file id defined in settings.json (See mods/VideoLib/settings.json and mods/VideoLib/data/videos)"
 vl_plan,data.scripts.console.VideoLibPlanetsDemo,"planets",vl_planets_demo,"Gives all planets in the player location ufos flying around until they leave the system or restart"
+vl_img_test,data.scripts.console.VideoLibImageTest,"images",vl_image_test,"vl_image_test"

@@ -96,6 +96,11 @@ public class ImagePlugin implements CustomUIPanelPlugin {
         this.y = pos.getY();
     }
 
+    public void finish() {
+        GL11.glDeleteTextures(textureId);
+        FFmpeg.closeImage(ptr);
+    }
+
     @Override
     public void advance(float arg0) {
         advancingValue ^= 1;
@@ -108,6 +113,14 @@ public class ImagePlugin implements CustomUIPanelPlugin {
     public void positionChanged(PositionAPI arg0) {
         this.x = arg0.getX();
         this.y = arg0.getY();
+
+        int width = (int) arg0.getWidth();
+        int height = (int) arg0.getHeight();
+        if (width != this.width || height != this.height) {
+            this.width = width;
+            this.height = height;
+            resize(width, height);
+        }
     }
 
     @Override

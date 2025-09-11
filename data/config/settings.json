@@ -9,7 +9,8 @@
 
             },
             "images" : {
-
+                "vl_jpeg" : "data/videos/jpeg.jpg",
+		"vl_png" : "data/videos/png.png"
             }
         }
     },
