@@ -2265,6 +2265,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
         return NULL;
     }
 
+    if (ctx->vpx_alpha_channel) return readVpxAlphaChannel(env, ctx);
+
     AVPacket *pkt = av_packet_alloc();
     if (!pkt) {
         printe(env, "read: failed to allocate packet");
