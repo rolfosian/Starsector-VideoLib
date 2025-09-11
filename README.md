@@ -59,5 +59,5 @@ if (splitArgs.contains("wc")) {
 
 ## Notes:
 - Sound buffers cannot be queued to AL10 device buffers from outside the main thread as they will then conflict with the game's own music player
-- I believe some form of interpolation algorithm must be determined for the video frames as a result of this and texture processing ultimately being pegged to the game's framerate. We need to take into account variable framerates of videos and the game's frametime/framerate itself in order to sync correctly with audio frames. I am too much of a brainlet to figure this out thus far.
+- I believe some form of interpolation algorithm must be determined for the video frames as a result of this and texture processing ultimately being pegged to the game's framerate. We need to take into account variable framerates of videos and the game's frametime/framerate itself in order to sync correctly with audio frames. As the main thread pauses when the game is alt tabbed, the sound must be paused also, and as such we probably need to keep an extra before and after running audio buffer.
 - Have tried audio and video frames in lockstep but while they were synced it wasn't feasible as the audio had to wait for the video to catch up slightly periodically
