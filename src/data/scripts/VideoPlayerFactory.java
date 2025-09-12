@@ -73,6 +73,8 @@ public class VideoPlayerFactory {
     }
 
     public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayer(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        
         VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
