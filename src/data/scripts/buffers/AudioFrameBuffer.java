@@ -30,10 +30,11 @@ public class AudioFrameBuffer {
 
     public void clear() {
         for (int i = 0; i < capacity; i++) {
-            buffer[i].freeBuffer();
-            buffer[i] = null;
+            if (buffer[i] != null) {
+                buffer[i].freeBuffer();
+                buffer[i] = null;
+            }
         }
-        
         head = tail = count = 0;
     }
 

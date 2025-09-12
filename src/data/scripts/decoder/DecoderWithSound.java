@@ -20,6 +20,7 @@ import data.scripts.ffmpeg.AudioFrame;
 
 import data.scripts.projector.Projector;
 import data.scripts.speakers.Speakers;
+import data.scripts.speakers.VideoProjectorSpeakers;
 
 public class DecoderWithSound implements Decoder {
     private static final Logger logger = Logger.getLogger(DecoderWithSound.class);
@@ -40,7 +41,7 @@ public class DecoderWithSound implements Decoder {
 
     private String videoFilePath;
     private volatile boolean running = false;
-    private Thread decodeThread;
+    private Thread videoDecodeThread;
     private long pipePtr;
 
     private TextureBuffer textureBuffer;
@@ -73,7 +74,7 @@ public class DecoderWithSound implements Decoder {
 
         this.videoProjector = videoProjector;
 
-        this.audioBuffer = new AudioFrameBuffer(60);
+        this.audioBuffer = new AudioFrameBuffer(30);
 
         this.width = width;
         this.height = height;
@@ -86,8 +87,7 @@ public class DecoderWithSound implements Decoder {
         print("DecoderWithSound decodeLoop started");
 
         while (running) {
-            // if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
-            if (!audioBuffer.isFull()) {
+            if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
                 Frame f = FFmpeg.read(pipePtr);
 
                 if (f == null) { // EOF / Error
@@ -173,7 +173,6 @@ public class DecoderWithSound implements Decoder {
                             } else {
                                 seekWithoutClearingBuffer(0);
                             }
-                            
                         }
                         sleep(1);
                         continue;
@@ -181,17 +180,15 @@ public class DecoderWithSound implements Decoder {
 
                 } else {
                     if (f instanceof VideoFrame) {
-                    //     synchronized (textureBuffer) {
-                    //         textureBuffer.add((VideoFrame)f);
-                    //     }
-
+                        synchronized (textureBuffer) {
+                            textureBuffer.add((VideoFrame)f);
+                        }
                     } else {
                         synchronized(audioBuffer) {
                             audioBuffer.add((AudioFrame)f);
                         }
                     }
                 }
-            
             } else {
                 sleep(1);
             }
@@ -203,52 +200,65 @@ public class DecoderWithSound implements Decoder {
         gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
+        currentAudioPts = speakers.getCurrentAudioPts();
+
         synchronized(textureBuffer) {
             boolean switched = false;
-    
+
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
-    
+                
                 TextureFrame texture = textureBuffer.popFront(width, height);
-    
+
                 if (texture != null) {
                     switched = true;
                     if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
-    
+
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
+
+                    while (currentAudioPts > currentVideoPts) {
+                        texture = textureBuffer.popFront(width, height);
+
+                        if (texture != null) {
+                            switched = true;
+                            if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+        
+                            currentVideoTextureId = texture.id;
+                            currentVideoPts = texture.pts;
+                        }
+                    }
                 }
             }
 
             if (!switched) {
+
                 if (gameFps <= videoFps) {
                     textureBuffer.convertFront(width, height);
-                } else { 
+                } else {
                     textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
                 }
             }
         }
-    
+
         return currentVideoTextureId;
     }
 
     public int getCurrentVideoTextureId() {
-        // while (textureBuffer.isEmpty()) sleep(1); 
+        while (textureBuffer.isEmpty()) sleep(1); 
 
-        // synchronized(textureBuffer) {
-        //     TextureFrame texture = textureBuffer.popFront(width, height);
+        synchronized(textureBuffer) {
+            TextureFrame texture = textureBuffer.popFront(width, height);
 
-        //     if (texture != null) {
-        //         int oldTextureId = currentVideoTextureId;
+            if (texture != null) {
+                int oldTextureId = currentVideoTextureId;
 
-        //         currentVideoTextureId = texture.id;
-        //         currentVideoPts = texture.pts;
+                currentVideoTextureId = texture.id;
+                currentVideoPts = texture.pts;
 
-        //         if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
-
-        //         videoProjector.setIsRendering(true); // this is dumb, i dont like this
-        //     }
-        // }
+                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
+            }
+        }
         return currentVideoTextureId;
     }
 
@@ -275,33 +285,34 @@ public class DecoderWithSound implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(60) : new TextureBuffer(60);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);
         audioSampleRate = FFmpeg.getAudioSampleRate(pipePtr);
         print("Audio Channels=", audioChannels);
         print("Audio Sample Rate=", audioSampleRate);
 
-        decodeThread = new Thread(this::decodeLoop, "DecoderWithSound");
-        decodeThread.start();
+        videoDecodeThread = new Thread(this::decodeLoop, "DecoderWithSound-decodeLoop");
+        videoDecodeThread.start();
+
         print("DecoderWithSound decoderLoop thread started");
 
-        // while(textureBuffer.isEmpty()) sleep(1);
-        // synchronized(textureBuffer) {
-        //     textureBuffer.convertFront(width, height);
-        // }
+        while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
+        synchronized(textureBuffer) {
+            textureBuffer.convertFront(width, height);
+        }
         return;
     }
 
     public void finish() {
-        print("Stopping DecoderWithSound decoderLoop thread");
+        print("Stopping DecoderWithSound thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
 
-        print("Joining DecoderWithSound decoderLoop thread");
+        print("Joining DecoderWithSound thread");
         try {
-            decodeThread.join();
+            videoDecodeThread.join();
         } catch(InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -316,11 +327,6 @@ public class DecoderWithSound implements Decoder {
         synchronized(textureBuffer) {
             textureBuffer.clear();
         }
-        synchronized(audioBuffer) {
-            audioBuffer.clear();
-        }
-
-        // textureBuffer.glDeleteBuffers();
     }
 
     public void stop() {

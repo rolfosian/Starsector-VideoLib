@@ -166,13 +166,13 @@ JNIEXPORT jintArray JNICALL Java_data_scripts_ffmpeg_FFmpeg_getWidthAndHeight
  * Signature: (J)V
  */
 JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getTotalFrameCount
-  (JNIEnv *env, jclass clazz, jlong ptr);
+  (JNIEnv *, jclass, jlong);
 
 JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isImageRGBA
-  (JNIEnv *env, jclass clazz, jlong ptr);
+  (JNIEnv *, jclass, jlong);
 
 JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA
-  (JNIEnv *env, jclass clazz, jlong ptr);
+  (JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }

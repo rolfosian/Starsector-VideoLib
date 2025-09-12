@@ -57,7 +57,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
 
     AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
-    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IIJ)V");
+    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
 
     jclass localFFmpeg = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
     FFmpegClass = (*env)->NewGlobalRef(env, localFFmpeg);
@@ -70,9 +70,9 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     printMid = (*env)->GetStaticMethodID(env, FFmpegClass, "print", "([Ljava/lang/Object;)V");
 }
 
-
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jobject buffer) {
     void *ptr = (*env)->GetDirectBufferAddress(env, buffer);
+    
     if (ptr != NULL) {
         free(ptr);
     }
@@ -1071,7 +1071,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
 jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
     AVPacket *pkt = av_packet_alloc();
-    AVPacket *alpha_pkt = av_packet_alloc();
+    AVPacket *alpha_pkt = NULL;
 
     if (!pkt) {
         printe(env, "readVpxAlphaChannelNoSound: failed to allocate packet");
@@ -2011,7 +2011,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass 
 
 jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
     AVPacket *pkt = av_packet_alloc();
-    AVPacket *alpha_pkt = av_packet_alloc();
+    AVPacket *alpha_pkt = NULL;
 
     if (!pkt) {
         printe(env, "readVpxAlphaChannel: failed to allocate packet");
@@ -2202,43 +2202,66 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                 );
 
                 uint8_t **converted = NULL;
-                if (av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
-                                                       dst_nb_samples, ctx->out_sample_fmt, 0) < 0) {
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
+                av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
+                                                   dst_nb_samples, ctx->out_sample_fmt, 0);
 
                 int converted_samples = swr_convert(ctx->swr_ctx, converted, dst_nb_samples,
                                                     (const uint8_t **)ctx->audio_frame->data,
                                                     ctx->audio_frame->nb_samples);
-                if (converted_samples < 0) {
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
 
                 int buffer_size = av_samples_get_buffer_size(NULL, ctx->out_channels,
                                                              converted_samples, ctx->out_sample_fmt, 1);
-                if (buffer_size < 0) {
+
+                int16_t *audio_buf = (int16_t *)converted[0];
+
+                int64_t pts = av_rescale_q(ctx->audio_frame->pts,
+                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
+                                           AV_TIME_BASE_Q);
+
+                // if seeking: skip until first frame >= seek target
+                if (ctx->seeking && pts < ctx->seek_target_us) {
                     av_freep(&converted[0]);
                     av_freep(&converted);
                     av_frame_unref(ctx->audio_frame);
                     continue;
                 }
+                ctx->seeking = 0;
 
-                if (ctx->audio_out_capacity_bytes < buffer_size) {
-                    if (ctx->audio_out_buffer) av_free(ctx->audio_out_buffer);
-                    ctx->audio_out_buffer = (uint8_t *)av_malloc(buffer_size);
-                    ctx->audio_out_capacity_bytes = buffer_size;
+                void *copy = malloc(buffer_size);
+                if (!copy) {
+                    printe(env, "readVpxAlphaChannel: failed to allocate audio buffer copy");
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
                 }
-                memcpy(ctx->audio_out_buffer, converted[0], buffer_size);
+                memcpy(copy, audio_buf, buffer_size);
 
-                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ctx->audio_out_buffer, buffer_size);
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jint)converted_samples,
-                                           (jlong)av_rescale_q(ctx->audio_frame->pts,
-                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
-                                           AV_TIME_BASE_Q));
+                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, buffer_size);
+                if (!byteBuffer) {
+                    printe(env, "readVpxAlphaChannel: failed to create DirectByteBuffer for audio");
+                    free(copy);
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jlong)pts);
+                if (!result) {
+                    printe(env, "readVpxAlphaChannel: failed to create AudioFrame object");
+                    free(copy);
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
 
                 av_freep(&converted[0]);
                 av_freep(&converted);
@@ -2391,43 +2414,66 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 );
 
                 uint8_t **converted = NULL;
-                if (av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
-                                                       dst_nb_samples, ctx->out_sample_fmt, 0) < 0) {
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
+                av_samples_alloc_array_and_samples(&converted, NULL, ctx->out_channels,
+                                                   dst_nb_samples, ctx->out_sample_fmt, 0);
 
                 int converted_samples = swr_convert(ctx->swr_ctx, converted, dst_nb_samples,
                                                     (const uint8_t **)ctx->audio_frame->data,
                                                     ctx->audio_frame->nb_samples);
-                if (converted_samples < 0) {
-                    av_freep(&converted[0]);
-                    av_freep(&converted);
-                    av_frame_unref(ctx->audio_frame);
-                    continue;
-                }
 
                 int buffer_size = av_samples_get_buffer_size(NULL, ctx->out_channels,
                                                              converted_samples, ctx->out_sample_fmt, 1);
-                if (buffer_size < 0) {
+
+                int16_t *audio_buf = (int16_t *)converted[0];
+
+                int64_t pts = av_rescale_q(ctx->audio_frame->pts,
+                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
+                                           AV_TIME_BASE_Q);
+
+                // if seeking: skip until first frame >= seek target
+                if (ctx->seeking && pts < ctx->seek_target_us) {
                     av_freep(&converted[0]);
                     av_freep(&converted);
                     av_frame_unref(ctx->audio_frame);
                     continue;
                 }
+                ctx->seeking = 0;
 
-                if (ctx->audio_out_capacity_bytes < buffer_size) {
-                    if (ctx->audio_out_buffer) av_free(ctx->audio_out_buffer);
-                    ctx->audio_out_buffer = (uint8_t *)av_malloc(buffer_size);
-                    ctx->audio_out_capacity_bytes = buffer_size;
+                void *copy = malloc(buffer_size);
+                if (!copy) {
+                    printe(env, "read: failed to allocate audio buffer copy");
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
                 }
-                memcpy(ctx->audio_out_buffer, converted[0], buffer_size);
+                memcpy(copy, audio_buf, buffer_size);
 
-                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, ctx->audio_out_buffer, buffer_size);
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jint)converted_samples,
-                                           (jlong)av_rescale_q(ctx->audio_frame->pts,
-                                           ctx->fmt_ctx->streams[ctx->audio_stream_index]->time_base,
-                                           AV_TIME_BASE_Q));
+                jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, buffer_size);
+                if (!byteBuffer) {
+                    printe(env, "read: failed to create DirectByteBuffer for audio");
+                    free(copy);
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
+
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jlong)pts);
+                if (!result) {
+                    printe(env, "read: failed to create AudioFrame object");
+                    free(copy);
+                    av_freep(&converted[0]);
+                    av_freep(&converted);
+                    av_frame_unref(ctx->audio_frame);
+                    pthread_mutex_unlock(&ctx->mutex);
+                    av_packet_free(&pkt);
+                    return NULL;
+                }
 
                 av_freep(&converted[0]);
                 av_freep(&converted);

@@ -190,7 +190,7 @@ public class AudioVideoProjector extends VideoProjector {
                 MODE = OLD_MODE;
             }
             return;
-        } 
+        }
         currentTextureId = decoder.getCurrentVideoTextureId(amount);
     }
 
@@ -295,8 +295,8 @@ public class AudioVideoProjector extends VideoProjector {
             currentTextureId = 0;
         }
 
-        speakers.finish();
         decoder.finish();
+        speakers.finish();
 	}
 
     public Decoder getDecoder() {
