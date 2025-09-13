@@ -3,6 +3,7 @@ package data.scripts.speakers;
 import data.scripts.buffers.AudioFrameBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
+import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.projector.Projector;
 
 import org.lwjgl.BufferUtils;
@@ -11,6 +12,7 @@ import org.lwjgl.openal.AL11;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCcontext;
 import org.lwjgl.openal.ALCdevice;
+import org.lwjgl.util.vector.Vector2f;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.GameState;
@@ -63,8 +65,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
 
         @Override
-        public void clear() {
-            for (AudioFrame frame : this.values()) frame.freeBuffer();
+        public void clear() { // idk why it crashes if we straight up call frame.freeBuffer() instead of doing this, nothing else should be holding onto it?
+            for (AudioFrame frame : this.values()) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
             super.clear();
         }
     }
@@ -75,8 +77,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
 
         @Override
-        public void clear() {
-            for (AudioFrame frame : this) frame.freeBuffer();
+        public void clear() { // idk why it crashes if we straight up call frame.freeBuffer() instead of doing this, nothing else should be holding onto it?
+            for (AudioFrame frame : this) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
             super.clear();
         }
     }
@@ -216,6 +218,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         AL10.alSourceRewind(sourceId);
         AL10.alSourcePlay(sourceId);
         Global.getSector().addTransientScript(this);
+        Global.getCombatEngine().addPlugin(this);
     }
 
     public void play() {
@@ -242,13 +245,17 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
             if (AL10.alGetError() != AL10.AL_NO_ERROR) break;
             availableBuffers.offer(bufferId);
+
+            AudioFrame stale = bufferToFrame.remove(bufferId);
+            if (stale != null) stale.freeBuffer();
+
             queued--;
         }
 
         AL10.alSourceStop(sourceId);
 
-        // bufferToFrame.clear(); // causes crash? why? AL still holding onto it?
-        // playingFrames.clear(); // causes crash? why? AL still holding onto it?
+        bufferToFrame.clear();
+        playingFrames.clear();
         currentAudioPts = 0;
     }
 
@@ -276,11 +283,12 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         AL10.alDeleteBuffers(bufferIds);
 
         audioFrameBuffer.clear();
-        // bufferToFrame.clear(); causes crash? why? AL still holding onto it?
-        // playingFrames.clear(); causes crash? why? AL still holding onto it?
+        bufferToFrame.clear();
+        playingFrames.clear();
         availableBuffers.clear();
 
         Global.getSector().removeTransientScript(this);
+        Global.getCombatEngine().removePlugin(this);
     }
 
     @Override
@@ -301,5 +309,14 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     @Override
     public long getCurrentAudioPts() {
         return this.currentAudioPts;
+    }
+
+    public void setSoundDirection(Vector2f viewportLoc) {
+        if (viewportLoc == null) return;
+        AL10.alSource3f(sourceId, AL10.AL_POSITION, viewportLoc.x, 0f, viewportLoc.y);
+    }
+
+    public void resetSoundDirection() {
+        AL10.alSource3f(sourceId, AL10.AL_POSITION, 0f, 0f, 0f);
     }
 }

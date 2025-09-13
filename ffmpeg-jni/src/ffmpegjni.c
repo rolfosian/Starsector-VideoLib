@@ -2306,7 +2306,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
         int ret = av_read_frame(ctx->fmt_ctx, pkt);
         if (ret < 0) {
             // EOF or error
-            ctx->error_status;
+            ctx->error_status = ret;
 
             if (ret == AVERROR_EOF) {
                 if (ctx->seeking && last_frame) {

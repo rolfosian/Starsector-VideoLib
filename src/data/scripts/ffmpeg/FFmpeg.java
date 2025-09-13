@@ -1,5 +1,6 @@
 package data.scripts.ffmpeg;
 
+import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 
@@ -13,6 +14,8 @@ public class FFmpeg {
         }
         logger.error(sb.toString());
     }
+
+    public static final Cleaner cleaner = Cleaner.create();
 
     public static final int AVERROR_BSF_NOT_FOUND      = -1179861752;
     public static final int AVERROR_BUG                = -558323010;

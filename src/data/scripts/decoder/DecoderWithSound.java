@@ -99,6 +99,8 @@ public class DecoderWithSound implements Decoder {
                         FFmpeg.closePipe(pipePtr);
                         pipePtr = 0;
                         textureBuffer.clear();
+                        audioBuffer.clear();
+
                         VideoLibModPlugin.getMainThread().interrupt();
                         return;
                     }
@@ -110,7 +112,7 @@ public class DecoderWithSound implements Decoder {
 
                                 if (controlPanel != null) {
                                     if (!videoProjector.paused()) {
-                                        while (!textureBuffer.isEmpty()) {
+                                        while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
                                             sleep(1);
                                             if (videoProjector.paused()) break;
                                             if (!videoProjector.isRendering()) break;
@@ -119,6 +121,7 @@ public class DecoderWithSound implements Decoder {
         
                                         if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
                                             videoProjector.pause();
+                                            speakers.pause();
                                             
                                             controlPanel.setProgressDisplay(currentVideoPts);
                                             controlPanel.getPlayButton().setEnabled(true);
@@ -127,7 +130,7 @@ public class DecoderWithSound implements Decoder {
                                         }
     
                                     } else {
-                                        while (!textureBuffer.isEmpty()) {
+                                        while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
                                             sleep(1);
                                             if (videoProjector.paused()) break;
                                             if (!videoProjector.isRendering()) break;
@@ -143,24 +146,26 @@ public class DecoderWithSound implements Decoder {
                                 } else {
                                     switch(this.EOF_MODE) {
                                         case PLAY_UNTIL_END:
-                                            while (!textureBuffer.isEmpty()) {
+                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
                                                 sleep(1);
                                                 if (videoProjector.paused()) break;
                                                 if (!videoProjector.isRendering()) break;
                                             }
                                             seekWithoutClearingBuffer(0);
+                                            speakers.pause();
                                             videoProjector.pause();
                                             videoProjector.setPlayMode(PlayMode.SEEKING);
                                             videoProjector.setIsRendering(false);
                                             break;
 
                                         case PAUSE:
-                                            while (!textureBuffer.isEmpty()) {
+                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
                                                 sleep(1);
                                                 if (videoProjector.paused()) break;
                                                 if (!videoProjector.isRendering()) break;
                                             }
                                             seekWithoutClearingBuffer(0);
+                                            speakers.pause();
                                             videoProjector.pause();
                                             break;
 
@@ -217,11 +222,10 @@ public class DecoderWithSound implements Decoder {
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
 
-                    while (currentAudioPts > currentVideoPts) {
+                    while (!textureBuffer.isEmpty() && (currentAudioPts > currentVideoPts) ) {
                         texture = textureBuffer.popFront(width, height);
 
                         if (texture != null) {
-                            switched = true;
                             if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
         
                             currentVideoTextureId = texture.id;
@@ -352,6 +356,8 @@ public class DecoderWithSound implements Decoder {
             synchronized(audioBuffer) {
                 audioBuffer.clear();
             }
+            speakers.stop();
+            speakers.play();
 
             this.currentVideoPts = targetUs;
         }

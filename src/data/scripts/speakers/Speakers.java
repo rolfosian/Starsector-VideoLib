@@ -1,7 +1,8 @@
 package data.scripts.speakers;
 
+import org.lwjgl.util.vector.Vector2f;
+
 import data.scripts.decoder.Decoder;
-import data.scripts.ffmpeg.AudioFrame;
 
 public interface Speakers {   
     public void start();
@@ -19,4 +20,7 @@ public interface Speakers {
     public Decoder getDecoder();
 
     public void finish();
+
+    public void setSoundDirection(Vector2f viewportLoc);
+    public void resetSoundDirection();
 }

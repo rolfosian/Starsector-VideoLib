@@ -84,6 +84,8 @@ public class AudioVideoProjector extends VideoProjector {
         this.decoder.setSpeakers(speakers);
         this.speakers.start();
 
+        if (startingPlayMode == PlayMode.PAUSED) this.speakers.pause();
+
         if (!keepAlive)
         Global.getSector().addScript(new EveryFrameScript() {
             private boolean isDone = false;
