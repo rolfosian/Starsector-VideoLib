@@ -1095,8 +1095,8 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     
                     if (!merge_alpha_frame(env, ctx, last_alpha_frame, last_frame)) {
                         printe(env, "readVpxAlphaChannelNoSound: failed to merge alpha frame");
-                        av_frame_unref(last_alpha_frame);
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_alpha_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&alpha_pkt);
                         av_packet_free(&pkt);
@@ -1107,8 +1107,8 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     if (!copy) {
                         ctx->seeking = 0;
                         printe(env, "readVpxAlphaChannelNoSound: failed to allocate memory for copy buffer, returning null last frame");
-                        av_frame_unref(last_alpha_frame);
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_alpha_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&alpha_pkt);
                         av_packet_free(&pkt);
@@ -1119,8 +1119,8 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
                     jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
                     ctx->seeking = 0;
-                    av_frame_unref(last_alpha_frame);
-                    av_frame_unref(last_frame);
+                    av_frame_free(&last_alpha_frame);
+                    av_frame_free(&last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
                     av_packet_free(&alpha_pkt);
                     av_packet_free(&pkt);
@@ -1298,7 +1298,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     if (!copy) {
                         ctx->seeking = 0;
                         printe(env, "readFrameNoSound: failed to allocate memory for buffer copy, returning null last frame");
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&pkt);
                         return NULL;
@@ -1308,7 +1308,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
                     jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
                     ctx->seeking = 0;
-                    av_frame_unref(last_frame);
+                    av_frame_free(&last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
                     av_packet_free(&pkt);
                     return result;
@@ -2035,8 +2035,8 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     
                     if (!merge_alpha_frame(env, ctx, last_alpha_frame, last_frame)) {
                         printe(env, "readVpxAlphaChannel: failed to merge alpha frame");
-                        av_frame_unref(last_alpha_frame);
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_alpha_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&alpha_pkt);
                         av_packet_free(&pkt);
@@ -2047,8 +2047,8 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     if (!copy) {
                         ctx->seeking = 0;
                         printe(env, "readVpxAlphaChannel: failed to allocate memory for buffer copy, returning null last frame");
-                        av_frame_unref(last_alpha_frame);
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_alpha_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&alpha_pkt);
                         av_packet_free(&pkt);
@@ -2059,8 +2059,8 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
                     jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
                     ctx->seeking = 0;
-                    av_frame_unref(last_alpha_frame);
-                    av_frame_unref(last_frame);
+                    av_frame_free(&last_alpha_frame);
+                    av_frame_free(&last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
                     av_packet_free(&alpha_pkt);
                     av_packet_free(&pkt);
@@ -2323,7 +2323,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     if (!copy) {
                         ctx->seeking = 0;
                         printe(env, "read: failed to allocate last frame copy buffer");
-                        av_frame_unref(last_frame);
+                        av_frame_free(&last_frame);
                         pthread_mutex_unlock(&ctx->mutex);
                         av_packet_free(&pkt);
                         return NULL;
@@ -2334,7 +2334,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     jobject videoResult = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
 
                     ctx->seeking = 0;
-                    av_frame_unref(last_frame);
+                    av_frame_free(&last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
                     av_packet_free(&pkt);
                     return videoResult;
