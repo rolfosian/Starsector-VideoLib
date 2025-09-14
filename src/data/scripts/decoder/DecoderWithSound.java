@@ -1,6 +1,7 @@
 package data.scripts.decoder;
 
 import org.apache.log4j.Logger;
+import org.lwjgl.openal.AL10;
 import org.lwjgl.opengl.GL11;
 
 import data.scripts.VideoLibModPlugin;
@@ -59,6 +60,7 @@ public class DecoderWithSound implements Decoder {
 
     public final Projector videoProjector;
     public Speakers speakers;
+    private int speakersSourceId;
 
     private int width;
     private int height;
@@ -117,17 +119,19 @@ public class DecoderWithSound implements Decoder {
                                             if (videoProjector.paused()) break;
                                             if (!videoProjector.isRendering()) break;
                                         }
+                                        videoProjector.pause();
+                                        speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                        speakers.pause();
                                         seekWithoutClearingBuffer(0);
         
                                         if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
-                                            videoProjector.pause();
-                                            speakers.pause();
                                             
                                             controlPanel.setProgressDisplay(currentVideoPts);
                                             controlPanel.getPlayButton().setEnabled(true);
                                             controlPanel.getPauseButton().setEnabled(false);
                                             controlPanel.getStopButton().setEnabled(true);
                                         }
+                                        continue;
     
                                     } else {
                                         while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
@@ -135,38 +139,45 @@ public class DecoderWithSound implements Decoder {
                                             if (videoProjector.paused()) break;
                                             if (!videoProjector.isRendering()) break;
                                         }
+                                        videoProjector.pause();
+                                        speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                        speakers.pause();
+                                        seekWithoutClearingBuffer(0);
+
                                         controlPanel.setProgressDisplay(currentVideoPts);
                                         controlPanel.getPlayButton().setEnabled(true);
                                         controlPanel.getPauseButton().setEnabled(false);
                                         controlPanel.getStopButton().setEnabled(true);
                                         
-                                        seekWithoutClearingBuffer(0);
                                         continue;
                                     }
                                 } else {
                                     switch(this.EOF_MODE) {
                                         case PLAY_UNTIL_END:
-                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
+                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                                 sleep(1);
                                                 if (videoProjector.paused()) break;
                                                 if (!videoProjector.isRendering()) break;
                                             }
                                             seekWithoutClearingBuffer(0);
-                                            speakers.pause();
                                             videoProjector.pause();
+                                            speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                            speakers.pause();
+
                                             videoProjector.setPlayMode(PlayMode.SEEKING);
                                             videoProjector.setIsRendering(false);
                                             break;
 
                                         case PAUSE:
-                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
+                                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                                 sleep(1);
                                                 if (videoProjector.paused()) break;
                                                 if (!videoProjector.isRendering()) break;
                                             }
                                             seekWithoutClearingBuffer(0);
-                                            speakers.pause();
                                             videoProjector.pause();
+                                            speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                            speakers.pause();
                                             break;
 
                                         default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
@@ -176,11 +187,31 @@ public class DecoderWithSound implements Decoder {
                                     }
                                 }
                             } else {
+                                while (AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                                    sleep(1);
+                                    if (videoProjector.paused()) break;
+                                    if (!videoProjector.isRendering()) break;
+                                } 
+                                speakers.stop();
+                                speakers.play();
                                 seekWithoutClearingBuffer(0);
+                                continue;
                             }
                         }
                         sleep(1);
                         continue;
+
+                    } else {
+                        switch(this.EOF_MODE) {
+                            case PAUSE:
+                            case PLAY_UNTIL_END:
+                                seek(videoDurationUs);
+                            case LOOP:
+                                seekWithoutClearingBuffer(0);
+                                continue;
+                            default:
+                                break;
+                        }
                     }
 
                 } else {
@@ -357,7 +388,6 @@ public class DecoderWithSound implements Decoder {
                 audioBuffer.clear();
             }
             speakers.stop();
-            speakers.play();
 
             this.currentVideoPts = targetUs;
         }
@@ -387,6 +417,7 @@ public class DecoderWithSound implements Decoder {
 
     public void setSpeakers(Speakers speakers) {
         this.speakers = speakers;
+        this.speakersSourceId = speakers.getSourceId();
     }
 
     public Speakers getSpeakers() {

@@ -14,6 +14,7 @@ import com.fs.starfarer.api.util.Misc;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+import data.scripts.decoder.Decoder;
 import data.scripts.projector.VideoProjector;
 import data.scripts.speakers.Speakers;
 import data.scripts.util.VideoUtils;
@@ -44,6 +45,7 @@ public class PlayerControlPanel {
     private final VideoProjector projector;
     private final CustomPanelAPI controlPanel;
     private final PlayerControls playerControls;
+    private final Decoder decoder;
 
     private CustomPanelAPI seekBarPanel;
     private SeekBarPlugin seekBarPlugin;
@@ -76,6 +78,7 @@ public class PlayerControlPanel {
 
     public PlayerControlPanel(VideoProjector projector, int width, int height, Speakers speakers, Color textColor, Color buttonBgColor) {
         this.projector = projector;
+        this.decoder = projector.getDecoder();
         this.playerControls = new PlayerControls();
         this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
 
@@ -120,7 +123,7 @@ public class PlayerControlPanel {
         this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
         this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, buttonBgColor, Misc.getBrightPlayerColor(), BTN_SIZE, BTN_SIZE, 0f);
 
-        this.loopButton.setChecked(this.projector.getDecoder().getEOFMode() == EOFMode.LOOP);
+        this.loopButton.setChecked(this.decoder.getEOFMode() == EOFMode.LOOP);
 
         this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
         this.stopButton.getPosition().rightOfMid(this.pauseButton, 5f);
@@ -139,6 +142,7 @@ public class PlayerControlPanel {
 
     public PlayerControlPanel(VideoProjector projector, int width, int height, Speakers speakers) {
         this.projector = projector;
+        this.decoder = projector.getDecoder();
         this.playerControls = new PlayerControls();
         this.controlPanel = Global.getSettings().createCustom(width, height, this.playerControls);
 
@@ -179,7 +183,7 @@ public class PlayerControlPanel {
         this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
         this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, bgButtonColor, Misc.getBrightPlayerColor(), BTN_SIZE, BTN_SIZE, 0f);
 
-        this.loopButton.setChecked(this.projector.getDecoder().getEOFMode() == EOFMode.LOOP);
+        this.loopButton.setChecked(this.decoder.getEOFMode() == EOFMode.LOOP);
 
         this.playPauseStopPanel.addUIElement(playPauseStopHolder);
         this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
@@ -227,10 +231,10 @@ public class PlayerControlPanel {
 
     public void toggleLoop() {
         if (loopButton.isChecked()) {
-            projector.getDecoder().setEOFMode(EOFMode.LOOP);
+            decoder.setEOFMode(EOFMode.LOOP);
             projector.setEOFMode(EOFMode.LOOP);
         } else {
-            projector.getDecoder().setEOFMode(EOFMode.PLAY_UNTIL_END);
+            decoder.setEOFMode(EOFMode.PLAY_UNTIL_END);
             projector.setEOFMode(EOFMode.PLAY_UNTIL_END);
         }
     }
@@ -384,7 +388,7 @@ public class PlayerControlPanel {
         }
 
         private void seek() {
-            projector.getDecoder().seek(pendingSeekTarget);
+            decoder.seek(pendingSeekTarget);
             currentTimeLabel.setText(String.format("%s / %s", VideoUtils.formatTimeNoDecimals(pendingSeekTarget), durationString));
             this.timeAccumulator = 0;
 
@@ -398,7 +402,7 @@ public class PlayerControlPanel {
         @Override
         public void advance(float deltaTime) {
             timeAccumulator += deltaTime;
-            this.currentVideoPts = projector.getDecoder().getCurrentVideoPts();
+            this.currentVideoPts = decoder.getCurrentVideoPts();
 
             if (timeAccumulator >= 0.25 && !projector.paused()) {
                 currentTimeLabel.setText(String.format("%s / %s", VideoUtils.formatTimeNoDecimals(currentVideoPts), durationString));
@@ -416,7 +420,7 @@ public class PlayerControlPanel {
                 if (seekAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         this.seek();
-                        projector.setCurrentTextureId(projector.getDecoder().getCurrentVideoTextureId());
+                        projector.setCurrentTextureId(decoder.getCurrentVideoTextureId());
                     }
                 }
         
@@ -424,8 +428,8 @@ public class PlayerControlPanel {
                 if (this.pendingSeekTarget >= 0 && seekAccumulator >= SEEK_APPLY_THRESHOLD) {
                     if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
                         projector.setEOFMode(EOFMode.PAUSE);
-                        projector.getDecoder().setPlayMode(PlayMode.SEEKING);
-                        projector.getDecoder().seek(this.pendingSeekTarget);
+                        decoder.setPlayMode(PlayMode.SEEKING);
+                        decoder.seek(this.pendingSeekTarget);
                         projector.setPlayMode(PlayMode.SEEKING);
                         this.oldSeekTarget = this.pendingSeekTarget;
                     }
@@ -470,12 +474,12 @@ public class PlayerControlPanel {
                             this.seeking = true;
     
                             this.oldProjectorMode = projector.getPlayMode();
-                            this.oldDecoderMode = projector.getDecoder().getPlayMode();
+                            this.oldDecoderMode = decoder.getPlayMode();
     
                             this.wasPaused = projector.paused();
                             projector.pause();
                             projector.setPlayMode(PlayMode.SEEKING);
-                            projector.getDecoder().setPlayMode(PlayMode.SEEKING);
+                            decoder.setPlayMode(PlayMode.SEEKING);
                             seekButton.setEnabled(false);
                             stopButton.setEnabled(true);
     
@@ -509,9 +513,10 @@ public class PlayerControlPanel {
                         }
 
                         projector.setPlayMode(oldProjectorMode);
-                        projector.getDecoder().setPlayMode(oldDecoderMode);
+                        decoder.setPlayMode(oldDecoderMode);
+                        if (oldDecoderMode != PlayMode.PAUSED) speakers.play();
                         seekButton.setEnabled(true);
-                        if (!this.wasPaused) projector.unpause();
+                        if (!this.wasPaused) projector.unpause(); 
 
                         event.consume();
                         continue;
@@ -548,8 +553,8 @@ public class PlayerControlPanel {
             this.seekPanelWidth = seekBarPanelPos.getWidth();
             this.seekLineY = seekBarPanelPos.getY() + seekBarPanelPos.getHeight();
         
-            this.durationSeconds = projector.getDecoder().getDurationSeconds();
-            this.durationUs = projector.getDecoder().getDurationUs();
+            this.durationSeconds = decoder.getDurationSeconds();
+            this.durationUs = decoder.getDurationUs();
         
             seekBarTt = seekBarPanel.createUIElement(seekBarPanelPos.getWidth(), seekBarPanelPos.getHeight(), false);
 

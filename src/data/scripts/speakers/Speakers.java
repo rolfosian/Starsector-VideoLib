@@ -23,4 +23,7 @@ public interface Speakers {
 
     public void setSoundDirection(Vector2f viewportLoc);
     public void resetSoundDirection();
+
+    public int getSourceId();
+    public float getGain();
 }
