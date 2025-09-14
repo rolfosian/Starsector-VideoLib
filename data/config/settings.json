@@ -6,11 +6,11 @@
                 "vl_ufos" : "data/videos/ufos.mp4",
                 "vl_ufos_t" : "data/videos/ufos_transparent.webm",
                 "vl_mop" : "data/videos/fred-fred-mopping.gif"
-
             },
+            
             "images" : {
                 "vl_jpeg" : "data/videos/jpeg.jpg",
-		"vl_png" : "data/videos/png.png"
+                "vl_png" : "data/videos/png.png"
             }
         }
     },
