@@ -224,23 +224,23 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         Global.getCombatEngine().addPlugin(this);
     }
 
-    public void play() {
+    public synchronized void play() {
         unpause();
     }
 
-    public void pause() {
+    public synchronized void pause() {
         if (paused) return;
         paused = true;
         AL10.alSourcePause(sourceId);
     }
 
-    public void unpause() {
+    public synchronized void unpause() {
         if (!paused || isDone) return;
         paused = false;
         AL10.alSourcePlay(sourceId);
     }
 
-    public void stop() {
+    public synchronized void stop() {
         paused = true;
 
         int queued = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_QUEUED);
@@ -262,14 +262,14 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         currentAudioPts = 0;
     }
 
-    public void restart() {
+    public synchronized void restart() {
         finish();
         finished = false;
         initOpenAL();
         start();
     }
 
-    public void setVolume(float volume) {
+    public synchronized void setVolume(float volume) {
         this.volume = Math.max(0f, Math.min(1f, volume));
         this.volumeActual = Math.max(0f, Math.min(1f, volume) * VideoUtils.getSoundVolumeMult());
         AL10.alSourcef(sourceId, AL10.AL_GAIN, this.volumeActual);

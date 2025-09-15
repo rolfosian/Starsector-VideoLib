@@ -362,6 +362,9 @@ public class DecoderWithSound implements Decoder {
         synchronized(textureBuffer) {
             textureBuffer.clear();
         }
+        synchronized(audioBuffer) {
+            audioBuffer.clear();
+        }
     }
 
     public void stop() {
