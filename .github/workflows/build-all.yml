@@ -30,7 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             autoconf automake build-essential pkg-config yasm nasm make git \
-            zlib1g-dev
+            zlib1g-dev libopus-dev libvorbis-dev libogg-dev libdav1d-dev
 
       - name: Fetch FFmpeg source
         run: |
@@ -46,12 +46,10 @@ jobs:
             --disable-ffplay --disable-ffprobe \
             --enable-gpl --enable-static --disable-shared \
             --prefix="$PREFIX" \
-            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
-            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
-            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
-            --enable-parser=aac --enable-parser=mpegaudio \
-            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
-            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
+            --enable-libvorbis --enable-libopus --enable-libdav1d \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+            --enable-demuxer=matroska,mov,image2,gif \
             --enable-protocol=file \
             --enable-pic --extra-cflags="-fPIC" --extra-cxxflags="-fPIC"
           make -j"$(nproc)"
@@ -67,6 +65,7 @@ jobs:
           PREFIX=${{ github.workspace }}/ffmpeg-static/linux
           mkdir -p "$OUT_DIR"
           gcc -O2 -DNDEBUG -fPIC \
+            $(pkg-config --cflags dav1d) \
             -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/linux" \
             -o "$OUT_DIR/ffmpegjni.so" \
             -Wl,-Bsymbolic -shared -static-libgcc \
@@ -77,6 +76,7 @@ jobs:
             "$PREFIX/lib/libavcodec.a" \
             "$PREFIX/lib/libavutil.a" \
             "$PREFIX/lib/libswresample.a" \
+            $(pkg-config --libs dav1d) \
             -lpthread -ldl -lm -lz
 
       - name: Upload artifacts (Linux)
@@ -89,74 +89,97 @@ jobs:
 
   build-macos:
     name: macOS
-    runs-on: macos-latest
+    runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
+        id: setup-java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
+          architecture: x64
+          set-java-home: true
 
       - name: Install build dependencies
         run: |
           brew update
-          brew install nasm yasm pkg-config
+          brew install nasm yasm opus libvorbis dav1d
 
       - name: Fetch FFmpeg source
-        run: |
-          git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
-
+        run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
       - name: Build FFmpeg (static)
         working-directory: ffmpeg-src
         env:
-          PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
+          BREW_PREFIX: $(brew --prefix)
+          PREFIX: "${GITHUB_WORKSPACE}/ffmpeg-static/mac"
         run: |
           ./configure \
-            --disable-everything --disable-doc --disable-programs --disable-debug \
-            --disable-ffplay --disable-ffprobe \
-            --enable-gpl --enable-static --disable-shared \
+            --disable-everything \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --enable-gpl \
+            --enable-static \
+            --disable-shared \
             --prefix="$PREFIX" \
-            --enable-cross-compile --target-os=darwin --arch=x86_64 \
-            --enable-decoder=h264 --enable-decoder=hevc --enable-decoder=vp8 --enable-decoder=vp9 \
-            --enable-decoder=mjpeg --enable-decoder=png --enable-decoder=webp --enable-decoder=gif \
-            --enable-parser=h264 --enable-parser=hevc --enable-parser=vp8 --enable-parser=vp9 \
-            --enable-parser=mjpeg --enable-parser=png --enable-parser=webp --enable-parser=gif \
-            --enable-parser=aac --enable-parser=mpegaudio \
-            --enable-demuxer=matroska --enable-demuxer=mov --enable-demuxer=image2 --enable-demuxer=gif \
-            --enable-protocol=file \
+            --enable-cross-compile \
+            --target-os=darwin \
+            --arch=x86_64 \
+            --enable-libvorbis \
+            --enable-libopus \
+            --enable-libdav1d \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+            --enable-demuxer=matroska,mov,image2,gif \
             --enable-pic \
-            --cc="clang" --cxx="clang++" \
-            --extra-cflags="-fPIC -arch x86_64 -mmacosx-version-min=10.15" \
-            --extra-cxxflags="-fPIC -arch x86_64 -mmacosx-version-min=10.15" \
-            --extra-ldflags="-arch x86_64 -mmacosx-version-min=10.15"
+            --cc="clang" \
+            --cxx="clang++" \
+            --extra-cflags="-fPIC -arch x86_64" \
+            --extra-ldflags="-arch x86_64"
+
           make -j"$(sysctl -n hw.ncpu)"
           make install
 
-      - name: Build JNI bridge (libffmpegjni.dylib)
+      - name: Debug FFmpeg install
+        run: ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
+
+      - name: Build JNI bridge (ffmpegjni.dylib)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
+          SRC: ffmpeg-jni/src/ffmpegjni.c
+          OUT_DIR: ffmpeg-jni/bin/mac
+          PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
         run: |
-          set -euo pipefail
-          SRC=ffmpeg-jni/src/ffmpegjni.c
-          OUT_DIR=ffmpeg-jni/bin/mac
-          PREFIX=${{ github.workspace }}/ffmpeg-static/mac
           mkdir -p "$OUT_DIR"
           clang -O2 -DNDEBUG -fPIC \
-            -I"$PREFIX/include" -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/darwin" \
+            $(pkg-config --cflags dav1d) \
+            -I"$PREFIX/include" \
+            -I"$JAVA_HOME/include" \
+            -I"$JAVA_HOME/include/darwin" \
             -o "$OUT_DIR/ffmpegjni.dylib" \
-            -dynamiclib -Wl,-undefined,error \
-            -arch x86_64 -mmacosx-version-min=10.15 \
+            -dynamiclib \
+            -Wl,-undefined,error \
+            -arch x86_64 \
+            -mmacosx-version-min=10.15 \
             "$SRC" \
             -L"$PREFIX/lib" \
+            -L"$(pkg-config --variable=libdir dav1d)" \
             "$PREFIX/lib/libswscale.a" \
             "$PREFIX/lib/libavformat.a" \
             "$PREFIX/lib/libavcodec.a" \
             "$PREFIX/lib/libavutil.a" \
             "$PREFIX/lib/libswresample.a" \
-            -lpthread -lm -lz -lbz2 -liconv \
+            $(pkg-config --libs dav1d) \
+            -lpthread \
+            -lm \
+            -lz \
+            -lbz2 \
+            -liconv \
             -framework CoreVideo \
             -framework VideoToolbox \
             -framework CoreMedia \
@@ -169,4 +192,3 @@ jobs:
           path: |
             ffmpeg-static/mac
             ffmpeg-jni/bin/mac/ffmpegjni.dylib
-            
