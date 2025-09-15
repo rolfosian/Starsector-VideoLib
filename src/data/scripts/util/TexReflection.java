@@ -166,7 +166,7 @@ public class TexReflection {
 
     /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
-    
+
     static {
         try {
 
@@ -514,6 +514,17 @@ public class TexReflection {
             return getFieldHandle.invoke(ringBandTextureField, ringBand);
         } catch (Throwable e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static void printTexWrapperIds() {
+        Console.showMessage("        LOADED TEXTURE IDs              ");
+        Console.showMessage("--------------------------------");
+        print("        LOADED TEXTURE IDs              ");
+        print("--------------------------------");
+        for (String textureId : texObjectMap.keySet()) {
+            print(textureId);
+            Console.showMessage(textureId);
         }
     }
 

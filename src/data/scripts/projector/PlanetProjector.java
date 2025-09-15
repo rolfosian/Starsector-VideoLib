@@ -18,7 +18,6 @@ import data.scripts.VideoPaths;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
-import data.scripts.buffers.TextureBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
 
@@ -70,6 +69,17 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     private int currentTextureId;
 
+    /**
+     * Projects a video onto a campaign-level {@link PlanetAPI}'s texture field by swapping in a dynamic texture.
+     * Stores and restores original planet spec/texture on {@link #finish()}.
+     *
+     * @param campaignPlanet   campaign planet whose texture will be replaced
+     * @param videoId          id of the video asset defined in settings.json
+     * @param width            decoded video width in pixels
+     * @param height           decoded video height in pixels
+     * @param startVideoUs     initial start position in microseconds
+     * @param planetTexTypeField one of {@link PlanetProjector.PlanetTexType} fields indicating which texture to replace
+     */
     public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
         PlanetProjector possibleProj = (PlanetProjector) campaignPlanet.getMemory().get(PLANET_PROJECTOR_MEM_KEY);
         if (possibleProj != null) possibleProj.finish();
@@ -123,6 +133,17 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
     }
 
+    /**
+     * Projects a video onto a runtime {@link Planet} instance's texture field by swapping in a dynamic texture.
+     * Stores and restores original planet spec/texture on {@link #finish()}.
+     *
+     * @param planet           planet instance whose texture will be replaced
+     * @param videoId          id of the video asset defined in settings.json
+     * @param width            decoded video width in pixels
+     * @param height           decoded video height in pixels
+     * @param startVideoUs     initial start position in microseconds
+     * @param planetTexTypeField one of {@link PlanetProjector.PlanetTexType} fields indicating which texture to replace
+     */
     public PlanetProjector(Planet planet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
         PlanetProjector possibleProj = getPossibleProjector(planet);
         if (possibleProj != null) {

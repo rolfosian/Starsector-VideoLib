@@ -15,7 +15,6 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import data.scripts.VideoPaths;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
-import data.scripts.buffers.TextureBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
@@ -27,7 +26,8 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
     private boolean isDone = false;
     private boolean runWhilePaused = false;
 
-    private String videoId;
+    // videoId not used; path is resolved immediately
+    // private String videoId;
     private String videoFilePath;
     private int width;
     private int height;
@@ -48,9 +48,18 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
 
     private Object ourTexObj;
 
+    /**
+     * Projects a video onto a {@link Sprite}'s texture by swapping in a dynamic texture object.
+     * Restores the original texture on {@link #finish()}.
+     *
+     * @param sprite      sprite to project onto
+     * @param videoId     id of the video asset defined in settings.json
+     * @param width       decoded video width in pixels
+     * @param height      decoded video height in pixels
+     * @param startVideoUs initial start position in microseconds
+     */
     public SpriteProjector(Sprite sprite, String videoId, int width, int height, long startVideoUs) {
         this.videoFilePath = VideoPaths.getVideoPath(videoId);
-        this.videoId = videoId;
         this.width = width;
         this.height = height;
         this.sprite = sprite;

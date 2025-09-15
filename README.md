@@ -1,63 +1,70 @@
-# **WIP**
-- Audio support coming soon™, hopefully. impl TBD. Do NOT use the current audio stuff; it does not work in any way.
+## VideoLib (Beta)
+### A Starsector video/image rendering library powered by JNI-FFmpeg
 
-## Video Lib
-### A video library for Starsector with a few rudimentary implementations that render videos or images utilizing some basic? JNI-FFmpeg C glue code
+- **Video codecs**: AV1, H.264, HEVC, VP8, VP9, GIF. Audio: AAC, Opus, Vorbis, MP3.
+- **Alpha support**: YUVA420P (WEBM/VP9/VP8). See `data/videos/convert_to_alpha.py` for usage and compatibility notes. Animated GIFs are also converted to OpenGL RGBA textures.
+- **Image formats**: PNG, JPEG, WEBP, GIF. Alpha supported for PNG and GIF (WEBP untested).
+- **UI embedding**: Anything that can host a `CustomPanelAPI` can host a video.
+- **Texture overrides**: Most texture wrappers can be overridden via `TexProjector`. List available texture wrapper ids with console command: `runcode data.scripts.util.TexReflection.printTexWrapperIds()`.
+- **Sprite support**: Anything using a `Sprite` can be overridden (may require cloning/setting depending on context).
+- **Planet/Ringband support**: Replace planet texture layers (Planet, Cloud, Atmosphere, Glow, Shield, Shield2) and Ringband textures with videos.
 
-- Each video frame is converted into an OpenGL texture in real time via a ringbuffer wired to a decoder on a worker thread calling from static FFmpeg-JNI glue binaries
-- Supports H264, HEVC, VP8, VP9, PNG, JPEG, GIF, and WEBP. Support for alpha channel YUVA420P (WEBM/VP9 - See data/videos/convert_to_alpha.py) and animated GIF conversion to OpenGL RGBA textures also.
-- Protip: Do not use (loosely) variable framerate videos or else you will probably encounter issues; if they are very tight variables it probably won't matter though.
-- Anything you can put a `CustomPanelAPI` on, you can put a video on.
-- Anything that uses a `Sprite` object you can turn into a video with a bit of finesse.
-- Planet Projectors also work, we can replace any layer of planet textures with a video (Planet, Cloud, Atmosphere, Glow, Shield, Shield2). Ringband textures can also be replaced with videos. More to come maybe?
-
-## Example Usage for a Video UI panel
+## Example: Video UI panel
 
 [Examples](./src/data/scripts/console/)
 
 [For image/video file path resolution use settings.json](./data/config/settings.json)
 
-- Example usage for a Video UI Component
+- **Basic**: Video UI component (no audio)
 
 ```java
-CustomPanelAPI parentPanel = ...
-VideoPlayer videoplayer;
+import data.scripts.VideoPlayerFactory;
+// ...
 
-// with controls
+CustomPanelAPI parentPanel = /* your parent panel */;
+VideoPlayer videoPlayer;
+
+// With controls
 if (splitArgs.contains("wc")) {
-                                                // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls("vl_demo", videoWidth, videoHeight, PlayMode.PAUSED, EOFMode.LOOP, false, Color.WHITE, Misc.getDarkPlayerColor());
-    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
-
-    videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-    videoPlayer.init(); // init projector and controls so they know where/height/width to render. *Make sure 'parentPanel' is positioned properly before calling this
-
-// no controls, just a video by itself on loop
-} else {                                 // file ID defined in data/config/settings.json | starting PlayMode | starting EOFMode | keepAlive?
-    videoPlayer = VideoPlayerFactory.createMutePlayer("vl_demo", videoWidth, videoHeight, PlayMode.PLAYING, EOFMode.LOOP, false);
-    videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
-
-    videoPlayer.addTo(parentPanel).inTL(0f, 0f); // add to parent
-    videoPlayer.init(); // init projector so it knows where/width/height to render *Make sure 'parentPanel' is positioned properly before calling this
+    // fileId | width | height | PlayMode | EOFMode | keepAlive
+    videoPlayer = VideoPlayerFactory.createMutePlayerWithControls(
+        "vl_demo", videoWidth, videoHeight,
+        PlayMode.PAUSED, EOFMode.LOOP, false,
+        Color.WHITE, Misc.getDarkPlayerColor()
+    );
+    videoPlayer.setClickToPause(true);
+    videoPlayer.addTo(parentPanel).inTL(0f, 0f);
+    // Ensure parentPanel is positioned before init()
+    videoPlayer.init();
+} else {
+    // No controls, looping video
+    videoPlayer = VideoPlayerFactory.createMutePlayer(
+        "vl_demo", videoWidth, videoHeight,
+        PlayMode.PLAYING, EOFMode.LOOP, false
+    );
+    videoPlayer.setClickToPause(true);
+    videoPlayer.addTo(parentPanel).inTL(0f, 0f);
+    // Ensure parentPanel is positioned before init()
+    videoPlayer.init();
 }
 ```
 
-- Also supported: Projecting videos onto [planets](./src/data/scripts/projector/PlanetProjector.java) using different planet texture types (Planet, Cloud, Atmosphere, Shield, Shield2, (last constructor parameter)), the [RingBand](./src/data/scripts/projector/RingBandProjector.java) and [Sprite](./src/data/scripts/projector/SpriteProjector.java) classes can also be projected onto. Similar implementations could also be done for more entities such as asteroids. Although concurrent scaling with many projectors going on at once will probably require manual management with viewport/loc parameters (use pause/unpause functions to throttle) as to not incur too much of an overhead penalty.
+- **Also supported**: Project videos onto [planets](./src/data/scripts/projector/PlanetProjector.java) by choosing the planet texture layer via the constructor's last parameter (Planet, Cloud, Atmosphere, Shield, Shield2). The [RingBand](./src/data/scripts/projector/RingBandProjector.java) and [Sprite](./src/data/scripts/projector/SpriteProjector.java) classes are also supported. Similar patterns can be extended to other entities (e.g., asteroids). For many concurrent projectors, consider viewport/location to manage performance and throttle with pause/unpause.
 
-- Tips
-  - Use videos with framerates lower than 60 fps to give more breathing room for texture upload and seeking
-  - Test with different encodings, use videos with a good balance of bitrate and keyframe density - will possibly see dramatic differences in seeking performance
-  - Only use the `PlanetTexType.SHIELD` parameter for PlanetProjector if you are absolutely sure the planet wont be using, or obtaining a Planetary Shield during the projector's lifetime. Use `PlanetTexType.SHIELD2` if the planet has a shield, and it will replace the texture layer below it.
-  - if using `PlanetTexType.SHIELD` or `PlanetTexType.SHIELD2`, black pixels are chroma keyed by the Planet Renderer and rendered transparent. Use this to your advantage for some cool effects, although alpha channel support for YUVA420P (only vp9/webm tested) and GIF has since been added.
-  - ***IMPORTANT***: As the projectors use decoders that use worker threads, it is absolutely imperative to call the `finish()` method on the projector when you are done with it. Failure to do so will result in the decoder thread running indefinitely, the ringbuffer leaking memory, and the variables not being reset in the case of `RingBandProjector`, `PlanetProjector`, `SpriteProjector` etc. It is especially important to do this for the `PlanetProjector` to reset the instance specific `PlanetSpec` clones. For standard Video UI Panels such as in the above example, if the `keepAlive` parameter is specified `true`, then you must manually call `finish()` on the projector to clean up when desired. Otherwise, if `keepAlive` is specified `false` then the projector will finish and clean itself up automatically as soon as it stops advancing (usually when the panel component is removed from its parent and stops rendering).
+## Tips
+- **Prefer 20–40 fps videos**: Leaves headroom for texture upload to gpu and seeking.
+- **Tune encodes**: Balance bitrate and keyframe density; seeking performance varies dramatically by encode and codec balancing resolution. AV1 seems to work well at 720p for example whereas VP9 is belligerent while seeking at this res
+- **Planet shields**: Only use `PlanetTexType.SHIELD` if the planet will not gain a planetary shield during the projector's lifetime, or you have preprocessed a blended video with it overlayed. Prefer `PlanetTexType.SHIELD2` to replace the layer beneath an existing shield.
+- **Chroma keying**: With `SHIELD`/`SHIELD2`, black pixels are chroma-keyed by the planet renderer and rendered transparent. We don't have direct access to the draw call to change this behavior afaik.
+- **Cleanup is mandatory**: Projectors spawn decoder threads and manage native buffers. Always call `finish()` when done. Not doing so can leak memory, keep threads alive, and fail to restore original textures/specs (especially for `PlanetProjector`). For standard Video UI panels: if `keepAlive=false`, the projector cleans up automatically when removed and stops advancing; if `keepAlive=true`, you must call `finish()` yourself.
 
 ## TODO
-- Audio support coming soon™, hopefully. impl TBD `AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA` Do NOT use the current audio stuff; it does not work.
-- Documentation, Examples?
-- Polish gui?
+- Redo package semantics
+- Audio for Planet/RingBand/Tex projectors; directional audio for `PlanetProjector` based on viewport
+- Documentation and more examples
+- Polish UI
 - Thorough testing
 
-## Notes:
-- Sound buffers cannot be queued to AL10 device buffers from outside the main thread as they will then conflict with the game's own music player
-- I believe some form of interpolation algorithm must be determined for the video frames as a result of this and texture processing ultimately being pegged to the game's framerate. We need to take into account variable framerates of videos and the game's frametime/framerate itself in order to sync correctly with audio frames. As the main thread pauses when the game is alt tabbed, the sound must be paused also, and as such we probably need to keep an extra before and after running audio buffer.
-- Have tried audio and video frames in lockstep but while they were synced it wasn't feasible as the audio had to wait for the video to catch up slightly periodically
+## Notes
+- Each decoded video frame is uploaded to an OpenGL texture via a ring buffer, driven by a worker thread through FFmpeg JNI bindings.
+- A/V desync may occur and audio will probably stutter if the game fps slows to below the video framerate. It probably won't take long for the video to catch up to the audio in case of a/v desync
