@@ -206,6 +206,8 @@ public class DecoderWithSound implements Decoder {
                             case PAUSE:
                             case PLAY_UNTIL_END:
                                 seek(videoDurationUs);
+                                break;
+                                
                             case LOOP:
                                 seekWithoutClearingBuffer(0);
                                 continue;
