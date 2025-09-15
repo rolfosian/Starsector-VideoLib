@@ -25,5 +25,4 @@ public interface Speakers {
     public void resetSoundDirection();
 
     public int getSourceId();
-    public float getGain();
 }

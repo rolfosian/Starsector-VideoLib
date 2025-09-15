@@ -328,9 +328,4 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     public void resetSoundDirection() {
         AL10.alSource3f(sourceId, AL10.AL_POSITION, 0f, 0f, 0f);
     }
-
-    @Override
-    public float getGain() {
-        return AL10.alGetListenerf(AL10.AL_GAIN);
-    }
 }
