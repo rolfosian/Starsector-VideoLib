@@ -56,7 +56,7 @@ if (splitArgs.contains("wc")) {
 - **Tune encodes**: Balance bitrate and keyframe density; seeking performance varies dramatically by encode and codec balancing resolution. AV1 seems to work well at 720p for example whereas VP9 is belligerent while seeking at this res
 - **Planet shields**: Only use `PlanetTexType.SHIELD` if the planet will not gain a planetary shield during the projector's lifetime, or you have preprocessed a blended video with it overlayed. Prefer `PlanetTexType.SHIELD2` to replace the layer beneath an existing shield.
 - **Chroma keying**: With `SHIELD`/`SHIELD2`, black pixels are chroma-keyed by the planet renderer and rendered transparent. We don't have direct access to the draw call to change this behavior afaik.
-- **Cleanup is mandatory**: Projectors spawn decoder threads and manage native buffers. Always call `finish()` when done. Not doing so can leak memory, keep threads alive, and fail to restore original textures/specs (especially for `PlanetProjector`). For standard Video UI panels: if `keepAlive=false`, the projector cleans up automatically when removed and stops advancing; if `keepAlive=true`, you must call `finish()` yourself.
+- **Cleanup is mandatory**: Projectors spawn decoder threads and manage native buffers. Always call `projector.finish()` when done (NOT `decoder.finish()`, `projector.finish()` will handle that). Not doing so can leak memory, keep threads alive, and fail to restore original textures/specs (especially for `PlanetProjector`). For standard Video UI panels: if `keepAlive=false`, the projector cleans up automatically when removed and stops advancing; if `keepAlive=true`, you must call `finish()` yourself.
 
 ## TODO
 - Redo package semantics
