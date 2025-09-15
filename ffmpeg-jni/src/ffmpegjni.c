@@ -473,7 +473,7 @@ typedef struct {
     double duration_seconds;
     int64_t duration_us;
 
-    int vpx_alpha_channel;
+    int vpx_alpha_channel; // bool
     AVCodecContext *alpha_ctx;
     struct SwsContext * alpha_sws_ctx;
     AVFrame *alpha_frame;
@@ -488,12 +488,6 @@ typedef struct {
     enum AVSampleFormat out_sample_fmt;
     int out_sample_rate;
     int out_channels;
-
-    // audio output chunking and pts tracking
-    int64_t audio_next_pts_us;
-    int audio_target_samples;
-    uint8_t *audio_out_buffer;
-    int audio_out_capacity_bytes;
 
     int64_t seek_target_us;
     int seeking;
@@ -662,7 +656,6 @@ int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
             (AVRational){1, 1000000},
             ctx->fmt_ctx->streams[ctx->video_stream_index]->time_base
         );
-        ctx->audio_next_pts_us = -1;
         ctx->seek_target_us = (int64_t)startUs;
         ctx->seeking = 1;
     }
@@ -809,8 +802,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
     ctx->audio_frame = NULL;
     ctx->swr_ctx = NULL;
     ctx->audio_fifo = NULL;
-    ctx->audio_out_buffer = NULL;
-    ctx->audio_next_pts_us = -1;
     ctx->audio_stream_index = -1;
     memset(&ctx->out_ch_layout, 0, sizeof(AVChannelLayout));
 
@@ -1057,7 +1048,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
         } else {
             avcodec_flush_buffers(ctx->video_ctx);
-            ctx->audio_next_pts_us = -1;
             ctx->seek_target_us = (int64_t)startUs;
             ctx->seeking = 1;
         }
@@ -1480,7 +1470,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
-    
+
     if (avcodec_open2(vctx, vcodec, NULL) < 0) {
         printe(env, "Failed to open codec context with codec");
 
@@ -1645,10 +1635,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     ctx->out_sample_fmt = out_sample_fmt;
     ctx->out_sample_rate = out_sample_rate;
     ctx->out_channels = out_channels;
-    ctx->audio_next_pts_us = -1;
-    ctx->audio_target_samples = (out_sample_rate > 0 ? out_sample_rate / 4 : 0);
-    ctx->audio_out_buffer = NULL;
-    ctx->audio_out_capacity_bytes = 0;
 
     ctx->seek_target_us = -1;
     ctx->seeking = 0;
@@ -1904,7 +1890,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
             if (actx) avcodec_flush_buffers(actx);
             if (fifo) av_audio_fifo_reset(fifo);
 
-            ctx->audio_next_pts_us = -1;
             ctx->seek_target_us = (int64_t)startUs;
             ctx->seeking = 1;
         }
@@ -1958,9 +1943,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jc
     if (ctx->audio_fifo) {
         av_audio_fifo_free(ctx->audio_fifo);
     }
-    if (ctx->audio_out_buffer) {
-        av_free(ctx->audio_out_buffer);
-    }
     av_channel_layout_uninit(&ctx->out_ch_layout);
 
     if (ctx->fmt_ctx) {
@@ -2002,7 +1984,6 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass 
     if (ctx->audio_ctx) avcodec_flush_buffers(ctx->audio_ctx);
     if (ctx->audio_fifo) av_audio_fifo_reset(ctx->audio_fifo);
 
-    ctx->audio_next_pts_us = -1;
     ctx->seek_target_us = targetUs;
     ctx->seeking = 1;
 
