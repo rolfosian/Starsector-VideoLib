@@ -46,7 +46,7 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
      * Projects a video onto an arbitrary texture wrapper referenced by id in {@link TexReflection#texObjectMap}.
      * The original texture id is restored on {@link #finish()}.
      *
-     * @param textureWrapperId id in {@code TexReflection.texObjectMap} whose texture object will be updated.
+     * @param textureWrapperId id in {@code TexReflection.texObjectMap} whose texture object will be updated. (usually the relative path to the image eg data/graphics/illustrations/image.png)
      * @param videoId          id of the video asset defined in settings.json
      * @param width            decoded video width in pixels
      * @param height           decoded video height in pixels
