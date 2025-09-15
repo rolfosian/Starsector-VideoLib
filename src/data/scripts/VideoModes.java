@@ -6,7 +6,7 @@ public class VideoModes {
         LOOP,
         PAUSE,
         PLAY_UNTIL_END,
-        FINISH,
+        // FINISH, TODO IMPL
     }
 
     public static enum PlayMode {
@@ -14,6 +14,6 @@ public class VideoModes {
         SEEKING,
         PAUSED,
         STOPPED,
-        FINISHED
+        // FINISHED TODO IMPL
     }
 }
