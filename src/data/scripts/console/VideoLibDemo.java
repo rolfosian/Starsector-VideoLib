@@ -153,7 +153,7 @@ public class VideoLibDemo implements BaseCommand {
                     // with controls
                     if (splitArgs.contains("wc")) {
                                                                             // file ID defined in data/config/settings.json | vol |  starting PlayMode | starting EOFMode
-                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayerWithControls(fileId, videoWidth, videoHeight, 0.1f, PlayMode.PAUSED, EOFMode.LOOP, false, controlsTextColor[0], controlsColor[0]);
+                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayerWithControls(fileId, videoWidth, videoHeight, 1f, PlayMode.PAUSED, EOFMode.LOOP, false, controlsTextColor[0], controlsColor[0]);
                         videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
                         PositionAPI masterPos = videoPlayer.getMasterPanel().getPosition();
@@ -165,7 +165,7 @@ public class VideoLibDemo implements BaseCommand {
                         videoPlayer.init(); // init projector and controls so they know where/height/width to render
 
                     } else {                                 // file ID defined in data/config/settings.json | vol | starting PlayMode | starting EOFMode
-                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayer(fileId, videoWidth, videoHeight, 0.1f, PlayMode.PLAYING, EOFMode.LOOP, false);
+                        videoPlayer = VideoPlayerFactory.createAudioVideoPlayer(fileId, videoWidth, videoHeight, 1f, PlayMode.PLAYING, EOFMode.LOOP, false);
                         videoPlayer.setClickToPause(true); // setClickToPause on the video so user can click it to pause/unpause it
 
                         parentPanel = showCustomPanelAndCenter(dialog, videoWidth, videoHeight);

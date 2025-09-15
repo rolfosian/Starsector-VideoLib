@@ -1,9 +1,15 @@
 package data.scripts.util;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.json.JSONObject;
+
 import com.fs.starfarer.api.EveryFrameScript;
+import com.fs.starfarer.api.Global;
 
 import data.scripts.projector.PlanetProjector;
 import data.scripts.projector.Projector;
@@ -121,4 +127,35 @@ public class VideoUtils {
     public static Set<EveryFrameScript> getRingBandAndSpriteProjectors() {
         return ringBandAndSpriteProjectors;
     }
+
+    private static final Object prefs;
+    private static final MethodHandle prefsGetHandle;
+    
+    static {
+        try {
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            Class<?> prefsClass = Class.forName("java.util.prefs.Preferences", false, Class.class.getClassLoader());
+            MethodHandle userRootHandle = lookup.findStatic(prefsClass, "userRoot", MethodType.methodType(prefsClass));
+            MethodHandle nodeHandle = lookup.findVirtual(prefsClass, "node", MethodType.methodType(prefsClass, String.class));
+            prefsGetHandle = lookup.findVirtual(prefsClass, "get", MethodType.methodType(String.class, String.class, String.class));
+
+            Object userRoot = userRootHandle.invoke();
+            prefs = nodeHandle.invoke(userRoot, "/com/fs/starfarer");
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static float getSoundVolumeMult() {
+        try {
+            String spl = ((String)prefsGetHandle.invoke(prefs, "gameplaySettings", "{}")).split("soundVolume")[1].split(",")[0].split(":")[1];
+            return Float.valueOf(spl);
+        } catch (Throwable ignored) {
+            return 1f;
+        }
+    }
+
+    public static void init() {}
+
 }

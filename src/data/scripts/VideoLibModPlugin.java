@@ -34,6 +34,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onApplicationLoad() {
         FFmpeg.init();
         TexReflection.init();
+        VideoUtils.init();
 
         VideoPaths.populate();
         mainThread = Thread.currentThread();
@@ -109,6 +110,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
         if (newGame) return;
+
         Collection<PlanetProjector> projectors = VideoUtils.getPlanetProjectors();
         Set<EveryFrameScript> projectorz = VideoUtils.getRingBandAndSpriteProjectors();
 

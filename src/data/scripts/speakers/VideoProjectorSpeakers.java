@@ -5,6 +5,7 @@ import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.projector.Projector;
+import data.scripts.util.VideoUtils;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL10;
@@ -45,6 +46,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     private final AudioFrameBuffer audioFrameBuffer;
 
     private float volume;
+    private float volumeActual;
     private boolean paused = true;
     private boolean finished = false;
 
@@ -91,6 +93,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         this.videoProjector = videoProjector;
         this.decoder = decoder;
         this.audioFrameBuffer = audioFrameBuffer;
+        this.volumeActual = volume * VideoUtils.getSoundVolumeMult();
         this.volume = volume;
 
         this.availableBuffers = new ArrayDeque<>();
@@ -111,7 +114,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         if (device == null) throw new IllegalStateException("Failed to get OpenAL device.");
 
         sourceId = AL10.alGenSources();
-        AL10.alSourcef(sourceId, AL10.AL_GAIN, volume);
+        AL10.alSourcef(sourceId, AL10.AL_GAIN, volumeActual);
 
         bufferIds = BufferUtils.createIntBuffer(NUM_BUFFERS);
         AL10.alGenBuffers(bufferIds);
@@ -268,7 +271,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
     public void setVolume(float volume) {
         this.volume = Math.max(0f, Math.min(1f, volume));
-        AL10.alSourcef(sourceId, AL10.AL_GAIN, this.volume);
+        this.volumeActual = Math.max(0f, Math.min(1f, volume) * VideoUtils.getSoundVolumeMult());
+        AL10.alSourcef(sourceId, AL10.AL_GAIN, this.volumeActual);
     }
 
     public float getVolume() { return volume; }

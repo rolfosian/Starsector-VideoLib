@@ -74,6 +74,11 @@ public class PlayerControlPanel {
         this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0, 0f);
         this.playPauseStopPanel.addUIElement(playPauseStopHolder).inTL(0f, 25f); // MAGICAL NUMBERS LMAO ME GRUG ME TRIAL AND ERROR
         this.seekBarPlugin.init(seekBarPanel.getPosition());
+        
+        if (volumePanel != null) {
+            this.playPauseStopPanel.addComponent(volumePanel).inTL(4f * 30f + 60f, 0f).setYAlignOffset(-40f);
+            this.volumePlugin.init(volumePanel.getPosition());
+        }
     }
 
     public PlayerControlPanel(VideoProjector projector, int width, int height, Speakers speakers, Color textColor, Color buttonBgColor) {
@@ -137,6 +142,8 @@ public class PlayerControlPanel {
 
         if (speakers != null) {
             this.speakers = speakers;
+            this.volumePlugin = new VolumePlugin();
+            this.volumePanel = Global.getSettings().createCustom(width / 8, BTN_SIZE, this.volumePlugin);
         }
     }
 
@@ -201,7 +208,9 @@ public class PlayerControlPanel {
         this.controlPanel.addComponent(seekBarPanel).inTL(0f, 0f);
 
         if (speakers != null) {
-
+            this.speakers = speakers;
+            this.volumePlugin = new VolumePlugin();
+            this.volumePanel = Global.getSettings().createCustom(width / 8, BTN_SIZE, this.volumePlugin);
         }
     }
 
@@ -623,14 +632,213 @@ public class PlayerControlPanel {
     };
 
     private class VolumePlugin extends BaseCustomUIPanelPlugin {
-        @Override
-        public void processInput(List<InputEventAPI> events) {
+        private float leftBound;
+        private float rightBound;
 
+        private float volumePanelWidth;
+
+        private float volLineY;
+        private float volButtonY;
+        private float volButtonOffset;
+
+        private float volumePanelLeftBound;
+        private float volumePanelRightBound;
+        private float volumePanelYBoundTolerance = 15f;
+
+        private ButtonAPI volButton;
+        private TooltipMakerAPI volTt;
+
+        private int volumeAccumulator = 0;
+        private static final int VOLUME_APPLY_THRESHOLD = 5;
+        private float pendingVolume = -1f;
+        private float oldVolume = -1f;
+        
+        private boolean dragging = false;
+        private float dragX;
+
+        public VolumePlugin() {
         }
 
         @Override
-        public void render(float alphaMult) {
+        public void advance(float deltaTime) {
+            if (this.pendingVolume >= 0 && volumeAccumulator >= VOLUME_APPLY_THRESHOLD) {
+                if (!(this.oldVolume == this.pendingVolume)) {
+                    speakers.setVolume(this.pendingVolume);
+                    this.oldVolume = this.pendingVolume;
+                }
+                
+                this.pendingVolume = -1f;
+                this.volumeAccumulator = 0;
+            }
+        }
 
+        @Override
+        public void processInput(List<InputEventAPI> events) {
+            for (int i = 0; i < events.size(); i++) {
+                InputEventAPI event = events.get(i);
+
+                if (!event.isConsumed() && event.isMouseEvent()) {
+                    float mouseX = event.getX();
+                    float mouseY = event.getY();
+
+                    if (isInVolumeLineBounds(mouseX, mouseY)) {
+                        if (event.isMouseDownEvent() && !this.dragging) {
+                            this.dragging = true;
+                            
+                            float relativeX = mouseX - this.volumePanelLeftBound;
+                            float clampedX = Math.max(0f, Math.min(relativeX, this.volumePanelWidth));
+                            double fraction = clampedX / this.volumePanelWidth;
+                            
+                            speakers.setVolume((float) fraction);
+                            
+                            this.pendingVolume = (float) fraction;
+                            this.volumeAccumulator++;
+                            
+                            this.dragX = mouseX;
+                            
+                            float newX = (float) (fraction * this.volumePanelWidth);
+                            volButton.getPosition().inTL(newX - volButtonOffset, this.volButtonY);
+                            
+                            event.consume();
+
+                        } else if (event.isMouseScrollEvent()) {
+                            float currentVolume = speakers.getVolume();
+                            float scrollAmount = event.getEventValue() > 0 ? 0.05f : -0.05f; // 5% per scroll step
+                            float newVolume = Math.max(0f, Math.min(1f, currentVolume + scrollAmount));
+                            
+                            speakers.setVolume(newVolume);
+                            
+                            float newX = (float) (newVolume * this.volumePanelWidth);
+                            volButton.getPosition().inTL(newX - volButtonOffset, this.volButtonY);
+                            
+                            event.consume();
+                        }
+                    } else {
+                        if (this.dragging && event.isMouseUpEvent()) {
+                            this.dragging = false;
+                            event.consume();
+                        }
+                    }
+
+                    if (this.dragging && event.isMouseMoveEvent()) {
+                        float relativeX = mouseX - this.volumePanelLeftBound;
+                        float clampedX = Math.max(0f, Math.min(relativeX, this.volumePanelWidth));
+                        double fraction = clampedX / this.volumePanelWidth;
+                        
+                        this.pendingVolume = (float) fraction;
+                        this.volumeAccumulator++;
+                        
+                        this.dragX = mouseX;
+                        
+                        float newX = (float) (fraction * this.volumePanelWidth);
+                        volButton.getPosition().inTL(newX - volButtonOffset, this.volButtonY);
+                        
+                        event.consume();
+                    }
+
+                    if (this.dragging && event.isMouseUpEvent()) {
+                        if (!(dragX == mouseX)) {
+                            float relativeX = mouseX - this.volumePanelLeftBound;
+                            float clampedX = Math.max(0f, Math.min(relativeX, this.volumePanelWidth));
+                            double fraction = clampedX / this.volumePanelWidth;
+                            
+                            speakers.setVolume((float) fraction);
+                            
+                            float newX = (float) (fraction * this.volumePanelWidth);
+                            volButton.getPosition().inTL(newX - volButtonOffset, this.volButtonY);
+                        }
+                        
+                        this.dragging = false;
+                        event.consume();
+                    }
+                }
+            }
+        }
+
+        private boolean isInVolumeLineBounds(float mouseX, float mouseY) {
+            return mouseX >= this.leftBound && mouseX <= this.rightBound &&
+                   mouseY >= (this.volLineY - volumePanelYBoundTolerance) && mouseY <= (this.volLineY + volumePanelYBoundTolerance);
+        }
+
+        @Override
+        public void renderBelow(float alphaMult) {
+            GL11.glPushMatrix();
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+        
+            GL11.glColor4f(seekLineRed, seekLineGreen, seekLineBlue, alphaMult);
+            GL11.glLineWidth(3f);
+        
+            GL11.glBegin(GL11.GL_LINES);
+            GL11.glVertex2f(this.leftBound, this.volLineY);
+            GL11.glVertex2f(this.rightBound, this.volLineY);
+            GL11.glEnd();
+        
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glPopMatrix();
+        }
+
+        @Override
+        public void positionChanged(PositionAPI pos) {
+            this.volumePanelWidth = pos.getWidth();
+            this.volLineY = pos.getY() + pos.getHeight();
+
+            if (volButton != null) {
+                this.volButtonY = -volButton.getPosition().getHeight() / 2; // relative to panel top
+                this.volButtonOffset = volButton.getPosition().getWidth() / 2;
+                
+                this.leftBound = pos.getCenterX() - pos.getWidth() / 2 - this.volButtonOffset;
+                this.rightBound = pos.getCenterX() + pos.getWidth() / 2 + this.volButtonOffset;
+            }
+
+            setVolumePanelBounds(pos);
+        }
+
+        private void setVolumePanelBounds(PositionAPI panelPos) {
+            this.volumePanelLeftBound = panelPos.getCenterX() - panelPos.getWidth() / 2;
+            this.volumePanelRightBound = panelPos.getCenterX() + panelPos.getWidth() / 2;
+            
+            if (volButton != null) {
+                this.leftBound = this.volumePanelLeftBound - this.volButtonOffset;
+                this.rightBound = this.volumePanelRightBound + this.volButtonOffset;
+            }
+        }
+
+        public void init(PositionAPI panelPos) {
+            this.volumePanelWidth = panelPos.getWidth();
+            this.volLineY = panelPos.getY() + panelPos.getHeight();
+        
+            volTt = volumePanel.createUIElement(panelPos.getWidth(), panelPos.getHeight(), false);
+
+            volButton = volTt.addButton("", null, textColor, bgButtonColor, BTN_SIZE-5, BTN_SIZE-5, 0f);
+            volButton.setClickable(false);
+            volButton.setMouseOverSound(null);
+            volButton.setButtonPressedSound(null);
+
+            volumePanel.addUIElement(volTt).inTL(0f, 0f);
+
+            this.volButtonY = -volButton.getPosition().getHeight() / 2;
+            this.volButtonOffset = volButton.getPosition().getWidth() / 2;
+
+            setVolumePanelBounds(panelPos);
+            
+            this.leftBound = this.volumePanelLeftBound - this.volButtonOffset;
+            this.rightBound = this.volumePanelRightBound + this.volButtonOffset;
+
+            if (speakers != null) {
+                float currentVolume = speakers.getVolume();
+                float newX = (float) (currentVolume * this.volumePanelWidth);
+                volButton.getPosition().inTL(newX - volButtonOffset, this.volButtonY);
+            } else {
+                volButton.getPosition().inTL(0f, this.volButtonY);
+            }
+        }
+
+        public void reset() {
+            this.volumeAccumulator = 0;
+            this.pendingVolume = -1f;
+            this.oldVolume = -1f;
+            this.dragging = false;
+            this.dragX = 0f;
         }
     }
 }
