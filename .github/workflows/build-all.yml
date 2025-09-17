@@ -50,92 +50,53 @@ jobs:
       #     file_pattern: ffmpeg-jni/bin/linux/ffmpegjni.so
       #     branch: ${{ github.ref_name }}
 
-  build-windows:
-    name: Windows
+  windows-static:
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
+      - name: Install MSYS2 manually
+        shell: powershell
+        run: |
+          $msysInstaller = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20230728.exe"
+          Invoke-WebRequest $msysInstaller -OutFile "$env:TEMP\msys2.exe"
+          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "/SILENT /DIR=C:\msys64" -Wait
+          echo "MSYS2 installed to C:\msys64"
 
-      - name: Install MSYS2 and MinGW-w64 GCC
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          msystem: MINGW64
-          install: >-
-            base-devel
-            git
-            mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-pkg-config
-            mingw-w64-x86_64-gcc-libs
-            mingw-w64-x86_64-bzip2
-            mingw-w64-x86_64-libiconv
-            mingw-w64-x86_64-zlib
-            mingw-w64-x86_64-crt-git
-            mingw-w64-x86_64-winpthreads-git
-            mingw-w64-x86_64-openssl
-            mingw-w64-x86_64-dav1d
-
-      - name: List installed bzip2 files
+      - name: Update MSYS2 and install MinGW64 packages
         shell: msys2 {0}
-        run: pacman -Ql mingw-w64-x86_64-bzip2
-    
-      - name: List installed dav1d files
+        run: |
+          pacman -Syuu --noconfirm
+          pacman -S --noconfirm base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-bzip2 mingw-w64-x86_64-libiconv mingw-w64-x86_64-zlib mingw-w64-x86_64-crt-git mingw-w64-x86_64-winpthreads-git mingw-w64-x86_64-openssl mingw-w64-x86_64-dav1d
+
+      - name: Copy MinGW64 files to native Windows folder
         shell: msys2 {0}
-        run: pacman -Ql mingw-w64-x86_64-dav1d
+        run: |
+          mkdir -p /c/mingw64/lib
+          mkdir -p /c/mingw64/include
+          cp -r /mingw64/lib/* /c/mingw64/lib/
+          cp -r /mingw64/include/* /c/mingw64/include/
+          cp -r /mingw64/bin/* /c/mingw64/bin/
 
-      - name: Verify JAVA_HOME
+      - name: Ensure MinGW64 is on PATH for PowerShell
         shell: powershell
         run: |
-          if (-not $env:JAVA_HOME) { throw "JAVA_HOME is not set" }
-          Write-Host "JAVA_HOME: $env:JAVA_HOME"
+          echo "C:\mingw64\bin" >> $env:GITHUB_PATH
+          Write-Host "PATH now includes C:\mingw64\bin"
 
-      - name: Ensure MinGW64 is on PATH
+      - name: Verify copied libraries
         shell: powershell
         run: |
-          $mingw = 'C:\\msys64\\mingw64\\bin'
-          if (Test-Path $mingw) {
-            echo $mingw >> $env:GITHUB_PATH
-            Write-Host "Added to PATH: $mingw"
-          } else {
-            Write-Host "MinGW64 path not found at $mingw"
-          }
-          
-          ls C:\\msys64
-          echo --------- C:\\msys64\\mingw64
-          ls C:\\msys64\\mingw64
-          echo --------- C:\\msys64\\mingw64\\lib
-          ls C:\\msys64\\mingw64\\lib
-          echo --------- C:\\msys64\\mingw64\\include
-          ls C:\\msys64\\mingw64\\include
-          echo ---------
-          ls C:\\mingw64\\lib
-          echo ---------- WHY ARE THEY EMPTYI HUAIHFSAFGYJAHSFGJKASFGHSAGJHFJGHSA
-          exit(1)
+          ls C:\mingw64\lib
+          ls C:\mingw64\include
+          ls C:\mingw64\bin
 
-      - name: Unzip FFmpeg static (Windows)
-        shell: powershell
-        run: |
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows\ffmpeg-static-windows.zip'
-          $dest = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows'
-          if (Test-Path $zip) {
-            Expand-Archive -Path $zip -DestinationPath $dest -Force
-            Write-Host "Extracted: $zip"
-          } else {
-            throw "Zip not found: $zip"
-          }
-
-      - name: Build JNI bridge (ffmpegjni.dll)
-        shell: powershell
-        run: |
-          Set-Location $env:GITHUB_WORKSPACE
-          & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
+      # - name: Build JNI bridge (ffmpegjni.dll)
+      #   shell: powershell
+      #   run: |
+      #     Set-Location $env:GITHUB_WORKSPACE
+      #     & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
 
       # - name: Commit and push built binary (Windows)
       #   if: ${{ github.event_name == 'push' }}
