@@ -99,14 +99,12 @@ jobs:
             Write-Host "MinGW64 path not found at $mingw"
           }
           
-          ls C:\\mingw64\\x86_64-w64-mingw32
-          echo ---------
-          ls C:\\mingw64\\x86_64-w64-mingw32\\lib
-          echo --------
-          ls C:\\mingw64\\x86_64-w64-mingw32\\include
-          echo --------
-          ls C:\\mingw64\\x86_64-w64-mingw32\\bin
-          exit(1)
+          $path = "C:\"
+          $file = "libdav1d.a"
+
+          Get-ChildItem -Path $path -Recurse -Filter $file -ErrorAction SilentlyContinue -Force | ForEach-Object {
+              $_.FullName
+          }
 
       - name: Unzip FFmpeg static (Windows)
         shell: powershell
