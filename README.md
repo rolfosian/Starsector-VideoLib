@@ -13,7 +13,7 @@
 
 [Examples](./src/data/scripts/console/)
 
-[For image/video file path resolution use settings.json](./data/config/settings.json)
+[For image/video file path resolution use settings.json](./data/config/settings.json) - the key under the `"VideoLib"` key should be your mod's id defined in `mod_info.json`
 
 - **Basic**: Video UI component (no audio)
 
