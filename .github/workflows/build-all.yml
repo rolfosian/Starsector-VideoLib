@@ -99,6 +99,18 @@ jobs:
           ls C:\mingw64\include
           ls C:\mingw64\bin
 
+      - name: Unzip FFmpeg static (Windows)
+        shell: powershell
+        run: |
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows\ffmpeg-static-windows.zip'
+          $dest = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows'
+          if (Test-Path $zip) {
+            Expand-Archive -Path $zip -DestinationPath $dest -Force
+            Write-Host "Extracted: $zip"
+          } else {
+            throw "Zip not found: $zip"
+          }
+
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: powershell
         run: |
