@@ -25,19 +25,20 @@ $outDll = Join-Path $outDir 'ffmpegjni.dll'
 $includeFlags = @(
 	"-I$($FfmpegSdkDir)\include",
 	"-I$JavaHome\include",
-	"-I$JavaHome\include\win32"
+	"-I$JavaHome\include\win32",
+	"-IC:\msys64\mingw64\include"
 )
 
 $libFlags = @(
     "-L$($FfmpegSdkDir)\lib",
-    "-LC:\msys64\mingw64\lib",
     "$($FfmpegSdkDir)\lib\libswresample.a",
     "$($FfmpegSdkDir)\lib\libswscale.a",
     "$($FfmpegSdkDir)\lib\libavformat.a",
     "$($FfmpegSdkDir)\lib\libavcodec.a",
     "$($FfmpegSdkDir)\lib\libavutil.a",
-	"-ldav1d",
-	"-lbz2",
+	"-LC:\msys64\mingw64\lib",
+	"C:\msys64\mingw64\lib\libdav1d.a",
+	"C:\msys64\mingw64\lib\libbz2.a",
 	"-lws2_32",
 	"-lwinmm",
 	"-lbcrypt",
