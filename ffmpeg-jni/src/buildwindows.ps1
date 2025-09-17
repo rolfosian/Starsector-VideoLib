@@ -25,7 +25,7 @@ $outDll = Join-Path $outDir 'ffmpegjni.dll'
 $includeFlags = @(
 	"-I$($FfmpegSdkDir)\include",
 	"-I$JavaHome\include",
-	"-I$JavaHome\include\win32"
+	"-I$JavaHome\include\win32",
 	"-IC:\MSYS2\mingw64\include"
 )
 
