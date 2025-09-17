@@ -99,15 +99,13 @@ jobs:
             Write-Host "MinGW64 path not found at $mingw"
           }
           
-          ls C:\\msys64
+          ls C:\\mingw64
           echo ---------
-          ls C:\\msys64\\mingw64
-          echo ---------
-          ls C:\\msys64\\mingw64\\lib
-          echo ---------
-          ls C:\\msys64\\mingw64\\include
-          echo ----------
-          ls C:\\
+          ls C:\\mingw64\\lib
+          echo --------
+          ls C:\\mingw64\\bin
+          echo --------
+          ls C:\\mingw64\\include
           exit(1)
 
       - name: Unzip FFmpeg static (Windows)
