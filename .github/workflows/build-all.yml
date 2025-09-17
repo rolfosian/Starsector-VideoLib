@@ -56,6 +56,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
       - name: Install MSYS2 manually
         shell: powershell
         run: |
@@ -93,11 +99,11 @@ jobs:
           ls C:\mingw64\include
           ls C:\mingw64\bin
 
-      # - name: Build JNI bridge (ffmpegjni.dll)
-      #   shell: powershell
-      #   run: |
-      #     Set-Location $env:GITHUB_WORKSPACE
-      #     & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
+      - name: Build JNI bridge (ffmpegjni.dll)
+        shell: powershell
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
 
       # - name: Commit and push built binary (Windows)
       #   if: ${{ github.event_name == 'push' }}
