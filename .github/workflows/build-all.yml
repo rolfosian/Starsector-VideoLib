@@ -59,9 +59,9 @@ jobs:
       - name: Install MSYS2 manually
         shell: powershell
         run: |
-          $msysInstaller = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20230728.exe"
+          $msysInstaller = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20250830.exe"
           Invoke-WebRequest $msysInstaller -OutFile "$env:TEMP\msys2.exe"
-          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "/SILENT /DIR=C:\msys64" -Wait
+          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "/S /DIR=C:\msys64" -Wait
           echo "MSYS2 installed to C:\msys64"
 
       - name: Update MSYS2 and install MinGW64 packages
