@@ -60,9 +60,10 @@ jobs:
         shell: powershell
         run: |
           $msysInstaller = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20250830.exe"
+          $msysPath = "C:\MSYS2"
           Invoke-WebRequest $msysInstaller -OutFile "$env:TEMP\msys2.exe"
-          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "/S /DIR=C:\msys64 --confirm-command" -Wait
-          echo "MSYS2 installed to C:\msys64"
+          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "install","--root",$msysPath,"--confirm-command" -Wait
+          echo "MSYS2 installed to $msysPath"
 
       - name: Update MSYS2 and install MinGW64 packages
         shell: msys2 {0}
