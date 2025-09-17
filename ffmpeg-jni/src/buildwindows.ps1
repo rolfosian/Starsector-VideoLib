@@ -49,7 +49,6 @@ $libFlags = @(
 	"-luuid",
 	"-lncrypt",
 	"-liconv",
-	"-lpthread"
 )
 
 $cFlags = @(
