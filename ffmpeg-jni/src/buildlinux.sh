@@ -14,7 +14,7 @@ if [[ -z "${JAVA_HOME:-}" || ! -d "$JAVA_HOME" ]]; then
     exit 1
 fi
 GCC="gcc"
-FFMPEG_SDK_DIR="$REPO_ROOT/ffmpeg-static-libs/linux"
+FFMPEG_SDK_DIR="$REPO_ROOT/ffmpeg-static/linux"
 
 SRC_FILE="$SCRIPT_DIR/ffmpegjni.c"
 OUT_DIR="$REPO_ROOT/ffmpeg-jni/bin/linux"
