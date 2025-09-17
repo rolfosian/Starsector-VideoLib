@@ -104,6 +104,10 @@ jobs:
           ls C:\\msys64\\mingw64
           echo ---------
           ls C:\\msys64\\mingw64\\lib
+          echo ---------
+          ls C:\\msys64\\mingw64\\include
+          echo ----------
+          ls C:\\
           exit(1)
 
       - name: Unzip FFmpeg static (Windows)
