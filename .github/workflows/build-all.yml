@@ -11,6 +11,9 @@ on:
       - .github/workflows/build-all.yml
       - ffmpeg-jni/src/ffmpegjni.c
 
+# permissions:
+#   contents: write
+
 jobs:
   build-linux:
     name: Linux
@@ -39,9 +42,84 @@ jobs:
           chmod +x ./ffmpeg-jni/src/buildlinux.sh
           ./ffmpeg-jni/src/buildlinux.sh
 
-      - name: Upload artifacts (Linux)
-        uses: actions/upload-artifact@v4
+      # - name: Commit and push built binary (Linux)
+      #   if: ${{ github.event_name == 'push' }}
+      #   uses: stefanzweifel/git-auto-commit-action@v5
+      #   with:
+      #     commit_message: "chore(ci): update Linux ffmpegjni.so"
+      #     file_pattern: ffmpeg-jni/bin/linux/ffmpegjni.so
+      #     branch: ${{ github.ref_name }}
+
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          name: linux-build
-          path: |
-            ffmpeg-jni/bin/linux/ffmpegjni.so
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install MSYS2 and MinGW-w64 GCC
+        uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          msystem: MINGW64
+          install: >-
+            base-devel
+            git
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gcc-libs
+            mingw-w64-x86_64-bzip2
+            mingw-w64-x86_64-libiconv
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-crt-git
+            mingw-w64-x86_64-winpthreads-git
+            mingw-w64-x86_64-openssl
+            mingw-w64-x86_64-dav1d
+
+      - name: Verify JAVA_HOME
+        shell: powershell
+        run: |
+          if (-not $env:JAVA_HOME) { throw "JAVA_HOME is not set" }
+          Write-Host "JAVA_HOME: $env:JAVA_HOME"
+
+      - name: Ensure MinGW64 is on PATH
+        shell: powershell
+        run: |
+          $mingw = 'C:\\msys64\\mingw64\\bin'
+          if (Test-Path $mingw) {
+            echo $mingw >> $env:GITHUB_PATH
+            Write-Host "Added to PATH: $mingw"
+          } else {
+            Write-Host "MinGW64 path not found at $mingw"
+          }
+
+      - name: Unzip FFmpeg static (Windows)
+        shell: powershell
+        run: |
+          $zip = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows\ffmpeg-static-windows.zip'
+          $dest = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows'
+          if (Test-Path $zip) {
+            Expand-Archive -Path $zip -DestinationPath $dest -Force
+            Write-Host "Extracted: $zip"
+          } else {
+            throw "Zip not found: $zip"
+          }
+
+      - name: Build JNI bridge (ffmpegjni.dll)
+        shell: powershell
+        run: |
+          Set-Location $env:GITHUB_WORKSPACE
+          & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
+
+      # - name: Commit and push built binary (Windows)
+      #   if: ${{ github.event_name == 'push' }}
+      #   uses: stefanzweifel/git-auto-commit-action@v5
+      #   with:
+      #     commit_message: "chore(ci): update Windows ffmpegjni.dll"
+      #     file_pattern: ffmpeg-jni/bin/windows/ffmpegjni.dll
+      #     branch: ${{ github.ref_name }}
