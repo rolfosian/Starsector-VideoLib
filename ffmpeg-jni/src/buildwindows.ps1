@@ -26,6 +26,7 @@ $includeFlags = @(
 	"-I$($FfmpegSdkDir)\include",
 	"-I$JavaHome\include",
 	"-I$JavaHome\include\win32"
+	"-IC:\MSYS2\mingw64\include"
 )
 
 $libFlags = @(
@@ -35,6 +36,7 @@ $libFlags = @(
     "$($FfmpegSdkDir)\lib\libavformat.a",
     "$($FfmpegSdkDir)\lib\libavcodec.a",
     "$($FfmpegSdkDir)\lib\libavutil.a",
+	"-LC:\MSYS2\mingw64\lib",
 	"-llibdav1d",
 	"-lbz2",
 	"-lws2_32",

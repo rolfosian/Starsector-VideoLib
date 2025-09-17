@@ -95,11 +95,8 @@ jobs:
       - name: Build JNI bridge (ffmpegjni.dll)
         shell: powershell
         run: |
-          ls C:\MSYS2\mingw64\lib
-          ls C:\MSYS2\mingw64\include
-
-          # Set-Location $env:GITHUB_WORKSPACE
-          # & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
+          Set-Location $env:GITHUB_WORKSPACE
+          & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
 
       # - name: Commit and push built binary (Windows)
       #   if: ${{ github.event_name == 'push' }}
