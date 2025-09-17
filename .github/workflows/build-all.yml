@@ -98,6 +98,13 @@ jobs:
           } else {
             Write-Host "MinGW64 path not found at $mingw"
           }
+          
+          ls C:\\msys64
+          echo ---------
+          ls C:\\msys64\\mingw64
+          echo ---------
+          ls C:\\msys64\\mingw64\\lib
+          exit(1)
 
       - name: Unzip FFmpeg static (Windows)
         shell: powershell
