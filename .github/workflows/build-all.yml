@@ -66,19 +66,19 @@ jobs:
           echo "MSYS2 installed to $msysPath"
 
       - name: Update MSYS2 and install MinGW64 packages
-        shell: msys2 {0}
+        shell: powershell
         run: |
-          pacman -Syuu --noconfirm
-          pacman -S --noconfirm base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-bzip2 mingw-w64-x86_64-libiconv mingw-w64-x86_64-zlib mingw-w64-x86_64-crt-git mingw-w64-x86_64-winpthreads-git mingw-w64-x86_64-openssl mingw-w64-x86_64-dav1d
+          C:\MSYS2\usr\bin\bash.exe -c "pacman -Syuu --noconfirm"
+          C:\MSYS2\usr\bin\bash.exe -c "pacman -S --noconfirm base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-bzip2 mingw-w64-x86_64-libiconv mingw-w64-x86_64-zlib mingw-w64-x86_64-crt-git mingw-w64-x86_64-winpthreads-git mingw-w64-x86_64-openssl mingw-w64-x86_64-dav1d"
 
       - name: Copy MinGW64 files to native Windows folder
-        shell: msys2 {0}
+        shell: powershell
         run: |
-          mkdir -p /c/mingw64/lib
-          mkdir -p /c/mingw64/include
-          cp -r /mingw64/lib/* /c/mingw64/lib/
-          cp -r /mingw64/include/* /c/mingw64/include/
-          cp -r /mingw64/bin/* /c/mingw64/bin/
+          C:\MSYS2\usr\bin\bash.exe -c "mkdir -p /c/mingw64/lib"
+          C:\MSYS2\usr\bin\bash.exe -c "mkdir -p /c/mingw64/include"
+          C:\MSYS2\usr\bin\bash.exe -c "cp -r /mingw64/lib/* /c/mingw64/lib/"
+          C:\MSYS2\usr\bin\bash.exe -c "cp -r /mingw64/include/* /c/mingw64/include/"
+          C:\MSYS2\usr\bin\bash.exe -c "cp -r /mingw64/bin/* /c/mingw64/bin/"
 
       - name: Ensure MinGW64 is on PATH for PowerShell
         shell: powershell
