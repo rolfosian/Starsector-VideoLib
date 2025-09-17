@@ -36,7 +36,7 @@ $libFlags = @(
     "$($FfmpegSdkDir)\lib\libavformat.a",
     "$($FfmpegSdkDir)\lib\libavcodec.a",
     "$($FfmpegSdkDir)\lib\libavutil.a",
-	"-llibdav1d",
+	"-ldav1d",
 	"-lbz2",
 	"-lws2_32",
 	"-lwinmm",

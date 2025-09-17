@@ -72,6 +72,7 @@ jobs:
             base-devel
             git
             mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-pkg-config
             mingw-w64-x86_64-gcc-libs
             mingw-w64-x86_64-bzip2
             mingw-w64-x86_64-libiconv
@@ -123,4 +124,3 @@ jobs:
       #     commit_message: "chore(ci): update Windows ffmpegjni.dll"
       #     file_pattern: ffmpeg-jni/bin/windows/ffmpegjni.dll
       #     branch: ${{ github.ref_name }}
-      
