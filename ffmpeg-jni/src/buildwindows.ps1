@@ -30,23 +30,25 @@ $includeFlags = @(
 
 $libFlags = @(
     "-L$($FfmpegSdkDir)\lib",
+    "-LC:\msys64\mingw64\lib",
     "$($FfmpegSdkDir)\lib\libswresample.a",
     "$($FfmpegSdkDir)\lib\libswscale.a",
     "$($FfmpegSdkDir)\lib\libavformat.a",
     "$($FfmpegSdkDir)\lib\libavcodec.a",
     "$($FfmpegSdkDir)\lib\libavutil.a",
-	"-llibdav1d"
+	"-llibdav1d",
+	"-lbz2",
 	"-lws2_32",
 	"-lwinmm",
 	"-lbcrypt",
 	"-lcrypt32",
-	"-lbz2",
 	"-lz",
 	"-lsecur32",
 	"-lole32",
 	"-luuid",
 	"-lncrypt",
-	"-liconv"
+	"-liconv",
+	"-lpthread"
 )
 
 $cFlags = @(
