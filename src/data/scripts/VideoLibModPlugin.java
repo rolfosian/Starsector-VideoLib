@@ -1,6 +1,10 @@
 package data.scripts;
 
+import java.nio.IntBuffer;
 import java.util.*;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.openal.*;
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
@@ -32,7 +36,19 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     @Override
     public void onApplicationLoad() {
-        FFmpeg.init();
+        if (Global.getSettings().isSoundEnabled()) {
+            ALCcontext context = ALC10.alcGetCurrentContext();
+            ALCdevice device = ALC10.alcGetContextsDevice(context);
+
+            IntBuffer buffer = BufferUtils.createIntBuffer(1);
+            ALC10.alcGetInteger(device, ALC10.ALC_FREQUENCY, buffer);
+            int sampleRate = buffer.get(0);
+            FFmpeg.init(sampleRate);
+            
+        } else {
+            FFmpeg.init(0);
+        }
+        
         TexReflection.init();
         VideoUtils.init();
 

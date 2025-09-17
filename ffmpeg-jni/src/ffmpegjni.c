@@ -41,6 +41,8 @@ static jmethodID printMid;
 
 static jclass ObjectClass;
 
+static int AUDIO_DEVICE_SAMPLE_RATE;
+
 JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     jobjectArray args = (*env)->NewObjectArray(env, 1, ObjectClass, NULL);
     jstring jmsg = (*env)->NewStringUTF(env, msg);
@@ -52,7 +54,7 @@ JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
     (*env)->DeleteLocalRef(env, args);
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz) {
+JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz, jint audioSampleRate) {
     VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame"));
     VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
 
@@ -68,6 +70,8 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     (*env)->DeleteLocalRef(env, localObject);
     
     printMid = (*env)->GetStaticMethodID(env, FFmpegClass, "print", "([Ljava/lang/Object;)V");
+
+    AUDIO_DEVICE_SAMPLE_RATE = (int) audioSampleRate;
 }
 
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jobject buffer) {
@@ -1522,7 +1526,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
             } else {
                 AVChannelLayout in_layout = actx->ch_layout;
                 out_ch_layout = in_layout;
-                out_sample_rate = actx->sample_rate;
+                out_sample_rate = AUDIO_DEVICE_SAMPLE_RATE;
                 out_channels = in_layout.nb_channels;
 
                 if (out_channels <= 0) {

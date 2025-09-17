@@ -13,7 +13,7 @@ extern "C" {
  * Signature: ()V
  */
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init
-  (JNIEnv *, jclass);
+  (JNIEnv *, jclass, jint);
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
