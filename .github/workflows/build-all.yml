@@ -15,32 +15,39 @@ on:
 #   contents: write
 
 jobs:
-  # build-linux:
-  #   name: Linux
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-  #     - name: Set up JDK 17
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         distribution: temurin
-  #         java-version: '17'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  #     - name: Install build dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y --no-install-recommends \
-  #         build-essential zlib1g-dev unzip
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+          build-essential zlib1g-dev unzip
 
-  #     - name: Build JNI bridge (libffmpegjni.so)
-  #       env:
-  #         JAVA_HOME: ${{ env.JAVA_HOME }}
-  #       run: |
-  #         unzip -o ${{ github.workspace }}/ffmpeg-static/linux/ffmpeg-static-linux.zip -d ${{ github.workspace }}/ffmpeg-static/linux
-  #         chmod +x ./ffmpeg-jni/src/buildlinux.sh
-  #         ./ffmpeg-jni/src/buildlinux.sh
+      - name: Build JNI bridge (ffmpegjni.so)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+        run: |
+          unzip -o ${{ github.workspace }}/ffmpeg-static/linux/ffmpeg-static-linux.zip -d ${{ github.workspace }}/ffmpeg-static/linux
+          chmod +x ./ffmpeg-jni/src/buildlinux.sh
+          ./ffmpeg-jni/src/buildlinux.sh
+
+      - name: Upload artifacts (linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            ffmpeg-jni/bin/linux/ffmpegjni.so
 
       # - name: Commit and push built binary (Linux)
       #   if: ${{ github.event_name == 'push' }}
@@ -50,59 +57,134 @@ jobs:
       #     file_pattern: ffmpeg-jni/bin/linux/ffmpegjni.so
       #     branch: ${{ github.ref_name }}
 
-  windows-static:
-    runs-on: windows-latest
+  build-macos:
+    name: macOS
+    runs-on: macos-13
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
+        id: setup-java
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: "17"
+          architecture: x64
 
-      - name: Install MSYS2 manually
-        shell: powershell
+      - name: Install build dependencies
         run: |
-          $msysInstaller = "https://repo.msys2.org/distrib/x86_64/msys2-x86_64-20250830.exe"
-          $msysPath = "C:\MSYS2"
-          Invoke-WebRequest $msysInstaller -OutFile "$env:TEMP\msys2.exe"
-          Start-Process "$env:TEMP\msys2.exe" -ArgumentList "install","--root",$msysPath,"--confirm-command" -Wait
-          echo "MSYS2 installed to $msysPath"
+          brew update
+          brew install nasm yasm opus libvorbis meson ninja
 
-      - name: Update MSYS2 and install MinGW64 packages
-        shell: powershell
+      - name: Build libdav1d (static)
         run: |
-          C:\MSYS2\usr\bin\bash.exe -lc "pacman -Syuu --noconfirm"
-          C:\MSYS2\usr\bin\bash.exe -lc "pacman -S --noconfirm base-devel git mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-bzip2 mingw-w64-x86_64-libiconv mingw-w64-x86_64-zlib mingw-w64-x86_64-crt-git mingw-w64-x86_64-winpthreads-git mingw-w64-x86_64-openssl mingw-w64-x86_64-dav1d"
+          git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
+          cd dav1d-src
+          mkdir build && cd build
+          meson setup --default-library=static --buildtype=release --prefix="${{ github.workspace }}/dav1d-static" ..
+          ninja
+          ninja install
+          
+          cat > "${{ github.workspace }}/dav1d-static/lib/pkgconfig/dav1d.pc" << 'EOF'
+          prefix=${{ github.workspace }}/dav1d-static
+          exec_prefix=${prefix}
+          libdir=${exec_prefix}/lib
+          includedir=${prefix}/include
+          
+          Name: dav1d
+          Description: AV1 decoder library
+          Version: 1.0.0
+          Libs: -L${libdir} -ldav1d
+          Cflags: -I${includedir}
+          EOF
 
-          $env:PATH = "C:\MSYS2\mingw64\bin;" + $env:PATH
-          Write-Host "Updated PATH: $env:PATH"
-
-      - name: Unzip FFmpeg static (Windows)
-        shell: powershell
+      - name: Fetch FFmpeg source
+        run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+      - name: Build FFmpeg (static)
+        working-directory: ffmpeg-src
+        env:
+          BREW_PREFIX: $(brew --prefix)
+          PREFIX: "${GITHUB_WORKSPACE}/ffmpeg-static/mac"
+          DAV1D_PREFIX: "${GITHUB_WORKSPACE}/dav1d-static"
+          PKG_CONFIG_PATH: "${GITHUB_WORKSPACE}/dav1d-static/lib/pkgconfig:$PKG_CONFIG_PATH"
         run: |
-          $zip = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows\ffmpeg-static-windows.zip'
-          $dest = Join-Path $env:GITHUB_WORKSPACE 'ffmpeg-static\windows'
-          if (Test-Path $zip) {
-            Expand-Archive -Path $zip -DestinationPath $dest -Force
-            Write-Host "Extracted: $zip"
-          } else {
-            throw "Zip not found: $zip"
-          }
+          ./configure \
+            --disable-everything \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --enable-gpl \
+            --enable-static \
+            --disable-shared \
+            --prefix="$PREFIX" \
+            --enable-cross-compile \
+            --target-os=darwin \
+            --arch=x86_64 \
+            --enable-libvorbis \
+            --enable-libopus \
+            --enable-libdav1d \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+            --enable-demuxer=matroska,mov,image2,gif \
+            --enable-pic \
+            --cc="clang" \
+            --cxx="clang++" \
+            --extra-cflags="-fPIC -arch x86_64" \
+            --extra-ldflags="-arch x86_64"
 
-      - name: Build JNI bridge (ffmpegjni.dll)
-        shell: powershell
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+
+      - name: Debug FFmpeg install
+        run: ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
+
+      - name: Build JNI bridge (ffmpegjni.dylib)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+          SRC: ffmpeg-jni/src/ffmpegjni.c
+          OUT_DIR: ffmpeg-jni/bin/mac
+          PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
+          DAV1D_PREFIX: ${{ github.workspace }}/dav1d-static
         run: |
-          Set-Location $env:GITHUB_WORKSPACE
-          & powershell -ExecutionPolicy Bypass -File .\ffmpeg-jni\src\buildwindows.ps1
+          mkdir -p "$OUT_DIR"
+          clang -O2 -DNDEBUG -fPIC \
+            -I"$PREFIX/include" \
+            -I"$JAVA_HOME/include" \
+            -I"$JAVA_HOME/include/darwin" \
+            -I"$DAV1D_PREFIX/include" \
+            -o "$OUT_DIR/ffmpegjni.dylib" \
+            -dynamiclib \
+            -Wl,-undefined,error \
+            -arch x86_64 \
+            -mmacosx-version-min=10.15 \
+            "$SRC" \
+            -L"$PREFIX/lib" \
+            -L"$DAV1D_PREFIX/lib" \
+            "$PREFIX/lib/libswscale.a" \
+            "$PREFIX/lib/libavformat.a" \
+            "$PREFIX/lib/libavcodec.a" \
+            "$PREFIX/lib/libavutil.a" \
+            "$PREFIX/lib/libswresample.a" \
+            "$DAV1D_PREFIX/lib/libdav1d.a" \
+            -lpthread \
+            -lm \
+            -lz \
+            -lbz2 \
+            -liconv \
+            -framework CoreVideo \
+            -framework VideoToolbox \
+            -framework CoreMedia \
+            -framework CoreFoundation
 
-      # - name: Commit and push built binary (Windows)
-      #   if: ${{ github.event_name == 'push' }}
-      #   uses: stefanzweifel/git-auto-commit-action@v5
-      #   with:
-      #     commit_message: "chore(ci): update Windows ffmpegjni.dll"
-      #     file_pattern: ffmpeg-jni/bin/windows/ffmpegjni.dll
-      #     branch: ${{ github.ref_name }}
-      
+      - name: Upload artifacts (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            ffmpeg-static/mac
+            dav1d-static
+            ffmpeg-jni/bin/mac/ffmpegjni.dylib
+            
