@@ -85,19 +85,9 @@ jobs:
           meson setup --default-library=static --buildtype=release --prefix="${{ github.workspace }}/dav1d-static" ..
           ninja
           ninja install
-          
-          cat > "${{ github.workspace }}/dav1d-static/lib/pkgconfig/dav1d.pc" << 'EOF'
-          prefix=${{ github.workspace }}/dav1d-static
-          exec_prefix=${prefix}
-          libdir=${exec_prefix}/lib
-          includedir=${prefix}/include
-          
-          Name: dav1d
-          Description: AV1 decoder library
-          Version: 1.0.0
-          Libs: -L${libdir} -ldav1d
-          Cflags: -I${includedir}
-          EOF
+
+          ls "${{ github.workspace }}/dav1d-static"
+          ls "${{ github.workspace }}/dav1d-static/lib"
 
       - name: Fetch FFmpeg source
         run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
