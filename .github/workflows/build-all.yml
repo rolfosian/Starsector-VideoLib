@@ -86,9 +86,6 @@ jobs:
           ninja
           ninja install
 
-          ls "${{ github.workspace }}/dav1d-static"
-          ls "${{ github.workspace }}/dav1d-static/lib"
-
       - name: Fetch FFmpeg source
         run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
       - name: Build FFmpeg (static)
@@ -97,8 +94,9 @@ jobs:
           BREW_PREFIX: $(brew --prefix)
           PREFIX: "${GITHUB_WORKSPACE}/ffmpeg-static/mac"
           DAV1D_PREFIX: "${GITHUB_WORKSPACE}/dav1d-static"
-          PKG_CONFIG_PATH: "${GITHUB_WORKSPACE}/dav1d-static/lib/pkgconfig:$PKG_CONFIG_PATH"
         run: |
+          export PKG_CONFIG_PATH="${{ github.workspace }}/dav1d-static/lib/pkgconfig:$PKG_CONFIG_PATH"
+
           ./configure \
             --disable-everything \
             --disable-doc \
