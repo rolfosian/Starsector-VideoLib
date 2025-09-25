@@ -4,6 +4,7 @@ import org.lwjgl.opengl.GL11;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.RingBandAPI;
 import com.fs.starfarer.campaign.RingBand;
 
 import data.scripts.VideoModes.EOFMode;
@@ -67,11 +68,42 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
 
-        this.ringBand = ringBand;
         this.originalTexObj = TexReflection.getRingBandTexObj(ringBand);
 
         this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
         TexReflection.setRingBandTexObj(ringBand, ourTexObj);
+
+        currentTextureId = decoder.getCurrentVideoTextureId();
+        TexReflection.setTexObjId(ourTexObj, currentTextureId);
+
+        VideoUtils.getRingBandAndSpriteProjectors().add(this);
+    }
+
+    /**
+     * Projects a video onto a {@link RingBand}'s texture by swapping in a dynamic texture object.
+     * Restores the original texture on {@link #finish()}.
+     *
+     * @param ringBand   ring band to project onto
+     * @param videoId    id of the video asset defined in settings.json
+     * @param width      decoded video width in pixels
+     * @param height     decoded video height in pixels
+     * @param startVideoUs initial start position in microseconds
+     */
+    public RingBandProjector(RingBandAPI ringBand, String videoId, int width, int height, long startVideoUs) {
+        this.videoFilePath = VideoPaths.getVideoPath(videoId);
+        this.width = width;
+        this.height = height;
+        this.ringBand = (RingBand) ringBand;
+
+        this.MODE = PlayMode.PLAYING;
+        this.EOF_MODE = EOFMode.LOOP;
+        this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
+        this.decoder.start(startVideoUs);
+
+        this.originalTexObj = TexReflection.getRingBandTexObj(this.ringBand);
+
+        this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
+        TexReflection.setRingBandTexObj(this.ringBand, ourTexObj);
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourTexObj, currentTextureId);

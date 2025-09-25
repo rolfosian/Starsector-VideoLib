@@ -31,6 +31,19 @@ public class ImagePlugin implements CustomUIPanelPlugin {
     private int advancingValue = 0;
     private int checkAdvancing = 0;
 
+    /**
+     * Constructs a new ImagePlugin for displaying static images in the UI.
+     * 
+     * This constructor loads an image file, creates an OpenGL texture from it, and optionally
+     * sets up automatic cleanup. The plugin supports JPEG, PNG, WEBP, and GIF (static) formats.
+     * 
+     * @param fileId The unique identifier for the image file (without extension)
+     * @param width The desired width for the image display
+     * @param height The desired height for the image display
+     * @param keepAlive If false, automatically cleans up OpenGL resources when the plugin
+     *                  is no longer being used (determined by advance() method calls).
+     *                  If true, resources must be manually cleaned up by calling finish().
+     */
     public ImagePlugin(String fileId, int width, int height, boolean keepAlive) {
         this.fileId = fileId;
         this.filePath = VideoPaths.getImagePath(fileId);

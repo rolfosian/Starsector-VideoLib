@@ -25,7 +25,6 @@ import com.fs.graphics.util.GLListManager.GLListToken;
 import org.apache.log4j.Logger;
 import org.lazywizard.console.Console;
 
-@SuppressWarnings("unchecked")
 public class TexReflection {
     private static final Logger logger = Logger.getLogger(TexReflection.class);
     public static void print(Object... args) {

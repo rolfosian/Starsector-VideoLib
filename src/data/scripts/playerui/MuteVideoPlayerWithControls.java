@@ -41,6 +41,7 @@ public class MuteVideoPlayerWithControls implements VideoPlayer {
         if (projector.getPlayMode() == PlayMode.PLAYING) controlPanel.play();
     }
 
+    @Override
     public void openNewVideo(String videoId, int width, int height) { // this is too much debug with all the control panel components, easier to just scrap the thing and make a new one, may revisit this
         // Decoder decoder = this.projector.getDecoder();
         // decoder.setVideoFilePath(VideoPaths.getVideoPath(videoId));

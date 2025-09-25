@@ -31,8 +31,7 @@ public class AudioVideoPlayerWithControls implements VideoPlayer {
     public PositionAPI addTo(UIPanelAPI parent) {
         return parent.addComponent(this.masterPanel);
     }
-
-    /** Must be called after masterPanel is added to target parent AND positioned*/
+    
     @Override
     public void init() {
         this.controlPanel.init();

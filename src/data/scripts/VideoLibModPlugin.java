@@ -13,11 +13,12 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.characters.PersonAPI;
 
-// import data.scripts.buffers.OverlayingTextureBuffer;
 import data.scripts.ffmpeg.FFmpeg;
+
 import data.scripts.planetlistener.PlanetProjectorListener;
 import data.scripts.projector.PlanetProjector;
 import data.scripts.projector.Projector;
+
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
@@ -44,7 +45,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
             ALC10.alcGetInteger(device, ALC10.ALC_FREQUENCY, buffer);
             int sampleRate = buffer.get(0);
             FFmpeg.init(sampleRate);
-            
+
         } else {
             FFmpeg.init(0);
         }

@@ -10,7 +10,6 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
-import java.awt.Color;
 
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -36,6 +35,8 @@ public class VideoLibImageTest implements BaseCommand {
     }
 
     private float originalParentPanelX;
+    private float originalParentPanelY;
+
     private String fileId = null;
 
     @Override
@@ -98,7 +99,7 @@ public class VideoLibImageTest implements BaseCommand {
                     if (event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
                         if (dialog != null) dialog.dismiss();
                     }
-                 }
+                }
             }
         };
 
@@ -107,18 +108,24 @@ public class VideoLibImageTest implements BaseCommand {
 
         // center it
         PositionAPI pos = parentPanel.getPosition();
-        // float displayCenterY = (int) Global.getSettings().getScreenHeightPixels() / 2;
-        originalParentPanelX = pos.getX();
+        originalParentPanelX = pos.getCenterX() - ((width + 202f) / 2);
+        originalParentPanelY = pos.getCenterY() - (height / 2);
         
-        float delta = 30; // the distance between the parentPanelX and the center of the display is always the same apparently
+        float delta = 30;
         pos.setXAlignOffset(-delta + -width / 2);
+
+        delta = 280;
+        pos.setYAlignOffset(-delta + height / 2 );
 
         return parentPanel;
     }
 
-    private void recenter(PositionAPI parentPanelPos, int width) {
-        float delta = 30; // the distance between the parentPanelX and the center of the display is always the same apparently
-        parentPanelPos.setLocation(originalParentPanelX, parentPanelPos.getY());
-        parentPanelPos.setXAlignOffset(-delta + -width / 2);
-    }
+    // private void recenter(PositionAPI parentPanelPos, int width, int height) {
+    //     float delta = 30;
+    //     parentPanelPos.setLocation(originalParentPanelX, originalParentPanelY);
+    //     PositionAPI pos = parentPanelPos.setXAlignOffset(-delta + -width / 2);
+
+    //     originalParentPanelX = pos.getCenterX() - ((width + 202f) / 2);
+    //     originalParentPanelY = pos.getCenterY() - (height / 2);
+    // }
 }

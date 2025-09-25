@@ -1,14 +1,15 @@
 package data.scripts.console;
 
-import data.scripts.VideoPlayerFactory;
-
-import data.scripts.playerui.MuteVideoPlayer;
-import data.scripts.playerui.MuteVideoPlayerWithControls;
-import data.scripts.playerui.VideoPlayer;
-import data.scripts.VideoModes.PlayMode;
 import data.scripts.ffmpeg.FFmpeg;
+
+import data.scripts.VideoPlayerFactory;
+import data.scripts.playerui.MuteVideoPlayer;
+import data.scripts.playerui.VideoPlayer;
+
 import data.scripts.VideoPaths;
 import data.scripts.VideoModes.EOFMode;
+import data.scripts.VideoModes.PlayMode;
+
 
 import java.util.Arrays;
 import java.util.List;
@@ -49,6 +50,8 @@ public class VideoLibDemo implements BaseCommand {
     }
 
     private float originalParentPanelX;
+    private float originalParentPanelY;
+
     private VideoPlayer videoPlayer;
     private String fileId = null;
 
@@ -229,7 +232,7 @@ public class VideoLibDemo implements BaseCommand {
     
                                     // if (videoPlayer instanceof MuteVideoPlayer) {
                                         videoPlayer.openNewVideo(fileId, size[0], size[1]);
-                                        recenter(parentPanel.getPosition(), size[0]);
+                                        recenter(parentPanel.getPosition(), size[0], size[1]);
     
                                     // } else if (videoPlayer instanceof MuteVideoPlayerWithControls) {
                                     //     PlayMode mode = videoPlayer.getProjector().getPlayMode();
@@ -290,7 +293,7 @@ public class VideoLibDemo implements BaseCommand {
                     if (event.isKeyDownEvent() && event.getEventValue() == Keyboard.KEY_ESCAPE) {
                         if (dialog != null) dialog.dismiss();
                     }
-                 }
+                }
             }
         };
 
@@ -299,18 +302,27 @@ public class VideoLibDemo implements BaseCommand {
 
         // center it
         PositionAPI pos = parentPanel.getPosition();
-        // float displayCenterY = (int) Global.getSettings().getScreenHeightPixels() / 2;
-        originalParentPanelX = pos.getX();
+        originalParentPanelX = pos.getCenterX() - ((width + 202f) / 2);
+        originalParentPanelY = pos.getCenterY() + (height / 2);
         
-        float delta = 30; // the distance between the parentPanelX and the center of the display is always the same apparently
+        float delta = 30;
         pos.setXAlignOffset(-delta + -width / 2);
+
+        delta = 280;
+        pos.setYAlignOffset(-delta + height / 2 );
 
         return parentPanel;
     }
 
-    private void recenter(PositionAPI parentPanelPos, int width) {
-        float delta = 30; // the distance between the parentPanelX and the center of the display is always the same apparently
-        parentPanelPos.setLocation(originalParentPanelX, parentPanelPos.getY());
-        parentPanelPos.setXAlignOffset(-delta + -width / 2);
+    private void recenter(PositionAPI parentPanelPos, int width, int height) {
+        float delta = 30;
+        parentPanelPos.setLocation(originalParentPanelX, originalParentPanelY);
+        PositionAPI pos = parentPanelPos.setXAlignOffset(-delta + -width / 2);
+
+        delta = 280;
+        pos = pos.setYAlignOffset(-delta + height / 2 );
+
+        originalParentPanelX = pos.getCenterX() - ((width + 202f) / 2);
+        originalParentPanelY = pos.getCenterY() + (height / 2);
     }
 }

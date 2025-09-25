@@ -10,14 +10,12 @@ import org.apache.log4j.Logger;
 import com.fs.starfarer.api.GameState;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.combat.BaseEveryFrameCombatPlugin;
-import com.fs.starfarer.api.combat.CombatEngineAPI;
 import com.fs.starfarer.combat.CombatEngine;
 import com.fs.starfarer.api.combat.ViewportAPI;
 
 import com.fs.starfarer.api.input.InputEventAPI;
 
 import com.fs.starfarer.combat.entities.terrain.Planet;
-import com.fs.util.container.repo.ObjectRepository;
 
 @SuppressWarnings("unchecked")
 public class CombatPlanetChecker extends BaseEveryFrameCombatPlugin {

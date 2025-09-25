@@ -2,11 +2,13 @@ package data.scripts.decoder;
 
 import data.scripts.ffmpeg.FFmpeg;
 import data.scripts.ffmpeg.VideoFrame;
+
 import data.scripts.playerui.PlayerControlPanel;
-import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.Projector;
+
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+
 import data.scripts.buffers.RGBATextureBuffer;
 import data.scripts.buffers.TextureBuffer;
 import data.scripts.buffers.TextureFrame;

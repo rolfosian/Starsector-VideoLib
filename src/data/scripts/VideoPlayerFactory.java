@@ -13,10 +13,12 @@ import data.scripts.playerui.VideoPlayer;
 import data.scripts.playerui.MuteVideoPlayerWithControls;
 import data.scripts.playerui.AudioVideoPlayerWithControls;
 import data.scripts.playerui.ImagePanel;
+
 import data.scripts.projector.AudioVideoProjector;
 import data.scripts.projector.ImagePlugin;
 import data.scripts.projector.MuteVideoProjector;
 import data.scripts.projector.VideoProjector;
+
 import data.scripts.speakers.Speakers;
 
 import java.awt.Color;

@@ -1,13 +1,8 @@
 package data.scripts.buffers;
 
 import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
-
 import org.apache.log4j.Logger;
-import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL21;
 
 import data.scripts.ffmpeg.VideoFrame;
 
@@ -25,10 +20,6 @@ public class TextureBuffer {
     protected final VideoFrame[] videoFrames;
     protected final TextureFrame[] textures;
 
-    // protected final int pboId;
-    // protected final int vboId;
-    // protected final FloatBuffer quadBuffer;
-
     protected int size;
     protected final int capacity;
     protected int head;
@@ -41,14 +32,6 @@ public class TextureBuffer {
         this.size = 0;
         this.head = 0;
         this.tail = 0;
-
-        // this.quadBuffer = BufferUtils.createFloatBuffer(4 * 4);
-        // this.vboId = GL15.glGenBuffers();
-        // this.pboId = GL15.glGenBuffers();
-
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboId);
-        // GL15.glBufferData(GL15.GL_ARRAY_BUFFER, quadBuffer.capacity() * Float.BYTES, GL15.GL_DYNAMIC_DRAW);
-        // GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
     }
 
     public int size() {

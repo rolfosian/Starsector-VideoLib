@@ -1,6 +1,5 @@
 package data.scripts.projector;
 
-import java.nio.FloatBuffer;
 import java.util.*;
 
 import com.fs.starfarer.api.Global;
@@ -18,11 +17,9 @@ import data.scripts.decoder.MuteDecoder;
 
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.VideoProjectorSpeakers;
-import data.scripts.buffers.TextureBuffer;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL15;
 
 public class MuteVideoProjector extends VideoProjector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);

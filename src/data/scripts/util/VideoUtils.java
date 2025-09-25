@@ -6,13 +6,8 @@ import java.lang.invoke.MethodType;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.json.JSONObject;
-
 import com.fs.starfarer.api.EveryFrameScript;
-import com.fs.starfarer.api.Global;
-
 import data.scripts.projector.PlanetProjector;
-import data.scripts.projector.Projector;
 
 public class VideoUtils {
     public static String formatTime(long us) {

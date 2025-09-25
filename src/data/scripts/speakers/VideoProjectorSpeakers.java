@@ -26,6 +26,8 @@ import org.apache.log4j.Logger;
 import java.nio.IntBuffer;
 import java.util.*;
 
+
+// TODO: debug audio falling behind video on different machines (works on my machine)
 public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implements Speakers, EveryFrameScript {
     private static final Logger logger = Logger.getLogger(VideoProjectorSpeakers.class);
     public static void print(Object... args) {
@@ -211,6 +213,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         updateStream();
     }
 
+    @Override
     public void start() {
         paused = false;
         isDone = false;
@@ -223,23 +226,27 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         Global.getSector().addTransientScript(this);
         Global.getCombatEngine().addPlugin(this);
     }
-
+    
+    @Override
     public synchronized void play() {
         unpause();
     }
 
+    @Override
     public synchronized void pause() {
         if (paused) return;
         paused = true;
         AL10.alSourcePause(sourceId);
     }
 
+    @Override
     public synchronized void unpause() {
         if (!paused || isDone) return;
         paused = false;
         AL10.alSourcePlay(sourceId);
     }
 
+    @Override
     public synchronized void stop() {
         paused = true;
 
@@ -262,6 +269,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         currentAudioPts = 0;
     }
 
+    @Override
     public synchronized void restart() {
         finish();
         finished = false;
@@ -269,15 +277,17 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         start();
     }
 
+    @Override
     public synchronized void setVolume(float volume) {
         this.volume = Math.max(0f, Math.min(1f, volume));
         this.volumeActual = Math.max(0f, Math.min(1f, volume) * VideoUtils.getSoundVolumeMult());
         AL10.alSourcef(sourceId, AL10.AL_GAIN, this.volumeActual);
     }
 
-    public float getVolume() { return volume; }
-    public void mute() { setVolume(0f); }
+    @Override public float getVolume() { return volume; }
+    @Override public void mute() { setVolume(0f); }
 
+    @Override
     public void finish() {
         isDone = true;
         finished = true;
@@ -320,11 +330,13 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         return this.currentAudioPts;
     }
 
+    @Override
     public void setSoundDirection(Vector2f viewportLoc) {
         if (viewportLoc == null) return;
         AL10.alSource3f(sourceId, AL10.AL_POSITION, viewportLoc.x, 0f, viewportLoc.y);
     }
 
+    @Override
     public void resetSoundDirection() {
         AL10.alSource3f(sourceId, AL10.AL_POSITION, 0f, 0f, 0f);
     }

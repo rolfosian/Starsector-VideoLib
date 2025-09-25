@@ -90,5 +90,9 @@ public class AudioVideoPlayer implements VideoPlayer {
     public Speakers getSpeakers() {
         return speakers;
     }
-    
+
+    @Override
+    public PlayerControlPanel getControls() {
+        return null;
+    }
 }

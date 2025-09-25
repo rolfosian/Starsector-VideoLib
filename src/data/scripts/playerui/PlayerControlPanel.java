@@ -25,7 +25,6 @@ import java.util.*;
 import org.lwjgl.opengl.GL11;
 import org.apache.log4j.Logger;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.input.Mouse;
 
 public class PlayerControlPanel {
     private static final Logger logger = Logger.getLogger(PlayerControlPanel.class);

@@ -16,9 +16,7 @@ import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.combat.ViewportAPI;
-import com.fs.starfarer.api.impl.campaign.ids.Industries;
 import com.fs.starfarer.api.util.IntervalUtil;
-
 
 public class VideoLibPlanetsDemo implements BaseCommand {
     @Override

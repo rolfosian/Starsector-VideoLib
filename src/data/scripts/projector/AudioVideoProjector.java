@@ -1,6 +1,5 @@
 package data.scripts.projector;
 
-import java.nio.FloatBuffer;
 import java.util.*;
 
 import com.fs.starfarer.api.Global;
@@ -20,8 +19,6 @@ import data.scripts.speakers.Speakers;
 import data.scripts.speakers.VideoProjectorSpeakers;
 
 import data.scripts.playerui.PlayerControlPanel;
-
-import data.scripts.buffers.TextureBuffer;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;

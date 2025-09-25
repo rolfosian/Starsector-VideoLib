@@ -21,7 +21,6 @@ import data.scripts.ffmpeg.AudioFrame;
 
 import data.scripts.projector.Projector;
 import data.scripts.speakers.Speakers;
-import data.scripts.speakers.VideoProjectorSpeakers;
 
 public class DecoderWithSound implements Decoder {
     private static final Logger logger = Logger.getLogger(DecoderWithSound.class);

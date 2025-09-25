@@ -18,15 +18,17 @@ public class MuteVideoPlayer implements VideoPlayer {
         this.projector = projector;
     }
 
+    @Override
     public PositionAPI addTo(UIPanelAPI parent) {
         return parent.addComponent(projectorPanel);
     }
 
-    /** Must be called after masterPanel is added to target parent AND positioned*/
+    @Override
     public void init() {
         this.projector.init(projectorPanel.getPosition(), projectorPanel);
     }
 
+    @Override
     public void openNewVideo(String videoId, int width, int height) {
         String videoFilePath = VideoPaths.getVideoPath(videoId);
 
@@ -64,19 +66,28 @@ public class MuteVideoPlayer implements VideoPlayer {
         return this.projector.getDecoder();
     }
 
+    @Override
     public void setClickToPause(boolean clickToPause) {
         this.projector.setClickToPause(clickToPause);
     }
 
+    @Override
     public float getWidth() {
         return projectorPanel.getPosition().getWidth();
     }
 
+    @Override
     public float getHeight() {
         return projectorPanel.getPosition().getHeight();
     }
 
+    @Override
     public Speakers getSpeakers() {
+        return null;
+    }
+
+    @Override
+    public PlayerControlPanel getControls() {
         return null;
     }
 }

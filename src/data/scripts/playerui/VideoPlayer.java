@@ -10,11 +10,14 @@ import data.scripts.speakers.Speakers;
 
 public interface VideoPlayer {
     public PositionAPI addTo(UIPanelAPI parent);
+
+    /** Must be called after masterPanel is added to target parent AND positioned*/
     public void init();
     
     public CustomPanelAPI getMasterPanel();
     public CustomPanelAPI getProjectorPanel();
     public VideoProjector getProjector();
+    public PlayerControlPanel getControls();
     public Speakers getSpeakers();
     public Decoder getDecoder();
 

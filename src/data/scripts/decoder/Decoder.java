@@ -2,7 +2,6 @@ package data.scripts.decoder;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
-import data.scripts.buffers.TextureBuffer;;
 
 public interface Decoder {
     public long getFFmpegPipePtr();
