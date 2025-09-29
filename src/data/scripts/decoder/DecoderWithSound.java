@@ -4,21 +4,23 @@ import org.apache.log4j.Logger;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.opengl.GL11;
 
-import data.scripts.VideoLibModPlugin;
+import data.scripts.ffmpeg.AudioFrame;
+import data.scripts.ffmpeg.FFmpeg;
+import data.scripts.ffmpeg.Frame;
+import data.scripts.ffmpeg.VideoFrame;
 
+import data.scripts.VideoLibModPlugin;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
 import data.scripts.buffers.TextureBuffer;
+// import data.scripts.buffers.TextureBufferList;
 import data.scripts.buffers.TextureFrame;
 import data.scripts.buffers.AudioFrameBuffer;
 import data.scripts.buffers.RGBATextureBuffer;
-import data.scripts.ffmpeg.FFmpeg;
-import data.scripts.ffmpeg.Frame;
-import data.scripts.ffmpeg.VideoFrame;
+// import data.scripts.buffers.RGBATextureBufferList;
+import data.scripts.buffers.TexBuffer;
 import data.scripts.playerui.PlayerControlPanel;
-import data.scripts.ffmpeg.AudioFrame;
-
 import data.scripts.projector.Projector;
 import data.scripts.speakers.Speakers;
 
@@ -44,7 +46,7 @@ public class DecoderWithSound implements Decoder {
     private Thread videoDecodeThread;
     private long pipePtr;
 
-    private TextureBuffer textureBuffer;
+    private TexBuffer textureBuffer;
     private AudioFrameBuffer audioBuffer;
 
     private float gameFps = 0f;
@@ -75,7 +77,7 @@ public class DecoderWithSound implements Decoder {
 
         this.videoProjector = videoProjector;
 
-        this.audioBuffer = new AudioFrameBuffer(30);
+        this.audioBuffer = new AudioFrameBuffer(60);
 
         this.width = width;
         this.height = height;
@@ -322,6 +324,7 @@ public class DecoderWithSound implements Decoder {
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         print("isRGBA=", isRGBA);
         this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);
         audioSampleRate = FFmpeg.getAudioSampleRate(pipePtr);
@@ -432,7 +435,7 @@ public class DecoderWithSound implements Decoder {
         return this.audioBuffer;
     }
 
-    public TextureBuffer getTextureBuffer() {
+    public TexBuffer getTextureBuffer() {
         return this.textureBuffer;
     }
 
