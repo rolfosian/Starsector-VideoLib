@@ -95,4 +95,9 @@ public class AudioVideoPlayer implements VideoPlayer {
     public PlayerControlPanel getControls() {
         return null;
     }
+
+    @Override
+    public void finish() {
+        projector.finish();
+    }
 }

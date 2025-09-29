@@ -26,4 +26,6 @@ public interface VideoPlayer {
 
     public float getWidth();
     public float getHeight();
+
+    public void finish();
 }

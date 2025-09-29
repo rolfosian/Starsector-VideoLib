@@ -90,4 +90,9 @@ public class MuteVideoPlayer implements VideoPlayer {
     public PlayerControlPanel getControls() {
         return null;
     }
+
+    @Override
+    public void finish() {
+        projector.finish();
+    }
 }
