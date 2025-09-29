@@ -6,7 +6,7 @@ import org.lwjgl.opengl.GL11;
 
 import data.scripts.ffmpeg.VideoFrame;
 
-public class TextureBuffer {
+public class TextureBuffer implements TexBuffer {
     private static final Logger logger = Logger.getLogger(TextureBuffer.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
