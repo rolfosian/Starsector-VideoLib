@@ -50,6 +50,7 @@ Write-Host "Compiling Java sources..."
 $sourceFiles = Get-ChildItem -Path ".\src" -Filter "*.java" -Recurse
 $javacArgs = @(
     "-encoding", "UTF-8"
+    "-parameters"
     "-source", "17"
     "-target", "17"
     "-cp", $classpath
@@ -69,8 +70,8 @@ if ($LASTEXITCODE -eq 0) {
         New-Item -ItemType Directory -Path $jarDir | Out-Null
     }
 
-    Push-Location $buildDir
-    & "$env:JAVA_HOME\bin\jar" -cf "..\..\$jarFile" .
+    Push-Location .
+    & "$env:JAVA_HOME\bin\jar" -cf $jarFile -C $buildDir . -C src .
     Pop-Location
     
     if ($LASTEXITCODE -eq 0) {
