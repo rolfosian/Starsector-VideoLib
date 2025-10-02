@@ -111,7 +111,7 @@ public class CachingMuteDecoder implements Decoder {
             TextureFrame texture = textureBuffer.popFront(width, height);
 
             if (texture != null) {
-                if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+                if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
 
                 currentVideoTextureId = texture.id;
                 currentVideoPts = texture.pts;
@@ -134,7 +134,7 @@ public class CachingMuteDecoder implements Decoder {
             currentVideoTextureId = texture.id;
             currentVideoPts = texture.pts;
 
-            if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
+            if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) textureBuffer.deleteTexture(oldTextureId);
 
             videoProjector.setIsRendering(true); // this is dumb, i dont like this
         }

@@ -22,9 +22,13 @@ public class TextureBufferList implements TexBuffer {
     private final List<VideoFrame> videoFrames;
     private final List<TextureFrame> textures;
 
-    public TextureBufferList() {
+    private final int maxActiveTextures;
+    protected int activeTextures = 0;
+
+    public TextureBufferList(int maxActiveTextures) {
         this.videoFrames = new ArrayList<>();
         this.textures = new ArrayList<>();
+        this.maxActiveTextures = maxActiveTextures;
     }
 
     public int size() {
@@ -66,6 +70,7 @@ public class TextureBufferList implements TexBuffer {
 
     public void convertSome(int width, int height, int maxConversions) {
         for (int i = 0; i < videoFrames.size() && maxConversions > 0; i++) {
+            if (activeTextures >= maxActiveTextures) break;
             if (videoFrames.get(i) != null && textures.get(i) == null) {
                 textures.set(i, new TextureFrame(
                     createGLTextureFromFrame(videoFrames.get(i).buffer, width, height),
@@ -77,7 +82,7 @@ public class TextureBufferList implements TexBuffer {
                 maxConversions--;
             }
         }
-    }    
+    }
 
     public void convertAll(int width, int height) {
         for (int i = 0; i < videoFrames.size(); i++) {
@@ -94,7 +99,7 @@ public class TextureBufferList implements TexBuffer {
     }
 
     public void convertFront(int width, int height) {
-        if (isEmpty()) return;
+        if (isEmpty() || activeTextures >= maxActiveTextures) return;
         
         if (videoFrames.get(0) != null && textures.get(0) == null) {
             textures.set(0, new TextureFrame(
@@ -111,7 +116,7 @@ public class TextureBufferList implements TexBuffer {
         for (int i = 0; i < videoFrames.size(); i++) {
             TextureFrame tFrame = textures.get(i);
             if (tFrame != null) {
-                GL11.glDeleteTextures(tFrame.id);
+                deleteTexture(tFrame.id);
             }
             VideoFrame vFrame = videoFrames.get(i);
             if (vFrame != null) {
@@ -122,7 +127,6 @@ public class TextureBufferList implements TexBuffer {
         textures.clear();
     }
 
-    // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
     protected int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
         if (frameBuffer == null) return -1;
         int textureId = GL11.glGenTextures();
@@ -132,6 +136,13 @@ public class TextureBufferList implements TexBuffer {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        activeTextures++;
         return textureId;
+    }
+
+    @Override
+    public void deleteTexture(int id) {
+        GL11.glDeleteTextures(id);
+        activeTextures--;
     }
 }

@@ -195,7 +195,7 @@ public class MuteDecoder implements Decoder {
 
                 if (texture != null) {
                     switched = true;
-                    if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
 
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
@@ -228,7 +228,7 @@ public class MuteDecoder implements Decoder {
                 currentVideoTextureId = texture.id;
                 currentVideoPts = texture.pts;
 
-                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
+                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) textureBuffer.deleteTexture(oldTextureId);
             }
         }
         return currentVideoTextureId;
@@ -257,7 +257,7 @@ public class MuteDecoder implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10, 5) : new TextureBuffer(10, 5);
 
         decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();

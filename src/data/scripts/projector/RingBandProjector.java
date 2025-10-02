@@ -11,6 +11,7 @@ import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
 import data.scripts.VideoPaths;
+import data.scripts.buffers.TexBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
 
@@ -37,7 +38,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
     private EOFMode EOF_MODE;
 
     private final Decoder decoder;
-
+    private TexBuffer textureBuffer;
     private int currentTextureId;
 
     private RingBand ringBand;
@@ -67,7 +68,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
-
+        this.textureBuffer = decoder.getTextureBuffer();
         this.originalTexObj = TexReflection.getRingBandTexObj(ringBand);
 
         this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
@@ -99,7 +100,8 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
-
+        this.textureBuffer = decoder.getTextureBuffer();
+        
         this.originalTexObj = TexReflection.getRingBandTexObj(this.ringBand);
 
         this.ourTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
@@ -119,7 +121,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourTexObj, newId);
             
-            if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -129,6 +131,8 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         TexReflection.setRingBandTexObj(ringBand, ourTexObj);
 
         this.decoder.start(decoder.getCurrentVideoPts());
+        this.textureBuffer = decoder.getTextureBuffer();
+
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourTexObj, currentTextureId);
 
@@ -142,7 +146,7 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         // TexReflection.setRingBandTexId(ringBand, originalTexId);
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

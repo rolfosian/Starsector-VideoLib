@@ -2,6 +2,7 @@ package data.scripts.decoder;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+import data.scripts.buffers.TexBuffer;
 
 public interface Decoder {
     public long getFFmpegPipePtr();
@@ -18,6 +19,7 @@ public interface Decoder {
     public long getCurrentVideoPts();
     public int getCurrentVideoTextureId();
     public int getCurrentVideoTextureId(float deltaTime);
+    public TexBuffer getTextureBuffer();
 
     public int getSampleRate();
     public int getAudioChannels();

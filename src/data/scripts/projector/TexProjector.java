@@ -12,6 +12,7 @@ import com.fs.starfarer.api.combat.ViewportAPI;
 import com.fs.starfarer.api.input.InputEventAPI;
 
 import data.scripts.VideoPaths;
+import data.scripts.buffers.TexBuffer;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.decoder.Decoder;
@@ -36,7 +37,7 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
     private EOFMode EOF_MODE;
 
     private final Decoder decoder;
-
+    private TexBuffer textureBuffer;
     private int currentTextureId;
     private int originalTextureId;
 
@@ -59,8 +60,10 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
 
         this.MODE = PlayMode.PLAYING;
         this.EOF_MODE = EOFMode.LOOP;
+        
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
         this.decoder.start(startVideoUs);
+        this.textureBuffer = decoder.getTextureBuffer();
 
         this.textureWrapper = TexReflection.texObjectMap.get(textureWrapperId);
         this.originalTextureId = TexReflection.getTexObjId(textureWrapper);
@@ -79,7 +82,7 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(textureWrapper, newId);
             
-            if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -92,7 +95,7 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(textureWrapper, newId);
             
-            if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -100,6 +103,8 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
     @Override
     public void restart() {
         this.decoder.start(decoder.getCurrentVideoPts());
+        this.textureBuffer = decoder.getTextureBuffer();
+        
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(textureWrapper, currentTextureId);
 
@@ -112,7 +117,7 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         TexReflection.setTexObjId(textureWrapper, originalTextureId);
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

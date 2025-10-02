@@ -11,7 +11,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.VideoPaths;
-
+import data.scripts.buffers.TexBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.MuteDecoder;
 
@@ -42,6 +42,7 @@ public class MuteVideoProjector extends VideoProjector {
 
     private CustomPanelAPI panel;
     private MuteDecoder decoder;
+    private TexBuffer textureBuffer;
     private PlayerControlPanel controlPanel = null;
 
     // playback/texture state
@@ -73,6 +74,7 @@ public class MuteVideoProjector extends VideoProjector {
 
         this.decoder = new MuteDecoder(this, videoFilePath,  width, height, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
+        this.textureBuffer = decoder.getTextureBuffer();
 
         if (!keepAlive)
         Global.getSector().addScript(new EveryFrameScript() {
@@ -238,7 +240,7 @@ public class MuteVideoProjector extends VideoProjector {
         isRendering = true;
 
         if (this.MODE == PlayMode.STOPPED && currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
 
@@ -258,14 +260,14 @@ public class MuteVideoProjector extends VideoProjector {
         decoder.seek(0);
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
     }
 
     public void restart() {
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
     }
@@ -274,7 +276,7 @@ public class MuteVideoProjector extends VideoProjector {
         isRendering = false;
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

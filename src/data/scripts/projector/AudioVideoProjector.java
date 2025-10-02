@@ -11,7 +11,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 import data.scripts.VideoPaths;
-
+import data.scripts.buffers.TexBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.decoder.DecoderWithSound;
 
@@ -44,6 +44,7 @@ public class AudioVideoProjector extends VideoProjector {
 
     private CustomPanelAPI panel;
     private DecoderWithSound decoder;
+    private TexBuffer textureBuffer;
     private Speakers speakers;
     private PlayerControlPanel controlPanel = null;
 
@@ -76,6 +77,7 @@ public class AudioVideoProjector extends VideoProjector {
 
         this.decoder = new DecoderWithSound(this, videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
         this.decoder.start(0);
+        this.textureBuffer = decoder.getTextureBuffer();
 
         this.speakers = new VideoProjectorSpeakers(this, decoder, decoder.getAudioFrameBuffer(), volume); 
         this.decoder.setSpeakers(speakers);
@@ -250,7 +252,7 @@ public class AudioVideoProjector extends VideoProjector {
         isRendering = true;
 
         if (this.MODE == PlayMode.STOPPED && currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
         this.speakers.play();
@@ -272,7 +274,7 @@ public class AudioVideoProjector extends VideoProjector {
         decoder.seek(0);
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
     }
@@ -280,7 +282,7 @@ public class AudioVideoProjector extends VideoProjector {
 
     public void restart() {
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
         speakers.restart();
@@ -290,7 +292,7 @@ public class AudioVideoProjector extends VideoProjector {
         isRendering = false;
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

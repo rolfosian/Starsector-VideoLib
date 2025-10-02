@@ -251,7 +251,7 @@ public class DecoderWithSound implements Decoder {
 
                 if (texture != null) {
                     switched = true;
-                    if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
 
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
@@ -260,7 +260,7 @@ public class DecoderWithSound implements Decoder {
                         texture = textureBuffer.popFront(width, height);
 
                         if (texture != null) {
-                            if (currentVideoTextureId != 0) GL11.glDeleteTextures(currentVideoTextureId);
+                            if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
         
                             currentVideoTextureId = texture.id;
                             currentVideoPts = texture.pts;
@@ -294,7 +294,7 @@ public class DecoderWithSound implements Decoder {
                 currentVideoTextureId = texture.id;
                 currentVideoPts = texture.pts;
 
-                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) GL11.glDeleteTextures(oldTextureId);
+                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) textureBuffer.deleteTexture(oldTextureId);
             }
         }
         return currentVideoTextureId;
@@ -323,7 +323,7 @@ public class DecoderWithSound implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30, 5) : new TextureBuffer(30, 5);
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);

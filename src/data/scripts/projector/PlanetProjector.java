@@ -15,6 +15,7 @@ import com.fs.starfarer.combat.entities.terrain.Planet;
 import com.fs.starfarer.loading.specs.PlanetSpec;
 
 import data.scripts.VideoPaths;
+import data.scripts.buffers.TexBuffer;
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
 
@@ -54,6 +55,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     private EOFMode EOF_MODE;
 
     private final Decoder decoder;
+    private TexBuffer textureBuffer;
 
     private final PlanetAPI campaignPlanet;
     private final Planet planet;
@@ -128,6 +130,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start(startVideoUs);
+        this.textureBuffer = decoder.getTextureBuffer();
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
@@ -192,6 +195,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.EOF_MODE = EOFMode.LOOP;
         this.decoder = new MuteDecoder(this, videoFilePath, width, height, this.MODE, this.EOF_MODE);
         this.decoder.start(startVideoUs);
+        this.textureBuffer = decoder.getTextureBuffer();
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
@@ -205,7 +209,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourPlanetTexObj, newId);
             
-            if (currentTextureId != 0) GL11.glDeleteTextures(currentTextureId);
+            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -245,6 +249,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         planet.setSpec(ourPlanetSpec);
 
         this.decoder.start(decoder.getCurrentVideoPts());
+        this.textureBuffer = decoder.getTextureBuffer();
 
         currentTextureId = decoder.getCurrentVideoTextureId();
         TexReflection.setTexObjId(ourPlanetTexObj, currentTextureId);
@@ -258,7 +263,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         resetPlanetState();
 
         if (currentTextureId != 0) {
-            GL11.glDeleteTextures(currentTextureId);
+            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

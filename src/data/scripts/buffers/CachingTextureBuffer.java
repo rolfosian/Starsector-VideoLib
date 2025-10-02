@@ -9,7 +9,7 @@ public class CachingTextureBuffer extends TextureBuffer {
     private boolean ready = false;
 
     public CachingTextureBuffer(int width, int height, List<VideoFrame> frames) {
-        super(frames.size());
+        super(frames.size(), frames.size());
         for (int i = 0; i < textures.length; i++) add(frames.get(i));
         currentFrameIndex = 0;
         ready = true;

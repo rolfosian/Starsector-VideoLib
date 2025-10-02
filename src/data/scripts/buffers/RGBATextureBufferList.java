@@ -5,6 +5,10 @@ import java.nio.ByteBuffer;
 import org.lwjgl.opengl.GL11;
 
 public class RGBATextureBufferList extends TextureBufferList {
+    public RGBATextureBufferList(int maxActiveTextures) {
+        super(maxActiveTextures);
+    }
+
     @Override
     protected int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
         if (frameBuffer == null) return -1;
@@ -15,6 +19,7 @@ public class RGBATextureBufferList extends TextureBufferList {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        activeTextures++;
         return textureId;
     }
 }

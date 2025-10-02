@@ -12,4 +12,5 @@ public interface TexBuffer {
     public void convertAll(int width, int height);
     public void convertFront(int width, int height);
     public void clear();
+    public void deleteTexture(int id);
 }

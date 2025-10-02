@@ -6,8 +6,8 @@ import org.lwjgl.opengl.GL11;
 
 public class RGBATextureBuffer extends TextureBuffer {
 
-    public RGBATextureBuffer(int capacity) {
-        super(capacity);
+    public RGBATextureBuffer(int capacity, int maxActiveTextures) {
+        super(capacity, maxActiveTextures);
     }
 
     @Override
@@ -20,6 +20,7 @@ public class RGBATextureBuffer extends TextureBuffer {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        activeTextures++;
         return textureId;
     }
     

@@ -20,12 +20,15 @@ public class TextureBuffer implements TexBuffer {
     protected final VideoFrame[] videoFrames;
     protected final TextureFrame[] textures;
 
+    protected final int maxActiveTextures;
     protected int size;
     protected final int capacity;
     protected int head;
     protected int tail;
+    protected int activeTextures = 0;
 
-    public TextureBuffer(int capacity) {
+    public TextureBuffer(int capacity, int maxActiveTextures) {
+        this.maxActiveTextures = maxActiveTextures;
         this.capacity = capacity;
         this.textures = new TextureFrame[capacity];
         this.videoFrames = new VideoFrame[capacity];
@@ -76,6 +79,8 @@ public class TextureBuffer implements TexBuffer {
     public void convertSome(int width, int height, int maxConversions) {
         int idx = head;
         for (int i = 0; i < size && maxConversions > 0; i++) {
+            if (activeTextures >= maxActiveTextures) break;
+            
             if (videoFrames[idx] != null && textures[idx] == null) {
                 textures[idx] = new TextureFrame(
                     createGLTextureFromFrame(videoFrames[idx].buffer, width, height),
@@ -88,9 +93,8 @@ public class TextureBuffer implements TexBuffer {
             }
             idx = (idx + 1) % capacity;
         }
-    }    
+    }
 
-    // should probably do something about this, it might choke the main thread if too much is goign on, need a new method with dynamic conversion amount based on meta deltaTime between videofps, gamefps, and maximum gamefps
     public void convertAll(int width, int height) {
         int idx = head;
         for (int i = 0; i < size; i++) {
@@ -108,13 +112,13 @@ public class TextureBuffer implements TexBuffer {
     }
 
     public void convertFront(int width, int height) {
-        if (isEmpty()) return;
+        if (isEmpty() || activeTextures >= maxActiveTextures) return;
+
         if (videoFrames[head] != null && textures[head] == null) {
             textures[head] = new TextureFrame(
                 createGLTextureFromFrame(videoFrames[head].buffer, width, height),
                 videoFrames[head].pts
             );
-
             videoFrames[head].freeBuffer();
             videoFrames[head] = null;
         }
@@ -124,7 +128,7 @@ public class TextureBuffer implements TexBuffer {
         int idx = head;
         for (int i = 0; i < size; i++) {
             if (textures[idx] != null) {
-                GL11.glDeleteTextures(textures[idx].id);
+                deleteTexture(textures[idx].id);
                 textures[idx] = null;
             }
             if (videoFrames[idx] != null) {
@@ -150,6 +154,13 @@ public class TextureBuffer implements TexBuffer {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+
+        activeTextures++;
         return textureId;
+    }
+
+    public void deleteTexture(int id) {
+        GL11.glDeleteTextures(id);
+        activeTextures--;
     }
 }
