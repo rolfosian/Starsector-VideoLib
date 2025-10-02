@@ -66,6 +66,7 @@ public class AudioVideoPlayer implements VideoPlayer {
         decoder.restart(0);
 
         this.projectorPanel.getPosition().setSize(width, height);
+        this.projector.setTextureBuffer(decoder.getTextureBuffer());
         this.projector.setVideoFilePath(videoFilePath);
         this.projector.setWidth(width);
         this.projector.setHeight(height);

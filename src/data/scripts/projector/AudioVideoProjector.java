@@ -317,6 +317,13 @@ public class AudioVideoProjector extends VideoProjector {
         this.currentTextureId = id;
     }
 
+    public void setTextureBuffer(TexBuffer buffer) {
+        if (currentTextureId != 0) {
+            textureBuffer.deleteTexture(currentTextureId);
+        }
+        this.textureBuffer = buffer;
+    }
+
     public PlayMode getPlayMode() {
         return this.MODE;
     }

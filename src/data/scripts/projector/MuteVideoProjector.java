@@ -340,6 +340,13 @@ public class MuteVideoProjector extends VideoProjector {
     public boolean isRendering() {
         return this.isRendering;
     }
+    
+    public void setTextureBuffer(TexBuffer buffer) {
+        if (currentTextureId != 0) {
+            textureBuffer.deleteTexture(currentTextureId);
+        }
+        this.textureBuffer = buffer;
+    }
 
     public VideoProjectorSpeakers getSpeakers() {
         return null;

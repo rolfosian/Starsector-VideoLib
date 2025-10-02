@@ -9,6 +9,7 @@ import com.fs.starfarer.api.ui.PositionAPI;
 
 import data.scripts.VideoModes.EOFMode;
 import data.scripts.VideoModes.PlayMode;
+import data.scripts.buffers.TexBuffer;
 import data.scripts.decoder.Decoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
@@ -41,6 +42,8 @@ public abstract class VideoProjector implements CustomUIPanelPlugin, Projector {
     public abstract void setEOFMode(EOFMode mode);
 
     public abstract void setCurrentTextureId(int id);
+    public abstract void setTextureBuffer(TexBuffer buffer);
+
     public abstract boolean isRendering();
     public abstract void setIsRendering(boolean rendering);
     public abstract void setControlPanel(PlayerControlPanel controlPanel);
