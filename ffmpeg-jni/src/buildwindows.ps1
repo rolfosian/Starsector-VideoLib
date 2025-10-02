@@ -25,8 +25,7 @@ $outDll = Join-Path $outDir 'ffmpegjni.dll'
 $includeFlags = @(
 	"-I$($FfmpegSdkDir)\include",
 	"-I$JavaHome\include",
-	"-I$JavaHome\include\win32",
-	"-IC:\MSYS2\mingw64\include"
+	"-I$JavaHome\include\win32"
 )
 
 $libFlags = @(
@@ -36,19 +35,21 @@ $libFlags = @(
     "$($FfmpegSdkDir)\lib\libavformat.a",
     "$($FfmpegSdkDir)\lib\libavcodec.a",
     "$($FfmpegSdkDir)\lib\libavutil.a",
-	"-LC:\MSYS2\mingw64\lib",
-	"-llibdav1d",
+	"-Wl,-Bstatic",
+	"-ldav1d",
 	"-lbz2",
+	"-lz",
+	"-liconv",
+	"-lwinpthread",
+	"-Wl,-Bdynamic",
 	"-lws2_32",
 	"-lwinmm",
 	"-lbcrypt",
 	"-lcrypt32",
-	"-lz",
 	"-lsecur32",
 	"-lole32",
 	"-luuid",
-	"-lncrypt",
-	"-liconv"
+	"-lncrypt"
 )
 
 $cFlags = @(
@@ -56,13 +57,14 @@ $cFlags = @(
 	"-DNDEBUG",
 	"-DWIN32_LEAN_AND_MEAN",
 	"-DUNICODE",
-	"-D_UNICODE",
-	"-fPIC"
+	"-D_UNICODE"
 )
 
 $ldFlags = @(
 	"-shared",
-	"-static-libgcc"
+	"-static",
+	"-static-libgcc",
+	"-static-libstdc++"
 )
 
 Write-Host "Using JDK:    $JavaHome"
