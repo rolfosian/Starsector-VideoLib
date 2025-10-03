@@ -163,7 +163,7 @@ public class TexReflection {
     public static Object texObjectIdField;
     public static Object texObjectGLBindField;
 
-    /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class pulls from. Each planet projector will add its own to this temporarily while it is active. */
+    /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class (and also pretty much everything else it appears) pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
 
     static {
