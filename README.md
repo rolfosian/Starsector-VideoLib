@@ -49,7 +49,7 @@ if (splitArgs.contains("wc")) {
 }
 ```
 
-- **Also supported**: Project videos onto [planets](./src/data/scripts/projector/PlanetProjector.java) by choosing the planet texture layer via the constructor's last parameter (Planet, Cloud, Atmosphere, Shield, Shield2). The [RingBand](./src/data/scripts/projector/RingBandProjector.java) and [Sprite](./src/data/scripts/projector/SpriteProjector.java) classes are also supported. Similar patterns can be extended to other entities (e.g., asteroids). For many concurrent projectors, consider viewport/location to manage performance and throttle with pause/unpause.
+- **Also supported**: Project videos onto [planets](./src/data/scripts/projector/PlanetProjector.java) by choosing the planet texture layer via the constructor's last parameter (Planet, Cloud, Atmosphere, Shield, Shield2). The [RingBand](./src/data/scripts/projector/RingBandProjector.java) and [Sprite](./src/data/scripts/projector/SpriteProjector.java) classes are also supported, as well as a generalized class for overriding [essentially any texture](./src/data/scripts/projector/TexProjector.java) that has been loaded by the game. Similar patterns can be extended to other entities (e.g., asteroids). For many concurrent projectors, consider viewport/location to manage performance and throttle with pause/unpause.
 
 ## Tips
 - **Prefer 20–40 fps videos**: Leaves headroom for texture upload to gpu and seeking.
