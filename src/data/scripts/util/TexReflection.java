@@ -516,14 +516,11 @@ public class TexReflection {
         }
     }
 
-    public static void printTexWrapperIds() {
-        Console.showMessage("        LOADED TEXTURE IDs              ");
-        Console.showMessage("--------------------------------");
+    public static void logTexWrapperIds() {
         print("        LOADED TEXTURE IDs              ");
         print("--------------------------------");
         for (String textureId : texObjectMap.keySet()) {
             print(textureId);
-            Console.showMessage(textureId);
         }
     }
 

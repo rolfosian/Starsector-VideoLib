@@ -5,7 +5,7 @@
 - **Alpha channel support**: YUVA420P (WEBM/VP9/VP8). See `data/videos/convert_to_alpha.py` for usage and compatibility notes. Animated GIFs with alpha channel are also converted to OpenGL RGBA textures.
 - **Image formats**: PNG, JPEG, WEBP, GIF. Alpha channel support for PNG and GIF (WEBP untested).
 - **UI embedding**: Anything that can host a `CustomPanelAPI` can host a video.
-- **Texture overrides**: Most texture wrappers can be overridden via `TexProjector`. List available texture wrapper ids with console command: `runcode data.scripts.util.TexReflection.printTexWrapperIds()`.
+- **Texture overrides**: Most texture wrappers can be overridden via `TexProjector`. Log available texture wrapper ids with console command: `runcode data.scripts.util.TexReflection.logTexWrapperIds()`.
 - **Sprite support**: Anything using a `Sprite` can be overridden (may require cloning/setting depending on context).
 - **Planet/Ringband support**: Replace planet texture layers (Planet, Cloud, Atmosphere, Glow, Shield, Shield2) and Ringband textures with videos.
 
