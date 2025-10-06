@@ -139,6 +139,7 @@ public class VideoLibDemo implements BaseCommand {
                 if (argWidth != 0 && argHeight != 0) {
                     videoWidth = argWidth;
                     videoHeight = argHeight;
+                    if (fileId == null) fileId = "vl_demo";
 
                 } else if (fileId == null) {
                     videoWidth = 960;
