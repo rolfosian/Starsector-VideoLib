@@ -81,8 +81,11 @@ public class VideoLibPlanetsDemo implements BaseCommand {
 
         if (fileId == null)  {
             fileId = "vl_ufos";
-            videoWidth = 512;
-            videoHeight = 256;
+
+            if (videoWidth == 0 || videoHeight == 0) {
+                videoWidth = 512;
+                videoHeight = 256;
+            }
         }
 
         if (videoWidth == 0 || videoHeight == 0) {
