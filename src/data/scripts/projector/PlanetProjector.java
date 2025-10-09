@@ -2,6 +2,7 @@ package data.scripts.projector;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;
@@ -221,8 +222,12 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         TexReflection.texObjectMap.remove(ourPlanetTexObjId);
         VideoUtils.removeId(ourPlanetTexObjId);
 
-        ourPlanetSpec.getTags().remove(ourPlanetTexObjId);
-        originalPlanetSpec.getTags().addAll(ourPlanetSpec.getTags()); // in case a tag was added while this projector was active. this is a set so we don't need to worry about duplication
+        Set<String> ourTags = ourPlanetSpec.getTags();
+        ourTags.remove(ourPlanetTexObjId);
+
+        Set<String> originalTags = originalPlanetSpec.getTags();
+        originalTags.removeAll(originalTags);
+        originalTags.addAll(ourTags);
 
         planet.setSpec(originalPlanetSpec);
         if (campaignPlanet != null) {
