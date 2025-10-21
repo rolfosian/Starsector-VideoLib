@@ -2,8 +2,10 @@ package data.scripts.playerui;
 
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.ui.Alignment;
 import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.api.ui.CutStyle;
 import com.fs.starfarer.api.ui.Fonts;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
@@ -55,12 +57,13 @@ public class PlayerControlPanel {
     private CustomPanelAPI volumePanel;
     private VolumePlugin volumePlugin;
 
-    CustomPanelAPI playPauseStopPanel;
-    TooltipMakerAPI playPauseStopHolder;
+    private CustomPanelAPI playPauseStopPanel;
+    private TooltipMakerAPI playPauseStopHolder;
     private ButtonAPI playButton;
     private ButtonAPI pauseButton;
     private ButtonAPI stopButton;
     private ButtonAPI loopButton;
+    private PlayBackButtonOverlay[] playbackButtonOverlays = new PlayBackButtonOverlay[3];
 
     private Color textColor;
     private Color bgButtonColor;
@@ -72,6 +75,7 @@ public class PlayerControlPanel {
         this.controlPanel.addComponent(seekBarPanel).inTL(5f, 0f);
         this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0, 0f);
         this.playPauseStopPanel.addUIElement(playPauseStopHolder).inTL(0f, 25f); // MAGICAL NUMBERS LMAO ME GRUG ME TRIAL AND ERROR
+        for (PlayBackButtonOverlay overlay : this.playbackButtonOverlays) overlay.init();
         this.seekBarPlugin.init(seekBarPanel.getPosition());
         
         if (volumePanel != null) {
@@ -94,9 +98,6 @@ public class PlayerControlPanel {
 
         this.playPauseStopPanel = Global.getSettings().createCustom(width, BTN_SIZE, new BaseCustomUIPanelPlugin() {
             @Override
-            public void render(float alphaMult) {}
-
-            @Override
             public void buttonPressed(Object buttonId) {
                 switch((String)buttonId) {
                     case "PLAY":
@@ -113,7 +114,6 @@ public class PlayerControlPanel {
 
                     case "LOOP":
                         toggleLoop();
-                        return;
 
                     default:
                         return;
@@ -122,19 +122,46 @@ public class PlayerControlPanel {
         });
         this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, BTN_SIZE, false);
 
-        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, buttonBgColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, buttonBgColor, Misc.getBrightPlayerColor(), BTN_SIZE, BTN_SIZE, 0f);
+        this.playButton = this.playPauseStopHolder.addButton("", "PLAY", textColor, buttonBgColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[0] = new PlayBackButtonOverlay("PLAY");
 
+        CustomPanelAPI playOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[0]);
+        this.playbackButtonOverlays[0].setPanel(playOverlay);
+        this.playPauseStopHolder.addCustom(playOverlay, 0f);
+        playOverlay.getPosition().inTL(playButton.getPosition().getX(), 0);
+
+        this.pauseButton = this.playPauseStopHolder.addButton("", "PAUSE", textColor, buttonBgColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[1] = new PlayBackButtonOverlay("PAUSE");
+
+        CustomPanelAPI pauseOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[1]);
+        this.playbackButtonOverlays[1].setPanel(pauseOverlay);
+        this.playPauseStopHolder.addCustom(pauseOverlay, 0f);
+
+        this.stopButton = this.playPauseStopHolder.addButton("", "STOP", textColor, buttonBgColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[2] = new PlayBackButtonOverlay("STOP");
+
+        CustomPanelAPI stopOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[2]);
+        this.playbackButtonOverlays[2].setPanel(stopOverlay);
+        this.playPauseStopHolder.addCustom(stopOverlay, 0f);
+
+        this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, buttonBgColor, Misc.getBrightPlayerColor(), BTN_SIZE + 8f, BTN_SIZE, 0f);
         this.loopButton.setChecked(this.decoder.getEOFMode() == EOFMode.LOOP);
 
         this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
+        pauseOverlay.getPosition().rightOfMid(this.playButton, 5f);
+
         this.stopButton.getPosition().rightOfMid(this.pauseButton, 5f);
+        stopOverlay.getPosition().rightOfMid(this.pauseButton, 5f);
+
         this.loopButton.getPosition().rightOfMid(this.stopButton, 10f);
 
-        if (projector.getPlayMode() == PlayMode.PAUSED) this.pauseButton.setEnabled(false);
-        else if (projector.getPlayMode() == PlayMode.PLAYING) this.playButton.setEnabled(false);
+        if (projector.getPlayMode() == PlayMode.PAUSED) {
+            this.pauseButton.setEnabled(false);
+            playbackButtonOverlays[1].setWhite();
+        } else if (projector.getPlayMode() == PlayMode.PLAYING) {
+            this.playButton.setEnabled(false);
+            playbackButtonOverlays[1].setBlack();
+        }
 
         this.seekBarPlugin = new SeekBarPlugin();
         this.seekBarPanel = Global.getSettings().createCustom(width - 10, BTN_SIZE, this.seekBarPlugin);
@@ -184,20 +211,46 @@ public class PlayerControlPanel {
         });
         this.playPauseStopHolder = this.playPauseStopPanel.createUIElement(width, BTN_SIZE, false);
 
-        this.playButton = this.playPauseStopHolder.addButton("Play", "PLAY", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.pauseButton = this.playPauseStopHolder.addButton("Pause", "PAUSE", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.stopButton = this.playPauseStopHolder.addButton("Stop", "STOP", textColor, bgButtonColor, BTN_SIZE, BTN_SIZE, 0f);
-        this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, bgButtonColor, Misc.getBrightPlayerColor(), BTN_SIZE, BTN_SIZE, 0f);
+        this.playButton = this.playPauseStopHolder.addButton("", "PLAY", textColor, bgButtonColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[0] = new PlayBackButtonOverlay("PLAY");
 
+        CustomPanelAPI playOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[0]);
+        this.playbackButtonOverlays[0].setPanel(playOverlay);
+        this.playPauseStopHolder.addCustom(playOverlay, 0f);
+        playOverlay.getPosition().inTL(playButton.getPosition().getX(), 0);
+
+        this.pauseButton = this.playPauseStopHolder.addButton("", "PAUSE", textColor, bgButtonColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[1] = new PlayBackButtonOverlay("PAUSE");
+
+        CustomPanelAPI pauseOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[1]);
+        this.playbackButtonOverlays[1].setPanel(pauseOverlay);
+        this.playPauseStopHolder.addCustom(pauseOverlay, 0f);
+
+        this.stopButton = this.playPauseStopHolder.addButton("", "STOP", textColor, bgButtonColor, Alignment.MID, CutStyle.NONE, BTN_SIZE, BTN_SIZE, 0f);
+        this.playbackButtonOverlays[2] = new PlayBackButtonOverlay("STOP");
+
+        CustomPanelAPI stopOverlay = Global.getSettings().createCustom(BTN_SIZE, BTN_SIZE, this.playbackButtonOverlays[2]);
+        this.playbackButtonOverlays[2].setPanel(stopOverlay);
+        this.playPauseStopHolder.addCustom(stopOverlay, 0f);
+
+        this.loopButton = this.playPauseStopHolder.addAreaCheckbox("Loop", "LOOP", textColor, bgButtonColor, Misc.getBrightPlayerColor(), BTN_SIZE + 8f, BTN_SIZE, 0f);
         this.loopButton.setChecked(this.decoder.getEOFMode() == EOFMode.LOOP);
 
-        this.playPauseStopPanel.addUIElement(playPauseStopHolder);
         this.pauseButton.getPosition().rightOfMid(this.playButton, 5f);
+        pauseOverlay.getPosition().rightOfMid(this.playButton, 5f);
+
         this.stopButton.getPosition().rightOfMid(this.pauseButton, 5f);
+        stopOverlay.getPosition().rightOfMid(this.pauseButton, 5f);
+
         this.loopButton.getPosition().rightOfMid(this.stopButton, 10f);
 
-        if (projector.getPlayMode() == PlayMode.PAUSED) this.pauseButton.setEnabled(false);
-        else if (projector.getPlayMode() == PlayMode.PLAYING) this.playButton.setEnabled(false);
+        if (projector.getPlayMode() == PlayMode.PAUSED) {
+            this.pauseButton.setEnabled(false);
+            playbackButtonOverlays[1].setWhite();
+        } else if (projector.getPlayMode() == PlayMode.PLAYING) {
+            this.playButton.setEnabled(false);
+            playbackButtonOverlays[1].setBlack();
+        }
 
         this.controlPanel.addComponent(this.playPauseStopPanel).inTL(0f, 0f);
 
@@ -218,12 +271,20 @@ public class PlayerControlPanel {
         pauseButton.setEnabled(true);
         stopButton.setEnabled(true);
 
+        playbackButtonOverlays[0].setBlack();
+        playbackButtonOverlays[1].setWhite();
+        playbackButtonOverlays[2].setWhite();
+
         self.projector.play();
     }
     
     public void pause() {
         playButton.setEnabled(true);
         pauseButton.setEnabled(false);
+
+        playbackButtonOverlays[0].setWhite();
+        playbackButtonOverlays[1].setBlack();
+        playbackButtonOverlays[2].setWhite();
 
         self.projector.pause();
     }
@@ -232,6 +293,10 @@ public class PlayerControlPanel {
         stopButton.setEnabled(false);
         pauseButton.setEnabled(false);
         playButton.setEnabled(true);
+
+        playbackButtonOverlays[0].setWhite();
+        playbackButtonOverlays[1].setBlack();
+        playbackButtonOverlays[2].setBlack();
         
         seekBarPlugin.reset();
         self.projector.stop();
@@ -300,6 +365,277 @@ public class PlayerControlPanel {
         this.seekLineRed = color.getRed() / 255f;
         this.seekLineGreen = color.getGreen() / 255f;
         this.seekLineBlue = color.getBlue() / 255f;
+    }
+    
+    private class PlayBackButtonOverlay extends BaseCustomUIPanelPlugin {
+        private interface Draw {
+            public void draw(float alphaMult);
+        }
+
+        PlayBackButtonOverlay self = this;
+
+        private float x;
+        private float y;
+        private float width;
+        private float height;
+
+        private int red;
+        private int green;
+        private int blue;
+
+        private CustomPanelAPI panel;
+
+        private final String type;
+        private Draw draw;
+
+        public PlayBackButtonOverlay(String type) {
+            super();
+            this.type = type;
+
+            self.red = 255;
+            self.green = 255;
+            self.blue = 255;
+        }
+            
+        @Override
+        public void render(float alphaMult) {
+            if (draw != null) draw.draw(alphaMult);
+        }
+
+        @Override
+        public void positionChanged(PositionAPI pos) {
+            self.x = pos.getX();
+            self.y = pos.getY();
+
+            self.width = pos.getWidth();
+            self.height = pos.getHeight();
+
+            assignDraw();
+        }
+
+        public void init() {
+            PositionAPI pos = panel.getPosition();
+            self.x = pos.getX();
+            self.y = pos.getY();
+
+            self.width = pos.getWidth();
+            self.height = pos.getHeight();
+
+            assignDraw();
+        }
+
+        private void assignDraw() {
+            switch(self.type) {
+                case "PLAY":
+                    draw = new Draw() {
+                        private float centerX = self.x + self.width / 2f;
+                        private float centerY = self.y + self.height / 2f;
+                        private float triangleWidth = self.width * 0.6f;
+                        private float triangleHeight = self.height * 0.6f;
+
+                        private float vert1X = centerX - triangleWidth / 2f;
+                        private float vert1Y = centerY - triangleHeight / 2f;
+
+                        private float vert2X = centerX + triangleWidth / 2f;
+                        private float vert2Y = centerY;
+
+                        private float vert3X = centerX - triangleWidth / 2f;
+                        private float vert3Y = centerY + triangleHeight / 2f;
+                        
+                        public void draw(float alphaMult) {
+                            GL11.glPushMatrix();
+                            GL11.glDisable(GL11.GL_TEXTURE_2D);
+                        
+                            GL11.glEnable(GL11.GL_BLEND);
+                            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                            GL11.glEnable(GL11.GL_POLYGON_SMOOTH);
+                        
+                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glBegin(GL11.GL_TRIANGLES);
+                        
+                            GL11.glVertex2f(this.vert1X, this.vert1Y);
+                            GL11.glVertex2f(this.vert2X, this.vert2Y);
+                            GL11.glVertex2f(this.vert3X, this.vert3Y);
+                        
+                            GL11.glEnd();
+                        
+                            GL11.glDisable(GL11.GL_POLYGON_SMOOTH);
+                            GL11.glDisable(GL11.GL_BLEND);
+                        
+                            GL11.glEnable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(1f, 1f, 1f, 1f);
+                            GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+                            GL11.glPopMatrix();
+                        }
+                    };
+                    break;
+                
+                case "STOP":
+                    draw = new Draw() {
+                        private float squareSize = Math.min(self.width, self.height) * 0.6f;
+                        private float centerX = self.x + self.width / 2f;
+                        private float centerY = self.y + self.height / 2f;
+                        private float halfSize = squareSize / 2f;
+                        
+                        private float v1X = centerX - halfSize;
+                        private float v1Y = centerY - halfSize;
+                        private float v2X = centerX + halfSize;
+                        private float v2Y = centerY - halfSize;
+                        private float v3X = centerX + halfSize;
+                        private float v3Y = centerY + halfSize;
+                        private float v4X = centerX - halfSize;
+                        private float v4Y = centerY + halfSize;
+                        
+                        public void draw(float alphaMult) {
+                            GL11.glPushMatrix();
+                            GL11.glDisable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glBegin(GL11.GL_QUADS);
+                            
+                            GL11.glVertex2f(this.v1X, this.v1Y);
+                            GL11.glVertex2f(this.v2X, this.v2Y);
+                            GL11.glVertex2f(this.v3X, this.v3Y);
+                            GL11.glVertex2f(this.v4X, this.v4Y);
+                            
+                            GL11.glEnd();
+                            GL11.glEnable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(1f, 1f, 1f, 1f);
+                            GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+                            GL11.glPopMatrix();
+                        }
+                    };
+                    break;
+                
+                case "PAUSE":
+                    draw = new Draw() {
+                        private float centerX = self.x + self.width / 2f;
+                        private float centerY = self.y + self.height / 2f;
+                        private float rectWidth = self.width * 0.2f;
+                        private float rectHeight = self.height * 0.6f;
+                        private float gap = self.width * 0.05f; // smaller but consistent gap between rects
+                    
+                        private float leftCenterX = centerX - (rectWidth / 2f + gap / 2f);
+                        private float rightCenterX = centerX + (rectWidth / 2f + gap / 2f);
+                    
+                        private float leftRect1X = leftCenterX - rectWidth / 2f;
+                        private float leftRect1Y = centerY - rectHeight / 2f;
+                        private float leftRect2X = leftCenterX + rectWidth / 2f;
+                        private float leftRect2Y = centerY - rectHeight / 2f;
+                        private float leftRect3X = leftCenterX + rectWidth / 2f;
+                        private float leftRect3Y = centerY + rectHeight / 2f;
+                        private float leftRect4X = leftCenterX - rectWidth / 2f;
+                        private float leftRect4Y = centerY + rectHeight / 2f;
+                    
+                        private float rightRect1X = rightCenterX - rectWidth / 2f;
+                        private float rightRect1Y = centerY - rectHeight / 2f;
+                        private float rightRect2X = rightCenterX + rectWidth / 2f;
+                        private float rightRect2Y = centerY - rectHeight / 2f;
+                        private float rightRect3X = rightCenterX + rectWidth / 2f;
+                        private float rightRect3Y = centerY + rectHeight / 2f;
+                        private float rightRect4X = rightCenterX - rectWidth / 2f;
+                        private float rightRect4Y = centerY + rectHeight / 2f;
+                    
+                        public void draw(float alphaMult) {
+                            GL11.glPushMatrix();
+                            GL11.glDisable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glBegin(GL11.GL_QUADS);
+                    
+                            GL11.glVertex2f(leftRect1X, leftRect1Y);
+                            GL11.glVertex2f(leftRect2X, leftRect2Y);
+                            GL11.glVertex2f(leftRect3X, leftRect3Y);
+                            GL11.glVertex2f(leftRect4X, leftRect4Y);
+                    
+                            GL11.glVertex2f(rightRect1X, rightRect1Y);
+                            GL11.glVertex2f(rightRect2X, rightRect2Y);
+                            GL11.glVertex2f(rightRect3X, rightRect3Y);
+                            GL11.glVertex2f(rightRect4X, rightRect4Y);
+                    
+                            GL11.glEnd();
+                            GL11.glEnable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(1f, 1f, 1f, 1f);
+                            GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+                            GL11.glDisable(GL11.GL_BLEND);
+                            GL11.glPopMatrix();
+                        }
+                    };
+                    break;
+                
+                case "LOOP":
+                    draw = new Draw() {
+                        private float centerX = self.x + self.width / 2f;
+                        private float centerY = self.y + self.height / 2f;
+                        private float radius = Math.min(self.width, self.height) * 0.25f;
+                        private float arrowSize = radius * 0.3f;
+                        private float arrowAngle = (float) (Math.PI * 1.5f);
+                        private float arrowX = centerX + (float) (Math.cos(arrowAngle) * radius);
+                        private float arrowY = centerY + (float) (Math.sin(arrowAngle) * radius);
+                        
+                        private float[] arcVerticesX = new float[33];
+                        private float[] arcVerticesY = new float[33];
+                        private int segments = 32;
+
+                        private float arrow1X = arrowX;
+                        private float arrow1Y = arrowY;
+                        private float arrow2X = arrowX - arrowSize * 0.5f;
+                        private float arrow2Y = arrowY - arrowSize;
+                        private float arrow3X = arrowX - arrowSize * 0.5f;
+                        private float arrow3Y = arrowY + arrowSize;
+                        
+                        {
+                            for (int i = 0; i <= this.segments; i++) {
+                                float angle = (float) (i * Math.PI * 1.5f / this.segments);
+                                this.arcVerticesX[i] = centerX + (float) (Math.cos(angle) * radius);
+                                this.arcVerticesY[i] = centerY + (float) (Math.sin(angle) * radius);
+                            }
+                        }
+                        
+                        public void draw(float alphaMult) {
+                            GL11.glPushMatrix();
+                            GL11.glDisable(GL11.GL_TEXTURE_2D);
+                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            
+                            GL11.glBegin(GL11.GL_LINE_STRIP);
+                            for (int i = 0; i <= this.segments; i++) {
+                                GL11.glVertex2f(this.arcVerticesX[i], this.arcVerticesY[i]);
+                            }
+                            GL11.glEnd();
+                            
+                            GL11.glBegin(GL11.GL_TRIANGLES);
+                            GL11.glVertex2f(this.arrow1X, this.arrow1Y);
+                            GL11.glVertex2f(this.arrow2X, this.arrow2Y);
+                            GL11.glVertex2f(this.arrow3X, this.arrow3Y);
+                            GL11.glEnd();
+                            GL11.glEnable(GL11.GL_TEXTURE_2D);
+                            GL11.glPopMatrix();
+                        }
+                    };
+                    break;
+                
+                default:
+                    throw new UnsupportedOperationException("Unsupported type: " + type);
+            }
+        }
+
+        public void setBlack() {
+            self.red = 0;
+            self.green = 0;
+            self.blue = 0;
+        }
+
+        public void setWhite() {
+            self.red = 255;
+            self.green = 255;
+            self.blue = 255;
+        }
+
+        public void setPanel(CustomPanelAPI panel) {
+            self.panel = panel;
+        }
+
+        public CustomPanelAPI getPanel() {
+            return self.panel;
+        }
     }
 
     private class SeekBarPlugin extends BaseCustomUIPanelPlugin {
@@ -422,7 +758,7 @@ public class PlayerControlPanel {
                 this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
                 
                 float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
-                seekButton.getPosition().inTL(newX, this.seekButtonY);
+            seekButton.getPosition().inTL(newX, this.seekButtonY);
                 
                 seekAccumulator++;
                 if (seekAccumulator >= SEEK_APPLY_THRESHOLD) {
