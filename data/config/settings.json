@@ -1,13 +1,13 @@
 {
     "VideoLib" : {
-        "video_lib" : { 
+        "video_lib" : { # id in mod_info.json
             "videos" : {
                 "vl_demo" : "data/videos/jabroni.mp4",
                 "vl_ufos" : "data/videos/ufos.mp4",
                 "vl_ufos_t" : "data/videos/ufos_transparent.webm",
                 "vl_mop" : "data/videos/fred-fred-mopping.gif"
             },
-            
+
             "images" : {
                 "vl_jpeg" : "data/videos/jpeg.jpg",
                 "vl_png" : "data/videos/png.png"
