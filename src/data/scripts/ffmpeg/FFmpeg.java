@@ -4,6 +4,8 @@ import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import org.apache.log4j.Logger;
 
+import com.fs.starfarer.api.Global;
+
 public class FFmpeg {
     private static final Logger logger = Logger.getLogger(FFmpeg.class);
     public static void print(Object... args) {
@@ -117,20 +119,19 @@ public class FFmpeg {
 
     static {
         String osName = System.getProperty("os.name").toLowerCase();
-        String cwd = System.getProperty("user.dir");
 
         if (osName.startsWith("windows")) {
-            String binDir = cwd.replace("starsector-core", "") + "mods/VideoLib/ffmpeg-jni/bin/windows/";
+            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/windows/";
 
             System.load(binDir + "ffmpegjni.dll");  // our bridge
 
         } else if (osName.startsWith("linux")) {
-            String binDir = cwd + "/mods/VideoLib/ffmpeg-jni/bin/linux/";
+            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/linux/";
 
             System.load(binDir + "ffmpegjni.so"); // our bridge
 
         } else if (osName.startsWith("mac")) {
-            String binDir = cwd.replace("/Contents/Resources/Java", "") + "/mods/VideoLib/ffmpeg-jni/bin/mac/";
+            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/mac/";
 
             System.load(binDir + "ffmpegjni.dylib"); // our bridge
 
