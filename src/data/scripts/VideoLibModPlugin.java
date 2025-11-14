@@ -59,7 +59,8 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     private static List<PlanetProjector> planetProjectors = new ArrayList<>();
     private static List<Object> ringBandAndSpriteProjectors = new ArrayList<>();
-    private static PersonAPI playerPerson;
+    
+    private static long saveTime;
 
     @Override
     public void beforeGameSave() {
@@ -112,15 +113,17 @@ public class VideoLibModPlugin extends BaseModPlugin {
                 ((Projector)projector).finish();
             }
         }
-        playerPerson = Global.getSector().getPlayerPerson();
 
+        saveTime = (long) Global.getSector().getPersistentData().getOrDefault("$vl_saveTime", 0L);
+        if (saveTime == 0L) {
+            saveTime = System.currentTimeMillis();
+            Global.getSector().getPersistentData().put("$vl_saveTime", saveTime);
+        }
     }
 
     private boolean isSameSave() {
-        PersonAPI sectorPerson = Global.getSector().getPlayerPerson();
-        if (playerPerson != null && playerPerson.getId().equals(sectorPerson.getId())
-            && playerPerson.getName().getFullName().equals(sectorPerson.getName().getFullName())) return true;
-        return false;
+        long newSaveTime = (long) Global.getSector().getPersistentData().getOrDefault("$vl_saveTime", 0L);
+        return (newSaveTime != 0L && saveTime == newSaveTime);
     }
 
     @Override
@@ -165,11 +168,15 @@ public class VideoLibModPlugin extends BaseModPlugin {
             }
 
         }
-        playerPerson = Global.getSector().getPlayerPerson();
+
+        saveTime = (long) Global.getSector().getPersistentData().getOrDefault("$vl_saveTime", 0L);
+        if (saveTime == 0L) {
+            saveTime = System.currentTimeMillis();
+            Global.getSector().getPersistentData().put("$vl_saveTime", saveTime);
+        }
     }
 
     public static Thread getMainThread() {
         return mainThread;
     }
-
 }
