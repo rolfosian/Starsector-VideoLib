@@ -203,6 +203,7 @@ public class PlayerControlPanel {
 
                     case "LOOP":
                         toggleLoop();
+                        return;
 
                     default:
                         return;
@@ -372,7 +373,7 @@ public class PlayerControlPanel {
             public void draw(float alphaMult);
         }
 
-        PlayBackButtonOverlay self = this;
+        PlayBackButtonOverlay playbackButtonSelf = this;
 
         private float x;
         private float y;
@@ -392,9 +393,9 @@ public class PlayerControlPanel {
             super();
             this.type = type;
 
-            self.red = 255;
-            self.green = 255;
-            self.blue = 255;
+            playbackButtonSelf.red = 255;
+            playbackButtonSelf.green = 255;
+            playbackButtonSelf.blue = 255;
         }
             
         @Override
@@ -404,34 +405,34 @@ public class PlayerControlPanel {
 
         @Override
         public void positionChanged(PositionAPI pos) {
-            self.x = pos.getX();
-            self.y = pos.getY();
+            playbackButtonSelf.x = pos.getX();
+            playbackButtonSelf.y = pos.getY();
 
-            self.width = pos.getWidth();
-            self.height = pos.getHeight();
+            playbackButtonSelf.width = pos.getWidth();
+            playbackButtonSelf.height = pos.getHeight();
 
             assignDraw();
         }
 
         public void init() {
             PositionAPI pos = panel.getPosition();
-            self.x = pos.getX();
-            self.y = pos.getY();
+            playbackButtonSelf.x = pos.getX();
+            playbackButtonSelf.y = pos.getY();
 
-            self.width = pos.getWidth();
-            self.height = pos.getHeight();
+            playbackButtonSelf.width = pos.getWidth();
+            playbackButtonSelf.height = pos.getHeight();
 
             assignDraw();
         }
 
         private void assignDraw() {
-            switch(self.type) {
+            switch(playbackButtonSelf.type) {
                 case "PLAY":
                     draw = new Draw() {
-                        private float centerX = self.x + self.width / 2f;
-                        private float centerY = self.y + self.height / 2f;
-                        private float triangleWidth = self.width * 0.6f;
-                        private float triangleHeight = self.height * 0.6f;
+                        private float centerX = playbackButtonSelf.x + playbackButtonSelf.width / 2f;
+                        private float centerY = playbackButtonSelf.y + playbackButtonSelf.height / 2f;
+                        private float triangleWidth = playbackButtonSelf.width * 0.6f;
+                        private float triangleHeight = playbackButtonSelf.height * 0.6f;
 
                         private float vert1X = centerX - triangleWidth / 2f;
                         private float vert1Y = centerY - triangleHeight / 2f;
@@ -450,7 +451,7 @@ public class PlayerControlPanel {
                             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
                             GL11.glEnable(GL11.GL_POLYGON_SMOOTH);
                         
-                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             GL11.glBegin(GL11.GL_TRIANGLES);
                         
                             GL11.glVertex2f(this.vert1X, this.vert1Y);
@@ -472,9 +473,9 @@ public class PlayerControlPanel {
                 
                 case "STOP":
                     draw = new Draw() {
-                        private float squareSize = Math.min(self.width, self.height) * 0.6f;
-                        private float centerX = self.x + self.width / 2f;
-                        private float centerY = self.y + self.height / 2f;
+                        private float squareSize = Math.min(playbackButtonSelf.width, playbackButtonSelf.height) * 0.6f;
+                        private float centerX = playbackButtonSelf.x + playbackButtonSelf.width / 2f;
+                        private float centerY = playbackButtonSelf.y + playbackButtonSelf.height / 2f;
                         private float halfSize = squareSize / 2f;
                         
                         private float v1X = centerX - halfSize;
@@ -489,7 +490,7 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
-                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             GL11.glBegin(GL11.GL_QUADS);
                             
                             GL11.glVertex2f(this.v1X, this.v1Y);
@@ -508,11 +509,11 @@ public class PlayerControlPanel {
                 
                 case "PAUSE":
                     draw = new Draw() {
-                        private float centerX = self.x + self.width / 2f;
-                        private float centerY = self.y + self.height / 2f;
-                        private float rectWidth = self.width * 0.2f;
-                        private float rectHeight = self.height * 0.6f;
-                        private float gap = self.width * 0.05f; // smaller but consistent gap between rects
+                        private float centerX = playbackButtonSelf.x + playbackButtonSelf.width / 2f;
+                        private float centerY = playbackButtonSelf.y + playbackButtonSelf.height / 2f;
+                        private float rectWidth = playbackButtonSelf.width * 0.2f;
+                        private float rectHeight = playbackButtonSelf.height * 0.6f;
+                        private float gap = playbackButtonSelf.width * 0.05f; // smaller but consistent gap between rects
                     
                         private float leftCenterX = centerX - (rectWidth / 2f + gap / 2f);
                         private float rightCenterX = centerX + (rectWidth / 2f + gap / 2f);
@@ -538,7 +539,7 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
-                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             GL11.glBegin(GL11.GL_QUADS);
                     
                             GL11.glVertex2f(leftRect1X, leftRect1Y);
@@ -563,9 +564,9 @@ public class PlayerControlPanel {
                 
                 case "LOOP":
                     draw = new Draw() {
-                        private float centerX = self.x + self.width / 2f;
-                        private float centerY = self.y + self.height / 2f;
-                        private float radius = Math.min(self.width, self.height) * 0.25f;
+                        private float centerX = playbackButtonSelf.x + playbackButtonSelf.width / 2f;
+                        private float centerY = playbackButtonSelf.y + playbackButtonSelf.height / 2f;
+                        private float radius = Math.min(playbackButtonSelf.width, playbackButtonSelf.height) * 0.25f;
                         private float arrowSize = radius * 0.3f;
                         private float arrowAngle = (float) (Math.PI * 1.5f);
                         private float arrowX = centerX + (float) (Math.cos(arrowAngle) * radius);
@@ -593,7 +594,7 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
-                            GL11.glColor4f(self.red, self.green, self.blue, alphaMult);
+                            GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             
                             GL11.glBegin(GL11.GL_LINE_STRIP);
                             for (int i = 0; i <= this.segments; i++) {
@@ -618,23 +619,23 @@ public class PlayerControlPanel {
         }
 
         public void setBlack() {
-            self.red = 0;
-            self.green = 0;
-            self.blue = 0;
+            playbackButtonSelf.red = 0;
+            playbackButtonSelf.green = 0;
+            playbackButtonSelf.blue = 0;
         }
 
         public void setWhite() {
-            self.red = 255;
-            self.green = 255;
-            self.blue = 255;
+            playbackButtonSelf.red = 255;
+            playbackButtonSelf.green = 255;
+            playbackButtonSelf.blue = 255;
         }
 
         public void setPanel(CustomPanelAPI panel) {
-            self.panel = panel;
+            playbackButtonSelf.panel = panel;
         }
 
         public CustomPanelAPI getPanel() {
-            return self.panel;
+            return playbackButtonSelf.panel;
         }
     }
 
@@ -758,7 +759,7 @@ public class PlayerControlPanel {
                 this.pendingSeekTarget = getSeekPositionFromX(this.seekX);
                 
                 float newX = getButtonXFromSeekPosition(this.pendingSeekTarget);
-            seekButton.getPosition().inTL(newX, this.seekButtonY);
+                seekButton.getPosition().inTL(newX, this.seekButtonY);
                 
                 seekAccumulator++;
                 if (seekAccumulator >= SEEK_APPLY_THRESHOLD) {
@@ -858,9 +859,15 @@ public class PlayerControlPanel {
 
                         projector.setPlayMode(oldProjectorMode);
                         decoder.setPlayMode(oldDecoderMode);
-                        if (oldDecoderMode != PlayMode.PAUSED) speakers.play();
+
                         seekButton.setEnabled(true);
-                        if (!this.wasPaused) projector.unpause(); 
+                        if (!this.wasPaused) {
+                            if (decoder.getEOFMode() != EOFMode.LOOP && this.currentVideoPts == this.durationUs) {
+                                projector.pause();
+                            } else {
+                                projector.unpause();
+                            }
+                        } 
 
                         event.consume();
                         continue;
