@@ -66,7 +66,7 @@ public class CachingMuteDecoder implements Decoder {
     }
 
     private void decodeLoop() {
-        print("CachingMuteDecoder decodeLoop started");
+        // print("CachingMuteDecoder decodeLoop started");
 
         List<VideoFrame> allFrames = new ArrayList<>();
         
@@ -86,18 +86,18 @@ public class CachingMuteDecoder implements Decoder {
                 }
 
                 // EOF reached - create CachingTextureBuffer with all frames
-                print("EOF reached, creating CachingTextureBuffer with", allFrames.size(), "frames");
+                // print("EOF reached, creating CachingTextureBuffer with", allFrames.size(), "frames");
                 textureBuffer = new CachingTextureBuffer(width, height, allFrames);
-                print("Closing FFmpeg Pipe");
+                // print("Closing FFmpeg Pipe");
                 FFmpeg.closePipe(pipePtr);
                 pipePtr = 0;
-                print("CachingMuteDecoder decodeLoop ended - buffer filled");
+                // print("CachingMuteDecoder decodeLoop ended - buffer filled");
                 return;
             } else {
                 allFrames.add(f);
             }
         }
-        print("CachingMuteDecoder decodeLoop ended");
+        // print("CachingMuteDecoder decodeLoop ended");
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
@@ -146,11 +146,11 @@ public class CachingMuteDecoder implements Decoder {
 
     public void start(long startUs) {
         if (running) return;
-        print("Starting CachingMuteDecoder for file", videoFilePath);
+        // print("Starting CachingMuteDecoder for file", videoFilePath);
         running = true;
 
         pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, startUs);
-        print("Opened FFmpeg pipe, ptr =", pipePtr);
+        // print("Opened FFmpeg pipe, ptr =", pipePtr);
 
         if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
 
@@ -160,24 +160,24 @@ public class CachingMuteDecoder implements Decoder {
 
         videoFps = FFmpeg.getVideoFps(pipePtr);
         spf = 1 / videoFps;
-        print("Video Framerate =", videoFps);
-        print("Video Duration=", videoDurationSeconds);
-        print("Video DurationUs=", videoDurationUs);
-        print("Total Frame Count=", totalFrameCount);
+        // print("Video Framerate =", videoFps);
+        // print("Video Duration=", videoDurationSeconds);
+        // print("Video DurationUs=", videoDurationUs);
+        // print("Total Frame Count=", totalFrameCount);
 
         decodeThread = new Thread(this::decodeLoop, "CachingMuteDecoder");
         decodeThread.start();
-        print("CachingMuteDecoder decoderLoop thread started");
+        // print("CachingMuteDecoder decoderLoop thread started");
 
         // Wait for the buffer to be filled
         while (textureBuffer == null || !textureBuffer.ready()) sleep(1);
         textureBuffer.convertAll(width, height);
-        print("CachingTextureBuffer filled, ready for playback");
+        // print("CachingTextureBuffer filled, ready for playback");
         return;
     }
 
     public void finish() {
-        print("Stopping CachingMuteDecoder decoderLoop thread");
+        // print("Stopping CachingMuteDecoder decoderLoop thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
@@ -242,7 +242,7 @@ public class CachingMuteDecoder implements Decoder {
     }
     
     public void setPlayMode(PlayMode newMode) {
-        print("Setting Mode", newMode);
+        // print("Setting Mode", newMode);
         this.PLAY_MODE = newMode;
     }
 

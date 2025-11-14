@@ -87,7 +87,7 @@ public class DecoderWithSound implements Decoder {
     }
 
     private void decodeLoop() {
-        print("DecoderWithSound decodeLoop started");
+        // print("DecoderWithSound decodeLoop started");
 
         while (running) {
             if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
@@ -205,8 +205,25 @@ public class DecoderWithSound implements Decoder {
                     } else {
                         switch(this.EOF_MODE) {
                             case PAUSE:
+                                seekWithoutClearingBuffer(videoDurationUs);
+                                while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                                    sleep(1);
+                                    if (!videoProjector.isRendering()) break;
+                                }
+                                videoProjector.pause();
+                                speakers.restart();
+                                speakers.pause();
+                                break;
+
                             case PLAY_UNTIL_END:
-                                seek(videoDurationUs);
+                                seekWithoutClearingBuffer(0);
+                                while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                                    sleep(1);
+                                    if (!videoProjector.isRendering()) break;
+                                }
+                                videoProjector.pause();
+                                speakers.restart();
+                                speakers.pause();
                                 break;
                                 
                             case LOOP:
@@ -232,7 +249,7 @@ public class DecoderWithSound implements Decoder {
                 sleep(1);
             }
         }
-        print("DecoderWithSound decodeLoop ended");
+        // print("DecoderWithSound decodeLoop ended");
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
@@ -304,11 +321,11 @@ public class DecoderWithSound implements Decoder {
 
     public void start(long startUs) {
         if (running) return;
-        print("Starting DecoderWithSound for file", videoFilePath);
+        // print("Starting DecoderWithSound for file", videoFilePath);
         running = true;
 
         pipePtr = FFmpeg.openPipe(videoFilePath, width, height, startUs);
-        print("Opened FFmpeg pipe, ptr =", pipePtr);
+        // print("Opened FFmpeg pipe, ptr =", pipePtr);
 
         if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
 
@@ -317,24 +334,24 @@ public class DecoderWithSound implements Decoder {
 
         videoFps = FFmpeg.getVideoFps(pipePtr);
         spf = 1 / videoFps;
-        print("Video Framerate =", videoFps);
-        print("Video Duration=", videoDurationSeconds);
-        print("Video DurationUs=", videoDurationUs);
+        // print("Video Framerate =", videoFps);
+        // print("Video Duration=", videoDurationSeconds);
+        // print("Video DurationUs=", videoDurationUs);
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
-        print("isRGBA=", isRGBA);
+        // print("isRGBA=", isRGBA);
         this.textureBuffer = isRGBA ? new RGBATextureBuffer(30, 5) : new TextureBuffer(30, 5);
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);
         audioSampleRate = FFmpeg.getAudioSampleRate(pipePtr);
-        print("Audio Channels=", audioChannels);
-        print("Audio Sample Rate=", audioSampleRate);
+        // print("Audio Channels=", audioChannels);
+        // print("Audio Sample Rate=", audioSampleRate);
 
         videoDecodeThread = new Thread(this::decodeLoop, "DecoderWithSound-decodeLoop");
         videoDecodeThread.start();
 
-        print("DecoderWithSound decoderLoop thread started");
+        // print("DecoderWithSound decoderLoop thread started");
 
         while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
         synchronized(textureBuffer) {
@@ -344,12 +361,12 @@ public class DecoderWithSound implements Decoder {
     }
 
     public void finish() {
-        print("Stopping DecoderWithSound thread");
+        // print("Stopping DecoderWithSound thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
 
-        print("Joining DecoderWithSound thread");
+        // print("Joining DecoderWithSound thread");
         try {
             videoDecodeThread.join();
         } catch(InterruptedException e) {
@@ -357,12 +374,12 @@ public class DecoderWithSound implements Decoder {
         }
 
         if (pipePtr != 0) {
-            print("Closing FFmpeg pipe");
+            // print("Closing FFmpeg pipe");
             FFmpeg.closePipe(pipePtr);
             pipePtr = 0;
         }
 
-        print("Clearing Texture/Video Buffer");
+        // print("Clearing Texture/Video Buffer");
         synchronized(textureBuffer) {
             textureBuffer.clear();
         }
@@ -384,7 +401,7 @@ public class DecoderWithSound implements Decoder {
 
     public void seek(long targetUs) {
         synchronized(seekLock) {
-            print("Seeking to", targetUs, "µs");
+            // print("Seeking to", targetUs, "µs");
 
             FFmpeg.seek(pipePtr, targetUs);
     
@@ -402,7 +419,7 @@ public class DecoderWithSound implements Decoder {
 
     public void seekWithoutClearingBuffer(long targetUs) {
         synchronized(seekLock) {
-            print("Seeking to", targetUs, "µs");
+            // print("Seeking to", targetUs, "µs");
             FFmpeg.seek(pipePtr, targetUs);
         }
     }
@@ -468,7 +485,7 @@ public class DecoderWithSound implements Decoder {
     }
     
     public void setPlayMode(PlayMode newMode) {
-        print("Setting Mode", newMode);
+        // print("Setting Mode", newMode);
         this.OLD_PLAY_MODE = this.PLAY_MODE;
         this.PLAY_MODE = newMode;
     }

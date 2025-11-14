@@ -70,7 +70,7 @@ public class MuteDecoder implements Decoder {
     }
 
     private void decodeLoop() {
-        print("MuteDecoder decodeLoop started");
+        // print("MuteDecoder decodeLoop started");
         // try {
         while (running) {
             if (!textureBuffer.isFull()) {
@@ -178,7 +178,7 @@ public class MuteDecoder implements Decoder {
         // } catch (Throwable e) {
         //     logger.error(e.getMessage(), e);
         // }
-        print("MuteDecoder decodeLoop ended");
+        // print("MuteDecoder decodeLoop ended");
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
@@ -238,11 +238,11 @@ public class MuteDecoder implements Decoder {
 
     public void start(long startUs) {
         if (running) return;
-        print("Starting MuteDecoder for file", videoFilePath);
+        // print("Starting MuteDecoder for file", videoFilePath);
         running = true;
 
         pipePtr = FFmpeg.openPipeNoSound(videoFilePath, width, height, startUs);
-        print("Opened FFmpeg pipe, ptr =", pipePtr);
+        // print("Opened FFmpeg pipe, ptr =", pipePtr);
 
         if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
 
@@ -251,17 +251,17 @@ public class MuteDecoder implements Decoder {
 
         videoFps = FFmpeg.getVideoFps(pipePtr);
         spf = 1 / videoFps;
-        print("Video Framerate =", videoFps);
-        print("Video Duration=", videoDurationSeconds);
-        print("Video DurationUs=", videoDurationUs);
+        // print("Video Framerate =", videoFps);
+        // print("Video Duration=", videoDurationSeconds);
+        // print("Video DurationUs=", videoDurationUs);
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
-        print("isRGBA=", isRGBA);
+        // print("isRGBA=", isRGBA);
         this.textureBuffer = isRGBA ? new RGBATextureBuffer(10, 5) : new TextureBuffer(10, 5);
 
         decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();
-        print("MuteDecoder decoderLoop thread started");
+        // print("MuteDecoder decoderLoop thread started");
 
         while(textureBuffer.isEmpty()) sleep(1);
         synchronized(textureBuffer) {
@@ -271,12 +271,12 @@ public class MuteDecoder implements Decoder {
     }
 
     public void finish() {
-        print("Stopping MuteDecoder decoderLoop thread");
+        // print("Stopping MuteDecoder decoderLoop thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
 
-        print("Joining MuteDecoder decoderLoop thread");
+        // print("Joining MuteDecoder decoderLoop thread");
         try {
             decodeThread.join();
         } catch(InterruptedException e) {
@@ -289,7 +289,7 @@ public class MuteDecoder implements Decoder {
             pipePtr = 0;
         }
 
-        print("Clearing Texture/Video Buffer");
+        // print("Clearing Texture/Video Buffer");
         synchronized(textureBuffer) {
             textureBuffer.clear();
         }
@@ -309,7 +309,7 @@ public class MuteDecoder implements Decoder {
 
     public void seek(long targetUs) {
         synchronized(seekLock) {
-            print("Seeking to", targetUs, "µs");
+            // print("Seeking to", targetUs, "µs");
 
             FFmpeg.seek(pipePtr, targetUs);
     
@@ -322,7 +322,7 @@ public class MuteDecoder implements Decoder {
 
     public void seekWithoutClearingBuffer(long targetUs) {
         synchronized(seekLock) {
-            print("Seeking to", targetUs, "µs");
+            // print("Seeking to", targetUs, "µs");
             FFmpeg.seek(pipePtr, targetUs);
         }
     }
@@ -368,7 +368,7 @@ public class MuteDecoder implements Decoder {
     }
     
     public void setPlayMode(PlayMode newMode) {
-        print("Setting Mode", newMode);
+        // print("Setting Mode", newMode);
         this.OLD_PLAY_MODE = this.PLAY_MODE;
         this.PLAY_MODE = newMode;
     }
