@@ -145,7 +145,7 @@ public class VideoUtils {
     public static float getSoundVolumeMult() {
         try {
             String spl = ((String)prefsGetHandle.invoke(prefs, "gameplaySettings", "{}")).split("soundVolume")[1].split(",")[0].split(":")[1];
-            return Float.valueOf(spl);
+            return Float.parseFloat(spl);
         } catch (Throwable ignored) {
             return 1f;
         }
