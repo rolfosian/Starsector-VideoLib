@@ -3,9 +3,10 @@ package data.scripts.util;
 import data.scripts.projector.PlanetProjector.PlanetTexType;
 
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodType;
-
+import java.lang.invoke.VarHandle;
 import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -72,7 +73,7 @@ public class TexReflection {
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
     
-    private static final MethodHandle constructorNewInstanceHandle;
+    // private static final MethodHandle constructorNewInstanceHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
 
     static {
@@ -86,7 +87,7 @@ public class TexReflection {
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
 
-            constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
+            // constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
 
         } catch (Exception e) {
@@ -145,180 +146,184 @@ public class TexReflection {
         }
     }
 
-    public static Object spriteTextureField;
-    public static Object spriteTextureIdField;
+    public static VarHandle spriteTextureVarHandle;
+    public static VarHandle spriteTextureIdVarHandle;
 
-    public static Object ringBandTextureField;
+    public static VarHandle ringBandTextureVarHandle;
 
-    public static Object planetListToken1Field;
-    public static Object planetListToken2Field;
-    public static Object planetListToken3Field;
-    public static Object planetListToken4Field;
-    public static Object planetListToken5Field;
+    public static VarHandle planetListToken1VarHandle;
+    public static VarHandle planetListToken2VarHandle;
+    public static VarHandle planetListToken3VarHandle;
+    public static VarHandle planetListToken4VarHandle;
+    public static VarHandle planetListToken5VarHandle;
 
-    public static Object campaignPlanetGraphicsField;
-    public static Object campaignPlanetSpecField;
+    public static VarHandle campaignPlanetGraphicsVarHandle;
+    public static VarHandle campaignPlanetSpecVarHandle;
 
-    public static Object texClassCtor;
-    public static Object texObjectIdField;
-    public static Object texObjectGLBindField;
+    public static MethodHandle texClassCtorHandle;
+    public static VarHandle texObjectIdVarHandle;
+    public static VarHandle texObjectGLBindVarHandle;
 
     /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class (and also pretty much everything else it appears) pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
 
     static {
         try {
+            Lookup privateLookup = MethodHandles.privateLookupIn(Sprite.class, lookup);
+            Class<?> textureClass = null;
 
+            outer:
             for (Object field : Sprite.class.getDeclaredFields()) {
-                switch(getFieldName(field)) {
-                    case "texture":
-                        spriteTextureField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
-                    
-                    case "textureId":
-                        spriteTextureIdField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
-                    
-                    default:
-                        break;
-                }
-            }
-
-            for (Object field : RingBand.class.getDeclaredFields()) {
                 if (getFieldName(field).equals("texture")) {
-                    ringBandTextureField = field;
-                    setFieldAccessibleHandle.invoke(field, true);
-                    break;
-                }
-            }
+                    textureClass = getFieldType(field);
 
-            for (Object field : CampaignPlanet.class.getDeclaredFields()) {
-                switch(getFieldName(field)) {
-                    case "graphics":
-                        campaignPlanetGraphicsField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-
-                    case "spec":
-                        campaignPlanetSpecField = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    default:
-                        continue;
-                }
-            }
-
-            for (Object field : Planet.class.getDeclaredFields()) {
-                switch (getFieldName(field)) {
-                    case "planetTex":
-                        for (Object ctor : getFieldType(field).getConstructors()) {
-                            if (((Class[])getConstructorParameterTypesHandle.invoke(ctor)).length == 2) {
-                                texClassCtor = ctor;
-                                break;
-                            }
+                    for (Object ctor : textureClass.getConstructors()) {
+                        Class<?>[] paramTypes = (Class[]) getConstructorParameterTypesHandle.invoke(ctor);
+                        if (paramTypes.length == 2) {
+                            texClassCtorHandle = lookup.findConstructor(textureClass, MethodType.methodType(void.class, paramTypes[0], paramTypes[1]));
+                            break outer;
                         }
-
-                        PlanetTexType.PLANET = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "cloudTex":
-                        PlanetTexType.CLOUD = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "shieldTex":
-                        PlanetTexType.SHIELD = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-
-                    case "shieldTex2":
-                        PlanetTexType.SHIELD2 = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "atmosphereTex":
-                        PlanetTexType.ATMOSPHERE = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    case "glowTex":
-                        PlanetTexType.GLOW = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-
-                    case "listToken1":
-                        planetListToken1Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                        
-                    case "listToken2":
-                        planetListToken2Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                        
-                    case "listToken3":
-                        planetListToken3Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                        
-                    case "listToken4":
-                        planetListToken4Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                        
-                    case "listToken5":
-                        planetListToken5Field = field;
-                        setFieldAccessibleHandle.invoke(field, true);
-                        continue;
-                    
-                    default:
-                        continue;
+                    }
                 }
             }
 
-            for (Object field : PlanetSpec.class.getDeclaredFields()) {
-                switch(getFieldName(field)) {
-                    case "texture":
-                        PlanetTexType.FIELD_MAP.put(PlanetTexType.PLANET, field);
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
+            spriteTextureVarHandle = privateLookup.findVarHandle(
+                Sprite.class,
+                "texture",
+                textureClass
+            );
+            spriteTextureIdVarHandle = privateLookup.findVarHandle(
+                Sprite.class,
+                "textureId",
+                String.class
+            );
 
-                    case "cloudTexture":
-                        PlanetTexType.FIELD_MAP.put(PlanetTexType.CLOUD, field);
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
+            privateLookup = MethodHandles.privateLookupIn(RingBand.class, lookup);
+            ringBandTextureVarHandle = privateLookup.findVarHandle(
+                RingBand.class,
+                "texture",
+                textureClass
+            );
 
-                    case "glowTexture":
-                        PlanetTexType.FIELD_MAP.put(PlanetTexType.GLOW, field);
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
+            privateLookup = MethodHandles.privateLookupIn(CampaignPlanet.class, lookup);
+            campaignPlanetGraphicsVarHandle = privateLookup.findVarHandle(
+                CampaignPlanet.class,
+                "graphics",
+                Planet.class
+            );
+            campaignPlanetSpecVarHandle = privateLookup.findVarHandle(
+                CampaignPlanet.class,
+                "spec",
+                PlanetSpec.class
+            );
 
-                    case "shieldTexture":
-                        PlanetTexType.FIELD_MAP.put(PlanetTexType.SHIELD, field);
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
-                        
-                    case "shieldTexture2":
-                        PlanetTexType.FIELD_MAP.put(PlanetTexType.SHIELD2, field);
-                        setFieldAccessibleHandle.invoke(field, true);
-                        break;
-                }
-            }
+            privateLookup = MethodHandles.privateLookupIn(Planet.class, lookup);
+            planetListToken1VarHandle = privateLookup.findVarHandle(
+                Planet.class,
+                "listToken1",
+                GLListToken.class
+            );
+            planetListToken2VarHandle = privateLookup.findVarHandle(
+                Planet.class,
+                "listToken2",
+                GLListToken.class
+            );
+            planetListToken3VarHandle = privateLookup.findVarHandle(
+                Planet.class,
+                "listToken3",
+                GLListToken.class
+            );
+            planetListToken4VarHandle = privateLookup.findVarHandle(
+                Planet.class,
+                "listToken4",
+                GLListToken.class
+            );
+            planetListToken5VarHandle = privateLookup.findVarHandle(
+                Planet.class,
+                "listToken5",
+                GLListToken.class
+            );
 
+            PlanetTexType.PLANET = privateLookup.findVarHandle(
+                Planet.class,
+                "planetTex",
+                textureClass
+            );
+            PlanetTexType.CLOUD = privateLookup.findVarHandle(
+                Planet.class,
+                "cloudTex",
+                textureClass
+            );
+            PlanetTexType.SHIELD = privateLookup.findVarHandle(
+                Planet.class,
+                "shieldTex",
+                textureClass
+            );
+            PlanetTexType.SHIELD2 = privateLookup.findVarHandle(
+                Planet.class,
+                "shieldTex2",
+                textureClass
+            );
+            PlanetTexType.ATMOSPHERE = privateLookup.findVarHandle(
+                Planet.class,
+                "atmosphereTex",
+                textureClass
+            );
+            PlanetTexType.GLOW = privateLookup.findVarHandle(
+                Planet.class,
+                "glowTex",
+                textureClass
+            );
+
+            privateLookup = MethodHandles.privateLookupIn(PlanetSpec.class, lookup);
+
+            PlanetTexType.VARHANDLE_MAP.put(PlanetTexType.PLANET, privateLookup.findVarHandle(
+                PlanetSpec.class,
+                "texture",
+                String.class
+            ));
+            PlanetTexType.VARHANDLE_MAP.put(PlanetTexType.CLOUD, privateLookup.findVarHandle(
+                PlanetSpec.class,
+                "cloudTexture",
+                String.class
+            ));
+            PlanetTexType.VARHANDLE_MAP.put(PlanetTexType.SHIELD, privateLookup.findVarHandle(
+                PlanetSpec.class,
+                "shieldTexture",
+                String.class
+            ));
+            PlanetTexType.VARHANDLE_MAP.put(PlanetTexType.SHIELD2, privateLookup.findVarHandle(
+                PlanetSpec.class,
+                "shieldTexture2",
+                String.class
+            ));
+            PlanetTexType.VARHANDLE_MAP.put(PlanetTexType.GLOW, privateLookup.findVarHandle(
+                PlanetSpec.class,
+                "glowTexture",
+                String.class
+            ));
+
+            privateLookup = MethodHandles.privateLookupIn(textureClass, lookup);
             Object textObj = instantiateTexObj(69, 420);
-            for (Object field : textObj.getClass().getDeclaredFields()) {
+
+            for (Object field : textureClass.getDeclaredFields()) {
                 if (getFieldTypeHandle.invoke(field).equals(int.class)) {
                     setFieldAccessibleHandle.invoke(field, true);
                     int value = (int) getFieldHandle.invoke(field, textObj);
 
                     if (value == 420) {
-                        texObjectIdField = field;
+                        texObjectIdVarHandle = privateLookup.findVarHandle(
+                            textureClass,
+                            getFieldName(field),
+                            int.class
+                        );
+
                     } else if (value == 69) {
-                        texObjectGLBindField = field;
+                        texObjectGLBindVarHandle = privateLookup.findVarHandle(
+                            textureClass,
+                            getFieldName(field),
+                            int.class
+                        );
                     }
                 }
             }
@@ -365,15 +370,15 @@ public class TexReflection {
 
     public static Planet getPlanetFromCampaignPlanet(PlanetAPI campaignPlanet) {
         try {
-            return (Planet) getFieldHandle.invoke(campaignPlanetGraphicsField, campaignPlanet);
+            return (Planet) campaignPlanetGraphicsVarHandle.get(campaignPlanet);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static void setPlanetSpecTextureId(Object field, String id, PlanetSpec spec) {
+    public static void setPlanetSpecTextureId(VarHandle handle, String id, PlanetSpec spec) {
         try {
-            setFieldHandle.invoke(field, spec, id);
+            if (handle != null) handle.set(spec, id);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -381,23 +386,23 @@ public class TexReflection {
 
     public static void setPlanetSpec(PlanetAPI campaignPlanet, PlanetSpec spec) {
         try {
-            setFieldHandle.invoke(campaignPlanetSpecField, campaignPlanet, spec);
+            campaignPlanetSpecVarHandle.set(campaignPlanet, spec);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Object getPlanetTex(Planet planet, Object texField) {
+    public static Object getPlanetTex(Planet planet, VarHandle texVarHandle) {
         try {
-            return getFieldHandle.invoke(texField, planet);
+            return texVarHandle.get(planet);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Object setPlanetTex(Planet planet, Object texField, Object texObj) {
+    public static void setPlanetTex(Planet planet, VarHandle texVarHandle, Object texObj) {
         try {
-            return setFieldHandle.invoke(texField, planet, texObj);
+            texVarHandle.set(planet, texObj);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -405,7 +410,7 @@ public class TexReflection {
 
     public static int getTexObjId(Object texObj) {
         try {
-            return (int) getFieldHandle.invoke(texObjectIdField, texObj);
+            return (int) texObjectIdVarHandle.get(texObj);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -413,7 +418,7 @@ public class TexReflection {
 
     public static void setTexObjId(Object texObj, int id) {
         try {
-            setFieldHandle.invoke(texObjectIdField, texObj, id);
+            texObjectIdVarHandle.set(texObj, id);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -421,11 +426,11 @@ public class TexReflection {
 
     public static void invalidateTokens(Planet planet) {
         try {
-            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken1Field, planet));
-            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken2Field, planet));
-            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken3Field, planet));
-            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken4Field, planet));
-            GLListManager.invalidateList((GLListToken)getFieldHandle.invoke(planetListToken5Field, planet));
+            GLListManager.invalidateList((GLListToken)planetListToken1VarHandle.get(planet));
+            GLListManager.invalidateList((GLListToken)planetListToken2VarHandle.get(planet));
+            GLListManager.invalidateList((GLListToken)planetListToken3VarHandle.get(planet));
+            GLListManager.invalidateList((GLListToken)planetListToken4VarHandle.get(planet));
+            GLListManager.invalidateList((GLListToken)planetListToken5VarHandle.get(planet));
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -433,7 +438,7 @@ public class TexReflection {
 
     public static Object instantiateTexObj(int glBindType, int texId) {
         try {
-            return constructorNewInstanceHandle.invoke(texClassCtor, glBindType, texId);
+            return texClassCtorHandle.invoke(glBindType, texId);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -446,7 +451,7 @@ public class TexReflection {
             Object texObj = getFieldHandle.invoke(field, planet);
             if (texObj == null) return;
 
-            int bindType = (int) getFieldHandle.invoke(texObjectGLBindField, texObj);
+            int bindType = (int) texObjectGLBindVarHandle.get(texObj);
             Console.showMessage("BindType for " + campaignPlanet.getName() + " " + typeName+":" + " " + String.valueOf(bindType));
             print("BindType for", campaignPlanet.getName(), typeName+":", bindType);
 
@@ -468,9 +473,9 @@ public class TexReflection {
         }
     }
 
-    public static void setSpriteTexId(Sprite sprite, Object id) {
+    public static void setSpriteTexId(Sprite sprite, String id) {
         try {
-            setFieldHandle.invoke(spriteTextureIdField, sprite, id);
+            spriteTextureIdVarHandle.set(sprite, id);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -478,7 +483,7 @@ public class TexReflection {
 
     public static String getSpriteTexId(Sprite sprite) {
         try {
-            return (String) getFieldHandle.invoke(spriteTextureIdField, sprite);
+            return (String) spriteTextureIdVarHandle.get(sprite);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -486,7 +491,7 @@ public class TexReflection {
 
     public static void setSpriteTexObj(Sprite sprite, Object texObj) {
         try {
-            setFieldHandle.invoke(spriteTextureField, sprite, texObj);
+            spriteTextureIdVarHandle.set(sprite, texObj);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -494,7 +499,7 @@ public class TexReflection {
 
     public static Object getSpriteTexObj(Sprite sprite) {
         try {
-            return getFieldHandle.invoke(spriteTextureField, sprite);
+            return spriteTextureIdVarHandle.get(sprite);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -502,7 +507,7 @@ public class TexReflection {
 
     public static void setRingBandTexObj(RingBand ringBand, Object texObj) {
         try {
-            setFieldHandle.invoke(ringBandTextureField, ringBand, texObj);
+            ringBandTextureVarHandle.set(ringBand, texObj);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -510,7 +515,7 @@ public class TexReflection {
 
     public static Object getRingBandTexObj(RingBand ringBand) {
         try {
-            return getFieldHandle.invoke(ringBandTextureField, ringBand);
+            return ringBandTextureVarHandle.get(ringBand);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

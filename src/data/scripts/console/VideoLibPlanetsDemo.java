@@ -6,6 +6,7 @@ import data.scripts.projector.PlanetProjector.PlanetTexType;
 import data.scripts.VideoPaths;
 import data.scripts.ffmpeg.FFmpeg;
 
+import java.lang.invoke.VarHandle;
 import java.util.*;
 
 import org.lazywizard.console.BaseCommand;
@@ -38,7 +39,7 @@ public class VideoLibPlanetsDemo implements BaseCommand {
 
         int videoWidth = 0;
         int videoHeight = 0;
-        Object planetTexType = PlanetTexType.SHIELD2;
+        VarHandle planetTexType = PlanetTexType.SHIELD2;
 
         for (String arg : splitArgs) {
             if (arg.startsWith("width:")) {

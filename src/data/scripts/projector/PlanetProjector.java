@@ -1,5 +1,6 @@
 package data.scripts.projector;
 
+import java.lang.invoke.VarHandle;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -60,7 +61,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     private final PlanetAPI campaignPlanet;
     private final Planet planet;
-    private final Object planetTexTypeField;
+    private final VarHandle planetTexTypeVarHandle;
 
     private PlanetSpec ourPlanetSpec;
     private String ourPlanetTexObjId;
@@ -81,9 +82,9 @@ public class PlanetProjector implements EveryFrameScript, Projector {
      * @param width            decoded video width in pixels
      * @param height           decoded video height in pixels
      * @param startVideoUs     initial start position in microseconds
-     * @param planetTexTypeField one of {@link PlanetProjector.PlanetTexType} fields indicating which texture to replace
+     * @param planetTexTypeVarHandle one of {@link PlanetProjector.PlanetTexType} VarHandles indicating which texture to replace
      */
-    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
+    public PlanetProjector(PlanetAPI campaignPlanet, String videoId, int width, int height, long startVideoUs, VarHandle planetTexTypeVarHandle) {
         PlanetProjector possibleProj = (PlanetProjector) campaignPlanet.getMemory().get(PLANET_PROJECTOR_MEM_KEY);
         if (possibleProj != null) possibleProj.finish();
         campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
@@ -92,12 +93,12 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.height = height;
 
         this.campaignPlanet = campaignPlanet;
-        this.planetTexTypeField = planetTexTypeField;
+        this.planetTexTypeVarHandle = planetTexTypeVarHandle;
         this.planet = TexReflection.getPlanetFromCampaignPlanet(campaignPlanet);
 
         this.originalPlanetSpec = (PlanetSpec) campaignPlanet.getSpec();
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
-        if (originalPlanetTexObj != null) this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, originalPlanetTexObj);
+        this.originalPlanetTexObj = planetTexTypeVarHandle.get(planet);
+        if (originalPlanetTexObj != null) this.originalPlanetTexId = TexReflection.getTexObjId(originalPlanetTexObj);
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
@@ -106,7 +107,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
-        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
+        TexReflection.setPlanetSpecTextureId(PlanetTexType.VARHANDLE_MAP.get(planetTexTypeVarHandle), ourPlanetTexObjId,  ourPlanetSpec);
 
         TexReflection.setPlanetSpec(campaignPlanet, ourPlanetSpec);
         planet.setSpec(ourPlanetSpec);
@@ -146,9 +147,9 @@ public class PlanetProjector implements EveryFrameScript, Projector {
      * @param width            decoded video width in pixels
      * @param height           decoded video height in pixels
      * @param startVideoUs     initial start position in microseconds
-     * @param planetTexTypeField one of {@link PlanetProjector.PlanetTexType} fields indicating which texture to replace
+     * @param planetTexTypeVarHandle one of {@link PlanetProjector.PlanetTexType} VarHandles indicating which texture to replace
      */
-    public PlanetProjector(Planet planet, String videoId, int width, int height, long startVideoUs, Object planetTexTypeField) {
+    public PlanetProjector(Planet planet, String videoId, int width, int height, long startVideoUs, VarHandle planetTexTypeVarHandle) {
         PlanetProjector possibleProj = getPossibleProjector(planet);
         if (possibleProj != null) {
             possibleProj.finish();
@@ -158,12 +159,12 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.height = height;
 
         this.campaignPlanet = null;
-        this.planetTexTypeField = planetTexTypeField;
+        this.planetTexTypeVarHandle = planetTexTypeVarHandle;
         this.planet = planet;
 
         this.originalPlanetSpec = planet.getSpec();
-        this.originalPlanetTexObj = TexReflection.getPlanetTex(this.planet, this.planetTexTypeField);
-        if (originalPlanetTexObj != null) this.originalPlanetTexId = (int) TexReflection.getPrivateVariable(TexReflection.texObjectIdField, originalPlanetTexObj);
+        this.originalPlanetTexObj = this.planetTexTypeVarHandle.get(this.planet);
+        if (originalPlanetTexObj != null) this.originalPlanetTexId = TexReflection.getTexObjId(originalPlanetTexObj);
         else this.originalPlanetTexId = 0;
 
         this.ourPlanetSpec = originalPlanetSpec.clone();
@@ -172,7 +173,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.ourPlanetTexObj = TexReflection.instantiateTexObj(GL11.GL_TEXTURE_2D, 0);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
-        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
+        TexReflection.setPlanetSpecTextureId(PlanetTexType.VARHANDLE_MAP.get(planetTexTypeVarHandle), ourPlanetTexObjId,  ourPlanetSpec);
 
         planet.setSpec(ourPlanetSpec);
 
@@ -216,7 +217,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
     }
 
     public void resetPlanetState() {
-        if (originalPlanetTexObj == null) TexReflection.setPrivateVariable(planetTexTypeField, planet, null);
+        if (originalPlanetTexObj == null) planetTexTypeVarHandle.set(planet, null);
         else TexReflection.setTexObjId(this.originalPlanetTexObj, this.originalPlanetTexId);
 
         TexReflection.texObjectMap.remove(ourPlanetTexObjId);
@@ -245,7 +246,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         this.ourPlanetSpec.addTag(ourPlanetTexObjId);
 
         TexReflection.texObjectMap.put(ourPlanetTexObjId, ourPlanetTexObj);
-        TexReflection.setPlanetSpecTextureId(PlanetTexType.FIELD_MAP.get(planetTexTypeField), ourPlanetTexObjId,  ourPlanetSpec);
+        TexReflection.setPlanetSpecTextureId(PlanetTexType.VARHANDLE_MAP.get(planetTexTypeVarHandle), ourPlanetTexObjId,  ourPlanetSpec);
 
         if (campaignPlanet != null) {
             campaignPlanet.getMemory().set(PLANET_PROJECTOR_MEM_KEY, this);
@@ -279,15 +280,15 @@ public class PlanetProjector implements EveryFrameScript, Projector {
 
     /** Pseudo enums for different planet texture fields - This is the last parameter for the PlanetProjector's constructor and what the projector replaces with video frames. They are populated in a static block in TexReflection*/
     public static class PlanetTexType {
-        public static Object PLANET;
-        public static Object CLOUD;
-        public static Object SHIELD;
-        public static Object SHIELD2;
-        public static Object ATMOSPHERE;
-        public static Object GLOW;
+        public static VarHandle PLANET;
+        public static VarHandle CLOUD;
+        public static VarHandle SHIELD;
+        public static VarHandle SHIELD2;
+        public static VarHandle ATMOSPHERE;
+        public static VarHandle GLOW;
 
         // Maps from Planet fields to PlanetSpec fields
-        public static final Map<Object, Object> FIELD_MAP = new HashMap<>();
+        public static final Map<VarHandle, VarHandle> VARHANDLE_MAP = new HashMap<>();
     }
 
     public Object getOurTexObject() {
@@ -306,8 +307,8 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         return this.ourPlanetSpec;
     }
 
-    public Object getTexType() {
-        return this.planetTexTypeField;
+    public VarHandle getTexType() {
+        return this.planetTexTypeVarHandle;
     }
 
     public String getVideoId() {
@@ -386,6 +387,7 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         return null;
     }
 
+    @Override
     public VideoProjectorSpeakers getSpeakers() {
         return null;
     }
