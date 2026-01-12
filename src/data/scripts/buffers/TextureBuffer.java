@@ -154,7 +154,10 @@ public class TextureBuffer implements TexBuffer {
     // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
     protected int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
         if (frameBuffer == null) return -1;
+
         int textureId = GL11.glGenTextures();
+        int previousAlignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
+
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, width, height, 0,
@@ -162,6 +165,7 @@ public class TextureBuffer implements TexBuffer {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, previousAlignment);
 
         activeTextures++;
         return textureId;
