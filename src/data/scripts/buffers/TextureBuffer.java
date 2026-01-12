@@ -149,6 +149,7 @@ public class TextureBuffer implements TexBuffer {
         if (frameBuffer == null) return -1;
         int textureId = GL11.glGenTextures();
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, width, height, 0,
                           GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, frameBuffer);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
