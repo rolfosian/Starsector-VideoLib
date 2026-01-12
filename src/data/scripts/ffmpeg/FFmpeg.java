@@ -17,6 +17,7 @@ public class FFmpeg {
         logger.error(sb.toString());
     }
 
+    public static int AUDIO_SAMPLE_RATE;
     public static final Cleaner cleaner = Cleaner.create();
 
     public static final int AVERROR_BSF_NOT_FOUND      = -1179861752;
