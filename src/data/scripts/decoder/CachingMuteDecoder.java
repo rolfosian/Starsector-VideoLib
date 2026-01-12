@@ -108,7 +108,7 @@ public class CachingMuteDecoder implements Decoder {
         while (timeAccumulator >= spf) {
             timeAccumulator -= spf;
             
-            TextureFrame texture = textureBuffer.popFront(width, height);
+            TextureFrame texture = textureBuffer.pop(width, height);
 
             if (texture != null) {
                 if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
@@ -126,7 +126,7 @@ public class CachingMuteDecoder implements Decoder {
         
         while (textureBuffer.isEmpty()) sleep(1); 
 
-        TextureFrame texture = textureBuffer.popFront(width, height);
+        TextureFrame texture = textureBuffer.pop(width, height);
 
         if (texture != null) {
             int oldTextureId = currentVideoTextureId;

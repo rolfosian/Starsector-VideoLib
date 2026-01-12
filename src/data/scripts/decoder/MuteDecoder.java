@@ -191,7 +191,7 @@ public class MuteDecoder implements Decoder {
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
                 
-                TextureFrame texture = textureBuffer.popFront(width, height);
+                TextureFrame texture = textureBuffer.pop(width, height);
 
                 if (texture != null) {
                     switched = true;
@@ -220,7 +220,7 @@ public class MuteDecoder implements Decoder {
         while (textureBuffer.isEmpty()) sleep(1); 
 
         synchronized(textureBuffer) {
-            TextureFrame texture = textureBuffer.popFront(width, height);
+            TextureFrame texture = textureBuffer.pop(width, height);
 
             if (texture != null) {
                 int oldTextureId = currentVideoTextureId;
