@@ -56,8 +56,15 @@ public class FFmpeg {
         print(getErrorMessage(ptr));
     }
 
+    public static void printError(int errorCode) {
+        print(getErrorMessage(errorCode));
+    }
+
     public static String getErrorMessage(long ptr) {
-        int errorCode = getErrorStatus(ptr);
+        return getErrorMessage(getErrorStatus(ptr));
+    }
+
+    public static String getErrorMessage(int errorCode) {
         switch (errorCode) {
             case AVERROR_EOF:
                 return "End of file";
