@@ -11,4 +11,8 @@ public class AudioFrame extends Frame {
         this.size = size;
         this.samplesPerChannel = samplesPerChannel;
     }
+
+    public long durationMillis() {
+        return (samplesPerChannel * 1000L) / FFmpeg.AUDIO_SAMPLE_RATE;
+    }
 }
