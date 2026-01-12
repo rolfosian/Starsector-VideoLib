@@ -20,7 +20,7 @@ public class CachingTextureBuffer extends TextureBuffer {
     }
 
     @Override
-    public TextureFrame popFront(int width, int height) {
+    public TextureFrame pop(int width, int height) {
         if (isEmpty()) return null;
     
         TextureFrame currentFrame = textures[currentFrameIndex];

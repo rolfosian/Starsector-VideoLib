@@ -56,9 +56,16 @@ public class TextureBuffer implements TexBuffer {
         size++;
     }
 
+    // Should only be called if size > 0
+    public long peekPts() {
+        TextureFrame texFrame = textures[head];
+        if (texFrame != null) return texFrame.pts;
+        return videoFrames[head].pts;
+    }
+
     // remember to glDeleteTextures with removed.id later (and only call this on the main thread)
-    public TextureFrame popFront(int width, int height) {
-        if (isEmpty()) return null;
+    public TextureFrame pop(int width, int height) {
+        if (size == 0) return null;
         TextureFrame removed = textures[head];
 
         if (removed == null && videoFrames[head] != null) {
