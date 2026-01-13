@@ -39,9 +39,24 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         logger.info(sb.toString());
     }
 
-    private static final int NUM_BUFFERS = 2;
+    // cant stand this shit
+    // why cant you just tightly couple to the hardware clock like a normal audio
+    private static final boolean IS_LINUX = FFmpeg.IS_LINUX;
+    private static final double SYNC_THRESHOLD = 0.035;
+    private static final double NOSYNC_THRESHOLD = 2.0;
+    private static final float MAX_PITCH_ADJUSTMENT = 0.025f;
+    private static final float PITCH_SMOOTHING = 0.1f;
 
-    private boolean isDone;
+    private static final int NUM_BUFFERS = IS_LINUX ? 6 : 3;
+
+    private boolean isDone = false;
+
+    @FunctionalInterface
+    private interface StreamUpdateDelegate {
+        void update(float deltaTime);
+    }
+
+    private final StreamUpdateDelegate updateDelegate;
 
     private final Projector videoProjector;
     private final Decoder decoder;
@@ -53,6 +68,9 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     private boolean finished = false;
 
     private long currentAudioPts;
+    
+    private double wallClockSeconds;
+    private float currentPitch = 1.0f;
 
     private final int sampleRate;
     private final int channels;
@@ -69,7 +87,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
 
         @Override
-        public void clear() { // idk why it crashes if we straight up call frame.freeBuffer() instead of doing this, nothing else should be holding onto it?
+        public void clear() {
             for (AudioFrame frame : this.values()) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
             super.clear();
         }
@@ -81,7 +99,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
 
         @Override
-        public void clear() { // idk why it crashes if we straight up call frame.freeBuffer() instead of doing this, nothing else should be holding onto it?
+        public void clear() {
             for (AudioFrame frame : this) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
             super.clear();
         }
@@ -106,8 +124,21 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
         this.isDone = false;
         this.currentAudioPts = 0;
+        this.wallClockSeconds = 0;
 
         initOpenAL();
+
+        if (IS_LINUX) {
+            this.updateDelegate = (deltaTime) -> {
+                wallClockSeconds += deltaTime;
+                syncAudioState(); // I DO NOT LIKE THIS
+                updateStream();
+            };
+        } else {
+            this.updateDelegate = (deltaTime) -> {
+                updateStream();
+            };
+        }
     }
 
     private void initOpenAL() {
@@ -117,6 +148,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
         sourceId = AL10.alGenSources();
         AL10.alSourcef(sourceId, AL10.AL_GAIN, volumeActual);
+        AL10.alSourcef(sourceId, AL10.AL_PITCH, 1.0f);
 
         bufferIds = BufferUtils.createIntBuffer(NUM_BUFFERS);
         AL10.alGenBuffers(bufferIds);
@@ -128,10 +160,6 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     }
 
     private void updateStream() {
-        if (isDone || paused) {
-            return;
-        }
-    
         int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
         for (int i = 0; i < processed; i++) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
@@ -180,12 +208,45 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
     }
 
+    // THANKS LOONIX
+    private void syncAudioState() {
+        if (playingFrames.isEmpty()) return;
+
+        double audioTime = currentAudioPts / 1_000_000.0;
+        double masterTime = wallClockSeconds;
+        double diff = audioTime - masterTime; // Positive: Audio is ahead. Negative: Audio is behind
+
+        if (Math.abs(diff) > NOSYNC_THRESHOLD) {
+            wallClockSeconds = audioTime;
+            diff = 0;
+        }
+
+        float targetPitch = 1.0f;
+
+        if (Math.abs(diff) > SYNC_THRESHOLD) {
+            float correction = (float) (diff * 1.5); 
+            
+            if (correction > MAX_PITCH_ADJUSTMENT) correction = MAX_PITCH_ADJUSTMENT;
+            if (correction < -MAX_PITCH_ADJUSTMENT) correction = -MAX_PITCH_ADJUSTMENT;
+            
+            targetPitch = 1.0f - correction; 
+        }
+
+        // Smooth pitch changes to avoid audio warble
+        currentPitch = currentPitch * (1f - PITCH_SMOOTHING) + targetPitch * PITCH_SMOOTHING;
+
+        if (currentPitch < 0.5f) currentPitch = 0.5f;
+        if (currentPitch > 2.0f) currentPitch = 2.0f;
+
+        AL10.alSourcef(sourceId, AL10.AL_PITCH, currentPitch);
+    }
+
     private AudioFrame getNextFrame() {
         synchronized(audioFrameBuffer) {
             return audioFrameBuffer.pop();
         }
     }
-    
+
     private void prefillBuffers() {
         int buffersToFill = availableBuffers.size();
         for (int i = 0; i < buffersToFill; i++) {
@@ -204,13 +265,14 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
     @Override
     public void advance(float deltaTime, List<InputEventAPI> events) {
-        if (Global.getCurrentState() != GameState.COMBAT) return;
-        updateStream();
+        if (Global.getCurrentState() != GameState.COMBAT || paused || isDone) return;
+        this.updateDelegate.update(deltaTime);
     }
 
     @Override
     public void advance(float deltaTime) {
-        updateStream();
+        if (paused || isDone) return;
+        this.updateDelegate.update(deltaTime);
     }
 
     @Override
@@ -218,6 +280,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         paused = false;
         isDone = false;
         currentAudioPts = 0;
+        wallClockSeconds = 0;
+        currentPitch = 1.0f;
 
         prefillBuffers();
 
@@ -226,7 +290,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         Global.getSector().addTransientScript(this);
         Global.getCombatEngine().addPlugin(this);
     }
-    
+
     @Override
     public synchronized void play() {
         unpause();
@@ -266,7 +330,11 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
         bufferToFrame.clear();
         playingFrames.clear();
+
         currentAudioPts = 0;
+        currentPitch = 1.0f;
+        wallClockSeconds = 0;
+        AL10.alSourcef(sourceId, AL10.AL_PITCH, 1.0f);
     }
 
     @Override
@@ -304,7 +372,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         Global.getSector().removeTransientScript(this);
         Global.getCombatEngine().removePlugin(this);
     }
-    
+
     @Override
     public int getSourceId() {
         return this.sourceId;
@@ -343,6 +411,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
     @Override
     public void notifySeek(long targetUs) {
-        
+        this.currentAudioPts = targetUs;
+        this.wallClockSeconds = targetUs / 1_000_000.0;
     }
 }
