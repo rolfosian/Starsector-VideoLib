@@ -10,6 +10,8 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 
+import data.scripts.ffmpeg.FFmpeg;
+
 @SuppressWarnings("unchecked")
 public class VideoPaths {
     public static boolean populated = false;
@@ -54,7 +56,10 @@ public class VideoPaths {
                     }
 
                     String relativePath = videoFilePaths.getString(fileId);
-                    videoMap.put(fileId, modPath + "/" + relativePath);
+                    String absolutePath = modPath + "/" + relativePath;
+                    if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
+
+                    videoMap.put(fileId, absolutePath);
                     videoKeyz.add(fileId);
 
                     logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
@@ -71,7 +76,10 @@ public class VideoPaths {
                     }
 
                     String relativePath = imageFilePaths.getString(fileId);
-                    imageMap.put(fileId, modPath + "/" + relativePath);
+                    String absolutePath = modPath + "/" + relativePath;
+                    if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
+
+                    imageMap.put(fileId, absolutePath);
                     imageKeyz.add(fileId);
 
                     logger.info("Resolved absolute path for image file id " + fileId + " at " + modPath + "/" + relativePath);

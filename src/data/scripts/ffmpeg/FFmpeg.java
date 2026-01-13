@@ -17,6 +17,7 @@ public class FFmpeg {
         logger.error(sb.toString());
     }
 
+    public static final boolean IS_LINUX;
     public static int AUDIO_SAMPLE_RATE;
     public static final Cleaner cleaner = Cleaner.create();
 
@@ -132,16 +133,19 @@ public class FFmpeg {
             String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/windows/";
 
             System.load(binDir + "ffmpegjni.dll");  // our bridge
+            IS_LINUX = false;
 
         } else if (osName.startsWith("linux")) {
             String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/linux/";
 
             System.load(binDir + "ffmpegjni.so"); // our bridge
+            IS_LINUX = true;
 
         } else if (osName.startsWith("mac")) {
             String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/mac/";
 
             System.load(binDir + "ffmpegjni.dylib"); // our bridge
+            IS_LINUX = false;
 
         } else {
             throw new UnsupportedOperationException("Unsupported OS: " + osName);
@@ -151,6 +155,7 @@ public class FFmpeg {
     // Native methods
     public static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
     public static native void freeBuffer(ByteBuffer toFree);
+    public static native boolean fileExists(String filePath);
     public static native int[] getWidthAndHeight(String filepath);
 
     // jpeg, png, webp, gif (still frames)

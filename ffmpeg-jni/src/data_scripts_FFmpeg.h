@@ -174,6 +174,9 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isImageRGBA
 JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA
   (JNIEnv *, jclass, jlong);
 
+JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_fileExists
+(JNIEnv *, jclass, jstring);
+
 #ifdef __cplusplus
 }
 #endif

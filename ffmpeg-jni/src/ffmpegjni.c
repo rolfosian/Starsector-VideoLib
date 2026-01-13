@@ -43,7 +43,7 @@ static jclass ObjectClass;
 
 static int AUDIO_DEVICE_SAMPLE_RATE;
 
-JNIEXPORT void JNICALL printe(JNIEnv* env, const char* msg) {
+void printe(JNIEnv* env, const char* msg) {
     jobjectArray args = (*env)->NewObjectArray(env, 1, ObjectClass, NULL);
     jstring jmsg = (*env)->NewStringUTF(env, msg);
 
@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
 
     AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
-    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;IJ)V");
+    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
 
     jclass localFFmpeg = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
     FFmpegClass = (*env)->NewGlobalRef(env, localFFmpeg);
@@ -80,6 +80,20 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, j
     if (ptr != NULL) {
         free(ptr);
     }
+}
+
+JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_fileExists(JNIEnv *env, jclass clazz, jstring filePath) {
+    if (!filePath) {
+        return JNI_FALSE;
+    }
+    const char *filename = (*env)->GetStringUTFChars(env, filePath, NULL);
+    if (!filename) {
+        return JNI_FALSE;
+    }
+
+    int test = test_path(filename);
+    (*env)->ReleaseStringUTFChars(env, filePath, filename);
+    return test ? JNI_TRUE : JNI_FALSE;
 }
 
 // for jpeg, png, webp, gif
@@ -1061,7 +1075,6 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *
 
     return (jlong)(intptr_t)ctx;
 }
-
 
 jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
     AVPacket *pkt = av_packet_alloc();
@@ -2236,7 +2249,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     return NULL;
                 }
 
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jlong)pts);
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts);
                 if (!result) {
                     printe(env, "readVpxAlphaChannel: failed to create AudioFrame object");
                     free(copy);
@@ -2448,7 +2461,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     return NULL;
                 }
 
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, buffer_size, (jlong)pts);
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts);
                 if (!result) {
                     printe(env, "read: failed to create AudioFrame object");
                     free(copy);
