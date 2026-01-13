@@ -361,7 +361,7 @@ public class DecoderWithSound implements Decoder {
     }
 
     public void finish() {
-        // print("Stopping DecoderWithSound thread");
+        print("Stopping DecoderWithSound thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
