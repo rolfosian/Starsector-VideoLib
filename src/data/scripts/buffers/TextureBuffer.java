@@ -149,6 +149,7 @@ public class TextureBuffer implements TexBuffer {
         size = 0;
         head = 0;
         tail = 0;
+        activeTextures = 0;
     }
 
     // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
