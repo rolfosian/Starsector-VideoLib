@@ -25,4 +25,6 @@ public interface Speakers {
     public void resetSoundDirection();
 
     public int getSourceId();
+
+    public void notifySeek(long targetUs);
 }

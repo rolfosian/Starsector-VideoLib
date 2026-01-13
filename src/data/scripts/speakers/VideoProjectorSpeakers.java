@@ -1,10 +1,12 @@
 package data.scripts.speakers;
 
-import data.scripts.buffers.AudioFrameBuffer;
-import data.scripts.decoder.Decoder;
 import data.scripts.ffmpeg.AudioFrame;
 import data.scripts.ffmpeg.FFmpeg;
+import data.scripts.buffers.AudioFrameBuffer;
+
+import data.scripts.decoder.Decoder;
 import data.scripts.projector.Projector;
+
 import data.scripts.util.VideoUtils;
 
 import org.lwjgl.BufferUtils;
@@ -26,8 +28,6 @@ import org.apache.log4j.Logger;
 import java.nio.IntBuffer;
 import java.util.*;
 
-
-// TODO: debug audio falling behind video on different machines (works on my machine)
 public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implements Speakers, EveryFrameScript {
     private static final Logger logger = Logger.getLogger(VideoProjectorSpeakers.class);
     public static void print(Object... args) {
@@ -39,7 +39,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         logger.info(sb.toString());
     }
 
-    private static final int NUM_BUFFERS = 4;
+    private static final int NUM_BUFFERS = 2;
 
     private boolean isDone;
 
@@ -131,7 +131,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         if (isDone || paused) {
             return;
         }
-
+    
         int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
         for (int i = 0; i < processed; i++) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
@@ -140,40 +140,40 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
                 continue;
             }
             availableBuffers.offer(bufferId);
-
+    
             AudioFrame stale = bufferToFrame.remove(bufferId);
             if (stale != null) stale.freeBuffer();
-
+    
             playingFrames.poll();
         }
-
+    
         while (!availableBuffers.isEmpty()) {
             AudioFrame frame = getNextFrame();
-            if (frame == null) {
-                break;
-            }
-
+            if (frame == null) break;
+    
             int bufferId = availableBuffers.poll();
             AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
             AL10.alSourceQueueBuffers(sourceId, bufferId);
+    
             bufferToFrame.put(bufferId, frame);
             playingFrames.offer(frame);
         }
-
-        AudioFrame currentFrame = playingFrames.peek();
-        if (currentFrame != null) {
-            float offsetSeconds = AL10.alGetSourcef(sourceId, AL11.AL_SEC_OFFSET);
-            long offsetMillis = (long) (offsetSeconds * 1000f);
-            this.currentAudioPts = currentFrame.pts + offsetMillis;
-        }
-
+    
         int sourceState = AL10.alGetSourcei(sourceId, AL10.AL_SOURCE_STATE);
         int queued = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_QUEUED);
-
+    
         if (sourceState != AL10.AL_PLAYING && !paused && queued > 0) {
             AL10.alSourcePlay(sourceId);
         }
 
+        int sampleOffset = AL10.alGetSourcei(sourceId, AL11.AL_SAMPLE_OFFSET);
+        AudioFrame currentFrame = playingFrames.peek();
+
+        if (currentFrame != null) {
+            long offsetUs = (long) ((sampleOffset / (double) sampleRate) * 1000000.0);
+            currentAudioPts = currentFrame.pts + offsetUs;
+        }
+    
         if (finished && queued == 0) {
             isDone = true;
             stop();
@@ -339,5 +339,10 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     @Override
     public void resetSoundDirection() {
         AL10.alSource3f(sourceId, AL10.AL_POSITION, 0f, 0f, 0f);
+    }
+
+    @Override
+    public void notifySeek(long targetUs) {
+        
     }
 }
