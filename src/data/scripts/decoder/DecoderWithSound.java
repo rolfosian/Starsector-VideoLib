@@ -58,6 +58,7 @@ public class DecoderWithSound implements Decoder {
     private int currentVideoTextureId = 0;
     private long currentVideoPts = 0;
     private long currentAudioPts = 0;
+    private long lastRenderedAudioPts = 0;
 
     public final Projector videoProjector;
     public Speakers speakers;
@@ -88,7 +89,6 @@ public class DecoderWithSound implements Decoder {
 
     private void decodeLoop() {
         // print("DecoderWithSound decodeLoop started");
-
         while (running) {
             if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
                 Frame f = FFmpeg.read(pipePtr);
@@ -257,6 +257,7 @@ public class DecoderWithSound implements Decoder {
         timeAccumulator += deltaTime;
 
         currentAudioPts = speakers.getCurrentAudioPts();
+        if (lastRenderedAudioPts == currentAudioPts) return currentVideoTextureId;
 
         synchronized(textureBuffer) {
             boolean switched = false;
@@ -264,18 +265,16 @@ public class DecoderWithSound implements Decoder {
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
                 
-                TextureFrame texture = textureBuffer.popFront(width, height);
-
+                TextureFrame texture = textureBuffer.pop(width, height);
                 if (texture != null) {
                     switched = true;
-                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
 
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
 
                     while (!textureBuffer.isEmpty() && (currentAudioPts > currentVideoPts) ) {
-                        texture = textureBuffer.popFront(width, height);
-
+                        texture = textureBuffer.pop(width, height);
+                        
                         if (texture != null) {
                             if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
         
@@ -296,6 +295,7 @@ public class DecoderWithSound implements Decoder {
             }
         }
 
+        lastRenderedAudioPts = currentAudioPts;
         return currentVideoTextureId;
     }
 
@@ -303,7 +303,7 @@ public class DecoderWithSound implements Decoder {
         while (textureBuffer.isEmpty()) sleep(1); 
 
         synchronized(textureBuffer) {
-            TextureFrame texture = textureBuffer.popFront(width, height);
+            TextureFrame texture = textureBuffer.pop(width, height);
 
             if (texture != null) {
                 int oldTextureId = currentVideoTextureId;
