@@ -45,8 +45,7 @@ public class MuteVideoPlayer implements VideoPlayer {
         this.projector.setWidth(width);
         this.projector.setHeight(height);
         this.projector.setIsRendering(true);
-
-        if (this.projector.paused()) this.projector.setCurrentTextureId(this.projector.getDecoder().getCurrentVideoTextureId());
+        this.projector.setCurrentTextureId(this.projector.getDecoder().getCurrentVideoTextureId());
     }
 
     @Override
