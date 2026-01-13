@@ -119,11 +119,11 @@ public class MuteVideoProjector extends VideoProjector {
         } else if (this.MODE == PlayMode.PAUSED) {
             this.isRendering = true;
             this.paused = true;
-            this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
+        this.currentTextureId = decoder.getCurrentVideoTextureId();
     }
 
-    private boolean isInBounds(float mouseX, float mouseY) {            
+    private boolean isInBounds(float mouseX, float mouseY) {
         return mouseX >= this.leftBound && mouseX <= this.rightBound &&
                mouseY >= this.topBound && mouseY <= this.bottomBound;
     }
@@ -292,7 +292,6 @@ public class MuteVideoProjector extends VideoProjector {
     }
 
     public void setCurrentTextureId(int id) {
-        if (id == currentTextureId) return;
         this.currentTextureId = id;
     }
 

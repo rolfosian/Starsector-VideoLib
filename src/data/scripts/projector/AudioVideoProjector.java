@@ -128,8 +128,8 @@ public class AudioVideoProjector extends VideoProjector {
         } else if (this.MODE == PlayMode.PAUSED) {
             this.isRendering = true;
             this.paused = true;
-            this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
+        this.currentTextureId = decoder.getCurrentVideoTextureId();
     }
 
     private boolean isInBounds(float mouseX, float mouseY) {            
@@ -313,7 +313,6 @@ public class AudioVideoProjector extends VideoProjector {
     }
 
     public void setCurrentTextureId(int id) {
-        if (id == currentTextureId) return;
         this.currentTextureId = id;
     }
 
