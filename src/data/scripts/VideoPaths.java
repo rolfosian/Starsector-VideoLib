@@ -46,6 +46,8 @@ public class VideoPaths {
                 JSONObject pathData = settings.getJSONObject(modId);
 
                 JSONObject videoFilePaths = pathData.getJSONObject("videos");
+                if (videoFilePaths == null) continue;
+
                 Iterator<String> fileIds = videoFilePaths.keys();
 
                 while (fileIds.hasNext()) {
@@ -66,6 +68,7 @@ public class VideoPaths {
                 }
 
                 JSONObject imageFilePaths = pathData.getJSONObject("images");
+                if (imageFilePaths == null) continue;
                 fileIds = imageFilePaths.keys();
 
                 while (fileIds.hasNext()) {
