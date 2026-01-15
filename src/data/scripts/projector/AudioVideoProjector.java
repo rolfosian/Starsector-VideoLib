@@ -207,20 +207,20 @@ public class AudioVideoProjector extends VideoProjector {
         GL11.glColor4f(1f, 1f, 1f, alphaMult);
     
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0f, 1f);
+        GL11.glTexCoord2f(0f, 0f);
         GL11.glVertex2f(x, y);
     
-        GL11.glTexCoord2f(1f, 1f);
+        GL11.glTexCoord2f(1f, 0f);
         GL11.glVertex2f(x + width, y);
     
-        GL11.glTexCoord2f(1f, 0f);
+        GL11.glTexCoord2f(1f, 1f);
         GL11.glVertex2f(x + width, y + height);
     
-        GL11.glTexCoord2f(0f, 0f);
+        GL11.glTexCoord2f(0f, 1f);
         GL11.glVertex2f(x, y + height);
         GL11.glEnd();
     
-        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glColor4f(1f, 1f, 1f, 1f); // reset color
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
