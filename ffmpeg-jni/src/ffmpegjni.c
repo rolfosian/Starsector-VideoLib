@@ -522,7 +522,27 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, j
         return 0;
     }
     
-    return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
+    return ctx->rgb_type == 1 ? JNI_TRUE : JNI_FALSE;
+}
+
+static void vflip_inplace(AVFrame *frame) {
+    if (!frame) return;
+    
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+    int chroma_shift = desc ? desc->log2_chroma_h : 1; // Default to 1 (like YUV420) if unknown
+
+    for (int i = 0; i < 4; i++) {
+        if (!frame->data[i]) break;
+
+        int plane_h = frame->height;
+
+        if (i == 1 || i == 2) {
+            plane_h = AV_CEIL_RSHIFT(frame->height, chroma_shift);
+        }
+
+        frame->data[i] += (frame->linesize[i] * (plane_h - 1));
+        frame->linesize[i] *= -1;
+    }
 }
 
 // vpx alpha channel is in side data, we need to extract it to then merge and then finally convert to rgba to put in buffer
@@ -591,6 +611,8 @@ static int merge_alpha_frame(JNIEnv *env, FFmpegPipeContext *ctx, AVFrame *alpha
         goto failed;
     }
 
+    vflip_inplace(frame);
+
     sws_scale(ctx->sws_ctx,
               (const uint8_t * const*)frame->data,
               frame->linesize,
@@ -600,6 +622,7 @@ static int merge_alpha_frame(JNIEnv *env, FFmpegPipeContext *ctx, AVFrame *alpha
               dst_linesize);
 
     if (alpha_frame) {
+        vflip_inplace(alpha_frame);
         uint8_t *scaled_alpha_data[4] = { NULL };
         int scaled_alpha_linesize[4];
         
@@ -1293,6 +1316,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
 
             if (ret == AVERROR_EOF) {
                 if (ctx->seeking && last_frame) {
+                    vflip_inplace(ctx->video_frame); 
                     sws_scale(ctx->sws_ctx,
                               (const uint8_t * const *)last_frame->data,
                               last_frame->linesize,
@@ -1358,6 +1382,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                 }
                 ctx->seeking = 0;
                 if (last_frame) av_frame_free(&last_frame);
+
+                vflip_inplace(ctx->video_frame); 
 
                 // convert to RGB
                 sws_scale(ctx->sws_ctx,
@@ -2309,6 +2335,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
             if (ret == AVERROR_EOF) {
                 if (ctx->seeking && last_frame) {
                     // Convert last frame to RGB
+                    vflip_inplace(last_frame);
+
                     sws_scale(ctx->sws_ctx,
                               (const uint8_t * const *)last_frame->data,
                               last_frame->linesize,
@@ -2370,6 +2398,8 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 }
                 ctx->seeking = 0;
                 if (last_frame) av_frame_free(&last_frame);
+
+                vflip_inplace(ctx->video_frame);
 
                 sws_scale(ctx->sws_ctx,
                           (const uint8_t * const *)ctx->video_frame->data,
