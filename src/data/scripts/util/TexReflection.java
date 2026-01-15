@@ -68,6 +68,7 @@ public class TexReflection {
     private static final Class<?> constructorClass;
 
     private static final MethodHandle getFieldTypeHandle;
+    public static final MethodHandle getFieldModifiersHandle;
     private static final MethodHandle setFieldHandle;
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
@@ -86,6 +87,7 @@ public class TexReflection {
             getFieldNameHandle = lookup.findVirtual(fieldClass, "getName", MethodType.methodType(String.class));
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
+            getFieldModifiersHandle = lookup.findVirtual(fieldClass, "getModifiers", MethodType.methodType(int.class));
 
             // constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
@@ -146,6 +148,14 @@ public class TexReflection {
         }
     }
 
+    public static int getFieldModifiers(Object field) throws Throwable {
+        return (int)getFieldModifiersHandle.invoke(field);
+    }
+
+    public static boolean isStatic(int modifiers) {
+        return (modifiers & 8) != 0;
+    }
+
     public static VarHandle spriteTextureVarHandle;
     public static VarHandle spriteTextureIdVarHandle;
 
@@ -160,12 +170,16 @@ public class TexReflection {
     public static VarHandle campaignPlanetGraphicsVarHandle;
     public static VarHandle campaignPlanetSpecVarHandle;
 
+    public static final Class<?> texClass;
+    public static Object texObjectBindMethod;
     public static MethodHandle texClassCtorHandle;
     public static VarHandle texObjectIdVarHandle;
     public static VarHandle texObjectGLBindVarHandle;
 
     /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class (and also pretty much everything else it appears) pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
+
+    private static final VarHandle[] texClassVarHandles;
 
     static {
         try {
@@ -186,6 +200,7 @@ public class TexReflection {
                     }
                 }
             }
+            texClass = textureClass;
 
             spriteTextureVarHandle = privateLookup.findVarHandle(
                 Sprite.class,
@@ -305,28 +320,36 @@ public class TexReflection {
 
             privateLookup = MethodHandles.privateLookupIn(textureClass, lookup);
             Object textObj = instantiateTexObj(69, 420);
+            List<VarHandle> handles = new ArrayList<>();
 
             for (Object field : textureClass.getDeclaredFields()) {
-                if (getFieldTypeHandle.invoke(field).equals(int.class)) {
+                Class<?> type = getFieldType(field);
+                String name = getFieldName(field);
+
+                if (type.equals(int.class)) {
                     setFieldAccessibleHandle.invoke(field, true);
                     int value = (int) getFieldHandle.invoke(field, textObj);
 
                     if (value == 420) {
                         texObjectIdVarHandle = privateLookup.findVarHandle(
                             textureClass,
-                            getFieldName(field),
+                            name,
                             int.class
                         );
 
                     } else if (value == 69) {
                         texObjectGLBindVarHandle = privateLookup.findVarHandle(
                             textureClass,
-                            getFieldName(field),
+                            name,
                             int.class
                         );
                     }
                 }
+                
+                if (isStatic(getFieldModifiers(field))) continue;
+                handles.add(privateLookup.findVarHandle(textureClass, name, type));
             }
+            texClassVarHandles = handles.toArray(new VarHandle[0]);
 
             for (Class<?> cls : getAllObfClasses("fs.common_obf.jar")) {
                 Object[] fields = cls.getDeclaredFields();
@@ -362,7 +385,7 @@ public class TexReflection {
                     break;
                 }
             }
-
+        
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -527,6 +550,10 @@ public class TexReflection {
         for (String textureId : texObjectMap.keySet()) {
             print(textureId);
         }
+    }
+
+    public static void transplantTexFields(Object original, Object destination) {
+        for (VarHandle handle : texClassVarHandles) handle.set(destination, handle.get(original));
     }
 
     public static void init() {}
