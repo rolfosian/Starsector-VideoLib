@@ -490,6 +490,9 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
+
+                            GL11.glEnable(GL11.GL_BLEND);
+                            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
                             GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             GL11.glBegin(GL11.GL_QUADS);
                             
@@ -499,6 +502,8 @@ public class PlayerControlPanel {
                             GL11.glVertex2f(this.v4X, this.v4Y);
                             
                             GL11.glEnd();
+
+                            GL11.glDisable(GL11.GL_BLEND);
                             GL11.glEnable(GL11.GL_TEXTURE_2D);
                             GL11.glColor4f(1f, 1f, 1f, 1f);
                             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
@@ -539,6 +544,9 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
+
+                            GL11.glEnable(GL11.GL_BLEND);
+                            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
                             GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             GL11.glBegin(GL11.GL_QUADS);
                     
@@ -553,6 +561,8 @@ public class PlayerControlPanel {
                             GL11.glVertex2f(rightRect4X, rightRect4Y);
                     
                             GL11.glEnd();
+
+                            GL11.glDisable(GL11.GL_BLEND);
                             GL11.glEnable(GL11.GL_TEXTURE_2D);
                             GL11.glColor4f(1f, 1f, 1f, 1f);
                             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
@@ -594,6 +604,9 @@ public class PlayerControlPanel {
                         public void draw(float alphaMult) {
                             GL11.glPushMatrix();
                             GL11.glDisable(GL11.GL_TEXTURE_2D);
+
+                            GL11.glEnable(GL11.GL_BLEND);
+                            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
                             GL11.glColor4f(playbackButtonSelf.red, playbackButtonSelf.green, playbackButtonSelf.blue, alphaMult);
                             
                             GL11.glBegin(GL11.GL_LINE_STRIP);
@@ -607,6 +620,7 @@ public class PlayerControlPanel {
                             GL11.glVertex2f(this.arrow2X, this.arrow2Y);
                             GL11.glVertex2f(this.arrow3X, this.arrow3Y);
                             GL11.glEnd();
+                            GL11.glDisable(GL11.GL_BLEND);
                             GL11.glEnable(GL11.GL_TEXTURE_2D);
                             GL11.glPopMatrix();
                         }
@@ -943,6 +957,8 @@ public class PlayerControlPanel {
         public void renderBelow(float alphaMult) {
             GL11.glPushMatrix();
             GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         
             GL11.glColor4f(seekLineRed, seekLineGreen, seekLineBlue, alphaMult);
             GL11.glLineWidth(4f);
@@ -952,6 +968,7 @@ public class PlayerControlPanel {
             GL11.glVertex2f(this.seekBarPanelRightBound, this.seekLineY);
             GL11.glEnd();
         
+            GL11.glDisable(GL11.GL_BLEND);
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glPopMatrix();
         }
@@ -1106,6 +1123,8 @@ public class PlayerControlPanel {
         public void renderBelow(float alphaMult) {
             GL11.glPushMatrix();
             GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         
             GL11.glColor4f(seekLineRed, seekLineGreen, seekLineBlue, alphaMult);
             GL11.glLineWidth(3f);
@@ -1115,6 +1134,7 @@ public class PlayerControlPanel {
             GL11.glVertex2f(this.rightBound, this.volLineY);
             GL11.glEnd();
         
+            GL11.glDisable(GL11.GL_BLEND);
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glPopMatrix();
         }
