@@ -6,11 +6,15 @@ import org.json.JSONObject;
 import org.json.JSONException;
 import org.apache.log4j.Logger;
 
+import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 
 import data.scripts.ffmpeg.FFmpeg;
+import data.scripts.projector.Projector;
+import data.scripts.projector.TransientTexProjector;
+import data.scripts.util.TexReflection;
 
 @SuppressWarnings("unchecked")
 public class VideoPaths {
@@ -21,6 +25,9 @@ public class VideoPaths {
 
     private static Map<String, String> imageMap = new HashMap<>();
     private static String[] imageKeys;
+
+    private static Map<String, EveryFrameScript> transientTexOverrides = new HashMap<>();
+    private static EveryFrameScript[] transientTexOverrideArr;
 
     protected static void populate() {
         if (populated) return;
@@ -45,47 +52,83 @@ public class VideoPaths {
                 String modPath = modSpec.getPath();
                 JSONObject pathData = settings.getJSONObject(modId);
 
-                JSONObject videoFilePaths = pathData.getJSONObject("videos");
-                if (videoFilePaths == null) continue;
+                JSONObject videoFilePaths = getJSONObject(modId, pathData, "videos", logger);
+                if (videoFilePaths != null) {
+                    Iterator<String> fileIds = videoFilePaths.keys();
 
-                Iterator<String> fileIds = videoFilePaths.keys();
-
-                while (fileIds.hasNext()) {
-                    String fileId = fileIds.next();
-
-                    if (videoMap.containsKey(fileId)) {
-                        throw new IllegalArgumentException("Duplicate video file ID " + fileId + " for mod id " + modId + " already located at " + videoMap.get(fileId));
+                    while (fileIds.hasNext()) {
+                        String fileId = fileIds.next();
+    
+                        if (videoMap.containsKey(fileId)) {
+                            throw new IllegalArgumentException("Duplicate video file ID " + fileId + " for mod id " + modId + " already located at " + videoMap.get(fileId));
+                        }
+    
+                        String relativePath = videoFilePaths.getString(fileId);
+                        String absolutePath = modPath + "/" + relativePath;
+                        if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
+    
+                        videoMap.put(fileId, absolutePath);
+                        videoKeyz.add(fileId);
+    
+                        logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
                     }
-
-                    String relativePath = videoFilePaths.getString(fileId);
-                    String absolutePath = modPath + "/" + relativePath;
-                    if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
-
-                    videoMap.put(fileId, absolutePath);
-                    videoKeyz.add(fileId);
-
-                    logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
                 }
 
-                JSONObject imageFilePaths = pathData.getJSONObject("images");
-                if (imageFilePaths == null) continue;
-                fileIds = imageFilePaths.keys();
+                JSONObject imageFilePaths = getJSONObject(modId, pathData, "images", logger);
+                if (imageFilePaths != null) {
+                    Iterator<String> fileIds = imageFilePaths.keys();
 
-                while (fileIds.hasNext()) {
-                    String fileId = fileIds.next();
-
-                    if (imageMap.containsKey(fileId)) {
-                        throw new IllegalArgumentException("Duplicate image file ID " + fileId + " for mod id " + modId + " already located at " + imageMap.get(fileId));
+                    while (fileIds.hasNext()) {
+                        String fileId = fileIds.next();
+    
+                        if (imageMap.containsKey(fileId)) {
+                            throw new IllegalArgumentException("Duplicate image file ID " + fileId + " for mod id " + modId + " already located at " + imageMap.get(fileId));
+                        }
+    
+                        String relativePath = imageFilePaths.getString(fileId);
+                        String absolutePath = modPath + "/" + relativePath;
+                        if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
+    
+                        imageMap.put(fileId, absolutePath);
+                        imageKeyz.add(fileId);
+    
+                        logger.info("Resolved absolute path for image file id " + fileId + " at " + modPath + "/" + relativePath);
                     }
+                }
+                
+                JSONObject textureOverrides = getJSONObject(modId, pathData, "textureOverrides", logger);
+                if (textureOverrides != null) {
+                    Iterator<String> texturePaths = textureOverrides.keys();
 
-                    String relativePath = imageFilePaths.getString(fileId);
-                    String absolutePath = modPath + "/" + relativePath;
-                    if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
+                    while (texturePaths.hasNext()) {
+                        String texturePath = texturePaths.next();
+                        JSONObject overrideData = textureOverrides.getJSONObject(texturePath);
+    
+                        String videoId = overrideData.getString("videoId");
+                        int width = overrideData.getInt("width");
+                        int height = overrideData.getInt("height");
+    
+                        if (!TexReflection.texObjectMap.containsKey(texturePath)) {
+                            throw new IllegalArgumentException(texturePath + "not found in Starsector texture repository for video override: " + videoId);
+                        }
+                        if (transientTexOverrides.containsKey(texturePath)) {
+                            throw new IllegalArgumentException("video override already found for texture " + texturePath);
+                        }
+    
+                        Projector ours = TransientTexProjector.instantiator.instantiate(videoId, width, height);
+                        Object original = TexReflection.texObjectMap.get(texturePath);
+                        TexReflection.transplantTexFields(original, ours);
+                        
+                        // for (String k : TexReflection.texObjectMap.keySet()) {
+                        //     if (k.startsWith("graphics/portraits"))
+                        //     TexReflection.texObjectMap.put(k, ours);
+                        // }
 
-                    imageMap.put(fileId, absolutePath);
-                    imageKeyz.add(fileId);
-
-                    logger.info("Resolved absolute path for image file id " + fileId + " at " + modPath + "/" + relativePath);
+                        TexReflection.texObjectMap.put(texturePath, ours);
+                        transientTexOverrides.put(texturePath, (EveryFrameScript)ours);
+    
+                        logger.info("Instantiated transient video override for texture " + texturePath + " using videoId " + videoId);
+                    }
                 }
             }
 
@@ -96,6 +139,7 @@ public class VideoPaths {
         String[] arr = new String[0];
         videoKeys = videoKeyz.toArray(arr);
         imageKeys = imageKeyz.toArray(arr);
+        transientTexOverrideArr = new ArrayList<>(transientTexOverrides.values()).toArray(new EveryFrameScript[0]);
 
         populated = true;
     }
@@ -112,11 +156,28 @@ public class VideoPaths {
         return result;
     }
 
+    public static Projector getTransientTexOverride(String texturePath) {
+        return (Projector) transientTexOverrides.get(texturePath);
+    }
+
+    protected static EveryFrameScript[] getTransientTexOverrides() {
+        return transientTexOverrideArr;
+    }
+
     public static String[] imageKeys() {
         return imageKeys;
     }
 
     public static String[] videoKeys() {
         return videoKeys;
+    }
+
+    private static JSONObject getJSONObject(String modId, JSONObject toGetFrom, String key, Logger logger) {
+        try {
+            return toGetFrom.getJSONObject(key);
+        } catch (JSONException e) {
+            logger.warn("Error for VideoLib path resolution for mod id " + modId + ": ", e);
+            return null;
+        }
     }
 }
