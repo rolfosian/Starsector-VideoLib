@@ -25,6 +25,7 @@ import com.fs.graphics.util.GLListManager.GLListToken;
 
 import org.apache.log4j.Logger;
 import org.lazywizard.console.Console;
+import org.lwjgl.opengl.GL11;
 
 public class TexReflection {
     private static final Logger logger = Logger.getLogger(TexReflection.class);
@@ -66,13 +67,20 @@ public class TexReflection {
 
     private static final Class<?> fieldClass;
     private static final Class<?> constructorClass;
+    private static final Class<?> methodClass;
 
     private static final MethodHandle getFieldTypeHandle;
-    public static final MethodHandle getFieldModifiersHandle;
+    private static final MethodHandle getFieldModifiersHandle;
     private static final MethodHandle setFieldHandle;
     private static final MethodHandle getFieldHandle;
     private static final MethodHandle getFieldNameHandle;
     private static final MethodHandle setFieldAccessibleHandle;
+
+    public static final MethodHandle getMethodNameHandle;
+    public static final MethodHandle invokeMethodHandle;
+    public static final MethodHandle getModifiersHandle;
+    public static final MethodHandle getParameterTypesHandle;
+    public static final MethodHandle getReturnTypeHandle;
     
     // private static final MethodHandle constructorNewInstanceHandle;
     private static final MethodHandle getConstructorParameterTypesHandle;
@@ -81,6 +89,7 @@ public class TexReflection {
         try {
             fieldClass = Class.forName("java.lang.reflect.Field", false, Class.class.getClassLoader());
             constructorClass = Class.forName("java.lang.reflect.Constructor", false, Class.class.getClassLoader());
+            methodClass = Class.forName("java.lang.reflect.Method", false, Class.class.getClassLoader());
 
             setFieldHandle = lookup.findVirtual(fieldClass, "set", MethodType.methodType(void.class, Object.class, Object.class));
             getFieldHandle = lookup.findVirtual(fieldClass, "get", MethodType.methodType(Object.class, Object.class));
@@ -88,6 +97,12 @@ public class TexReflection {
             getFieldTypeHandle = lookup.findVirtual(fieldClass, "getType", MethodType.methodType(Class.class));
             setFieldAccessibleHandle = lookup.findVirtual(fieldClass, "setAccessible", MethodType.methodType(void.class, boolean.class));
             getFieldModifiersHandle = lookup.findVirtual(fieldClass, "getModifiers", MethodType.methodType(int.class));
+
+            getMethodNameHandle = lookup.findVirtual(methodClass, "getName", MethodType.methodType(String.class));
+            getModifiersHandle = lookup.findVirtual(methodClass, "getModifiers", MethodType.methodType(int.class));
+            getParameterTypesHandle = lookup.findVirtual(methodClass, "getParameterTypes", MethodType.methodType(Class[].class));
+            getReturnTypeHandle = lookup.findVirtual(methodClass, "getReturnType", MethodType.methodType(Class.class));
+            invokeMethodHandle = lookup.findVirtual(methodClass, "invoke", MethodType.methodType(Object.class, Object.class, Object[].class));
 
             // constructorNewInstanceHandle = lookup.findVirtual(constructorClass, "newInstance", MethodType.methodType(Object.class, Object[].class));
             getConstructorParameterTypesHandle = lookup.findVirtual(constructorClass, "getParameterTypes", MethodType.methodType(Class[].class));
@@ -156,6 +171,37 @@ public class TexReflection {
         return (modifiers & 8) != 0;
     }
 
+    public static boolean isPublic(int modifiers) {
+        return (modifiers & 1) != 0;
+    }
+
+    public static String getTexBindMethodName() {
+        if (texObjectBindMethodName != null) return texObjectBindMethodName;
+        Object texWrapper = instantiateTexObj(GL11.GL_TEXTURE_2D, 42069);
+
+        try {
+
+            for (Object method : texWrapper.getClass().getDeclaredMethods()) {
+                Class<?> returnType = (Class<?>) getReturnTypeHandle.invoke(method);
+                Class<?>[] paramTypes = (Class<?>[]) getParameterTypesHandle.invoke(method);
+
+                if ((returnType.equals(void.class)) && paramTypes.length == 0 && isPublic((int)getModifiersHandle.invoke(method))) {
+                    invokeMethodHandle.invoke(method, texWrapper);
+
+                    if (GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D) == 42069) {
+                        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+
+                        return (String) getMethodNameHandle.invoke(method);
+                    }
+                }
+            }
+            return null;
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static VarHandle spriteTextureVarHandle;
     public static VarHandle spriteTextureIdVarHandle;
 
@@ -171,7 +217,7 @@ public class TexReflection {
     public static VarHandle campaignPlanetSpecVarHandle;
 
     public static final Class<?> texClass;
-    public static Object texObjectBindMethod;
+    public static final String texObjectBindMethodName;
     public static MethodHandle texClassCtorHandle;
     public static VarHandle texObjectIdVarHandle;
     public static VarHandle texObjectGLBindVarHandle;
@@ -201,6 +247,7 @@ public class TexReflection {
                 }
             }
             texClass = textureClass;
+            texObjectBindMethodName = getTexBindMethodName();
 
             spriteTextureVarHandle = privateLookup.findVarHandle(
                 Sprite.class,
