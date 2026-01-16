@@ -89,7 +89,7 @@ public class MuteDecoder implements Decoder {
                         return;
                     }
 
-                    if (!(this.PLAY_MODE == PlayMode.SEEKING)) {
+                    if (this.PLAY_MODE != PlayMode.SEEKING) {
                         synchronized(seekLock) {
                             if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
                                 PlayerControlPanel controlPanel = videoProjector.getControlPanel();
