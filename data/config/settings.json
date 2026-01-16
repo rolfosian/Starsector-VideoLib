@@ -5,17 +5,27 @@
                 "vl_demo" : "data/videos/jabroni.mp4",
                 "vl_ufos" : "data/videos/ufos.mp4",
                 "vl_ufos_t" : "data/videos/ufos_transparent.webm",
-                "vl_mop" : "data/videos/fred-fred-mopping.gif"
+                "vl_mop" : "data/videos/fred-fred-mopping.gif",
+                "vl_brule" : "data/videos/brule.gif"
             },
 
             "images" : {
                 "vl_jpeg" : "data/videos/jpeg.jpg",
                 "vl_png" : "data/videos/png.png"
+            },
+
+            "textureOverrides" : {
+                "graphics/portraits/roflos.png" : {
+                    "width" : 128,
+                    "height" : 128,
+                    "videoId" : "vl_brule"
+                }
             }
         }
     },
 
     "plugins" : {
+        "vl_CombatPlugin" : "data.scripts.VideoLibCombatPlugin",
         "vl_CombatPlanetChecker" : "data.scripts.planetlistener.CombatPlanetChecker"
     }
 }
