@@ -11,14 +11,13 @@ import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.PlanetAPI;
-import com.fs.starfarer.api.characters.PersonAPI;
 
 import data.scripts.ffmpeg.FFmpeg;
 
 import data.scripts.planetlistener.PlanetProjectorListener;
 import data.scripts.projector.PlanetProjector;
 import data.scripts.projector.Projector;
-
+import data.scripts.projector.TransientTexProjector;
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
@@ -45,6 +44,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
             ALC10.alcGetInteger(device, ALC10.ALC_FREQUENCY, buffer);
             int sampleRate = buffer.get(0);
             FFmpeg.init(sampleRate);
+            FFmpeg.AUDIO_SAMPLE_RATE = sampleRate;
 
         } else {
             FFmpeg.init(0);
@@ -52,8 +52,9 @@ public class VideoLibModPlugin extends BaseModPlugin {
         
         TexReflection.init();
         VideoUtils.init();
-
+        TransientTexProjector.init();
         VideoPaths.populate();
+
         mainThread = Thread.currentThread();
     }
 
@@ -129,6 +130,11 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
+
+        for (EveryFrameScript projector : VideoPaths.getTransientTexOverrides()) {
+            ((Projector)projector).pause();
+        }
+
         if (newGame) return;
 
         Collection<PlanetProjector> projectors = VideoUtils.getPlanetProjectors();
