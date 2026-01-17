@@ -269,6 +269,8 @@ public class DecoderWithSound implements Decoder {
                 if (texture != null) {
                     switched = true;
 
+                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
+
                     currentVideoTextureId = texture.id;
                     currentVideoPts = texture.pts;
 
