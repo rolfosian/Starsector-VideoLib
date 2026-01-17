@@ -34,7 +34,6 @@ jobs:
         run: |
           brew update
           brew install nasm yasm opus libvorbis meson ninja
-
       - name: Build libdav1d (static)
         run: |
           git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
@@ -43,7 +42,6 @@ jobs:
           meson setup --default-library=static --buildtype=release --prefix="${{ github.workspace }}/dav1d-static" ..
           ninja
           ninja install
-
       - name: Fetch FFmpeg source
         run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
       - name: Build FFmpeg (static)
@@ -54,7 +52,6 @@ jobs:
           DAV1D_PREFIX: "${GITHUB_WORKSPACE}/dav1d-static"
         run: |
           export PKG_CONFIG_PATH="${{ github.workspace }}/dav1d-static/lib/pkgconfig:$PKG_CONFIG_PATH"
-
           ./configure \
             --disable-everything \
             --disable-doc \
@@ -80,10 +77,8 @@ jobs:
             --cxx="clang++" \
             --extra-cflags="-fPIC -arch x86_64" \
             --extra-ldflags="-arch x86_64"
-
           make -j"$(sysctl -n hw.ncpu)"
           make install
-
       - name: Debug FFmpeg install
         run: ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
 
@@ -124,7 +119,6 @@ jobs:
             -framework VideoToolbox \
             -framework CoreMedia \
             -framework CoreFoundation
-
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
         with:
