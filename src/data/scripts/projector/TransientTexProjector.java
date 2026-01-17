@@ -22,7 +22,7 @@ import data.scripts.speakers.Speakers;
 import data.scripts.util.TexReflection;
 
 /**
- * Direct subclass of obfuscated Texture class implementing EveryFrameScript, EveryFrameCombatPlugin, and Projector interfaces. Automatically stops and starts itself depending on if it is being rendered or not.
+ * Direct subclass of obfuscated Texture class implementing EveryFrameScript and Projector interfaces. Automatically stops and starts itself depending on if it is being rendered or not.
  */
 public class TransientTexProjector implements Opcodes {
     public static interface TransientTexInstantiator {
