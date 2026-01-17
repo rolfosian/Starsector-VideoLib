@@ -56,10 +56,10 @@ void printe(JNIEnv* env, const char* msg) {
 
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz, jint audioSampleRate) {
     VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame"));
-    VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
+    VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;JJ)V");
 
     AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
-    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;J)V");
+    AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;JJ)V");
 
     jclass localFFmpeg = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
     FFmpegClass = (*env)->NewGlobalRef(env, localFFmpeg);
@@ -74,11 +74,9 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     AUDIO_DEVICE_SAMPLE_RATE = (int) audioSampleRate;
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jobject buffer) {
-    void *ptr = (*env)->GetDirectBufferAddress(env, buffer);
-    
-    if (ptr != NULL) {
-        free(ptr);
+JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jlong ptr) {
+    if (ptr != 0) {
+        free((void *)ptr);
     }
 }
 
@@ -1147,7 +1145,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
             
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
+                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                     ctx->seeking = 0;
                     av_frame_free(&last_alpha_frame);
                     av_frame_free(&last_frame);
@@ -1252,7 +1250,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
                     return NULL;
                 }
                 
-                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                 if (!result) {
                     printe(env, "readVpxAlphaChannelNoSound: failed to create VideoFrame object");
                     free(copy);
@@ -1337,7 +1335,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
             
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
+                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                     ctx->seeking = 0;
                     av_frame_free(&last_frame);
                     pthread_mutex_unlock(&ctx->mutex);
@@ -1414,7 +1412,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
                     return NULL;
                 }
                 
-                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                 if (!result) {
                     printe(env, "readFrameNoSound: failed to create VideoFrame object");
                     free(copy);
@@ -2081,7 +2079,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
             
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
+                    jobject result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                     ctx->seeking = 0;
                     av_frame_free(&last_alpha_frame);
                     av_frame_free(&last_frame);
@@ -2186,7 +2184,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     return NULL;
                 }
                 
-                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                 if (!result) {
                     printe(env, "readVpxAlphaChannel: failed to create VideoFrame object");
                     free(copy);
@@ -2275,7 +2273,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
                     return NULL;
                 }
 
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                 if (!result) {
                     printe(env, "readVpxAlphaChannel: failed to create AudioFrame object");
                     free(copy);
@@ -2357,7 +2355,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
 
                     jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                    jobject videoResult = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts);
+                    jobject videoResult = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)last_frame->pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
 
                     ctx->seeking = 0;
                     av_frame_free(&last_frame);
@@ -2420,7 +2418,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                 memcpy(copy, ctx->rgb_buffer, ctx->rgb_size);
 
                 jobject byteBuffer = (*env)->NewDirectByteBuffer(env, copy, ctx->rgb_size);
-                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, VideoFrameClass, VideoFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
 
                 av_frame_unref(ctx->video_frame);
                 pthread_mutex_unlock(&ctx->mutex);
@@ -2491,7 +2489,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
                     return NULL;
                 }
 
-                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts);
+                result = (*env)->NewObject(env, AudioFrameClass, AudioFrameClassCtor, byteBuffer, (jlong)pts, (jlong)(uintptr_t)(*env)->GetDirectBufferAddress(env, byteBuffer));
                 if (!result) {
                     printe(env, "read: failed to create AudioFrame object");
                     free(copy);

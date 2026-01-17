@@ -18,10 +18,10 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg
  * Method:    freeBuffer
- * Signature: ()V
+ * Signature: (J)V
  */
 JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer
-  (JNIEnv *, jclass, jobject);
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     data_scripts_ffmpeg_FFmpeg

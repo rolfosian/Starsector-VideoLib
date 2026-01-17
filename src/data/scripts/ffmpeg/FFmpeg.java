@@ -154,7 +154,7 @@ public class FFmpeg {
 
     // Native methods
     public static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
-    public static native void freeBuffer(ByteBuffer toFree);
+    public static native void freeBuffer(long bufferPtr);
     public static native boolean fileExists(String filePath);
     public static native int[] getWidthAndHeight(String filepath);
 
