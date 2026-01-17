@@ -15,6 +15,7 @@ import org.lwjgl.openal.AL11;
 import org.lwjgl.openal.ALC10;
 import org.lwjgl.openal.ALCcontext;
 import org.lwjgl.openal.ALCdevice;
+import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector2f;
 
 import com.fs.starfarer.api.EveryFrameScript;
@@ -39,12 +40,10 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         logger.info(sb.toString());
     }
 
-    // cant stand this shit
-    // why cant you just tightly couple to the hardware clock like a normal audio
     private static final boolean IS_LINUX = FFmpeg.IS_LINUX;
-    private static final double SYNC_THRESHOLD = 0.035;
-    private static final double NOSYNC_THRESHOLD = 2.0;
-    private static final float MAX_PITCH_ADJUSTMENT = 0.025f;
+    private static final double SYNC_THRESHOLD = 0.02;
+    private static final double NOSYNC_THRESHOLD = 1.0;
+    private static final float MAX_PITCH_ADJUSTMENT = 0.03f;
     private static final float PITCH_SMOOTHING = 0.1f;
 
     private static final int NUM_BUFFERS = IS_LINUX ? 6 : 3;
@@ -57,7 +56,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     }
 
     private final StreamUpdateDelegate updateDelegate;
-
+    
+    private final VideoProjectorSpeakers self = this;
     private final Projector videoProjector;
     private final Decoder decoder;
     private final AudioFrameBuffer audioFrameBuffer;
@@ -81,32 +81,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     private int sourceId;
     private IntBuffer bufferIds;
 
-    private class BufferToFrame extends HashMap<Integer, AudioFrame> {
-        public BufferToFrame() {
-            super();
-        }
-
-        @Override
-        public void clear() {
-            for (AudioFrame frame : this.values()) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
-            super.clear();
-        }
-    }
-
-    private class PlayingFrames extends ArrayDeque<AudioFrame> {
-        public PlayingFrames() {
-            super();
-        }
-
-        @Override
-        public void clear() {
-            for (AudioFrame frame : this) FFmpeg.cleaner.register(frame, () -> frame.freeBuffer());
-            super.clear();
-        }
-    }
-
-    private final Map<Integer, AudioFrame> bufferToFrame = new BufferToFrame();
-    private final Queue<AudioFrame> playingFrames = new PlayingFrames();
+    private final Map<Integer, AudioFrame> bufferToFrame = new HashMap<>();
+    private final Queue<AudioFrame> playingFrames = new ArrayDeque<>();
     private final Queue<Integer> availableBuffers;
 
     public VideoProjectorSpeakers(Projector videoProjector, Decoder decoder, AudioFrameBuffer audioFrameBuffer, float volume) {
@@ -128,17 +104,21 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
         initOpenAL();
 
-        if (IS_LINUX) {
+        // if (IS_LINUX) {
             this.updateDelegate = (deltaTime) -> {
-                wallClockSeconds += deltaTime;
-                syncAudioState(); // I DO NOT LIKE THIS
-                updateStream();
+                synchronized(self) {
+                    wallClockSeconds += deltaTime;
+                    updateStream();
+                    syncAudioState(); // I DO NOT LIKE THIS
+                }
             };
-        } else {
-            this.updateDelegate = (deltaTime) -> {
-                updateStream();
-            };
-        }
+        // } else {
+        //     this.updateDelegate = (deltaTime) -> {
+        //         synchronized(this) {
+        //             updateStream();
+        //         }
+        //     };
+        // }
     }
 
     private void initOpenAL() {
@@ -159,7 +139,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
     }
 
-    private void updateStream() {
+    private synchronized void updateStream() {
         int processed = AL10.alGetSourcei(sourceId, AL10.AL_BUFFERS_PROCESSED);
         for (int i = 0; i < processed; i++) {
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
@@ -170,7 +150,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
             availableBuffers.offer(bufferId);
     
             AudioFrame stale = bufferToFrame.remove(bufferId);
-            if (stale != null) stale.freeBuffer();
+            if (stale != null) currentAudioPts = stale.pts;
     
             playingFrames.poll();
         }
@@ -182,6 +162,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
             int bufferId = availableBuffers.poll();
             AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
             AL10.alSourceQueueBuffers(sourceId, bufferId);
+
+            frame.freeBuffer();
     
             bufferToFrame.put(bufferId, frame);
             playingFrames.offer(frame);
@@ -194,12 +176,18 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
             AL10.alSourcePlay(sourceId);
         }
 
-        int sampleOffset = AL10.alGetSourcei(sourceId, AL11.AL_SAMPLE_OFFSET);
         AudioFrame currentFrame = playingFrames.peek();
 
+        // int sampleOffset = AL10.alGetSourcei(sourceId, AL11.AL_SAMPLE_OFFSET);
+        // if (currentFrame != null) {
+        //     long offsetUs = (long) ((sampleOffset / (double) sampleRate) * 1000000.0);
+            // currentAudioPts = currentFrame.pts;
+        // }
+
         if (currentFrame != null) {
-            long offsetUs = (long) ((sampleOffset / (double) sampleRate) * 1000000.0);
-            currentAudioPts = currentFrame.pts + offsetUs;
+            float offsetSeconds = AL10.alGetSourcef(sourceId, AL11.AL_SEC_OFFSET);
+            long offsetMillis = (long) (offsetSeconds * 1000f);
+            this.currentAudioPts = currentFrame.pts + offsetMillis;
         }
     
         if (finished && queued == 0) {
@@ -208,13 +196,14 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         }
     }
 
-    // THANKS LOONIX
-    private void syncAudioState() {
+    private synchronized void syncAudioState() {
         if (playingFrames.isEmpty()) return;
 
         double audioTime = currentAudioPts / 1_000_000.0;
         double masterTime = wallClockSeconds;
         double diff = audioTime - masterTime; // Positive: Audio is ahead. Negative: Audio is behind
+
+        float maxPitchAdjustment = diff > 0 ? 0.005f : MAX_PITCH_ADJUSTMENT;
 
         if (Math.abs(diff) > NOSYNC_THRESHOLD) {
             wallClockSeconds = audioTime;
@@ -226,8 +215,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
         if (Math.abs(diff) > SYNC_THRESHOLD) {
             float correction = (float) (diff * 1.5); 
             
-            if (correction > MAX_PITCH_ADJUSTMENT) correction = MAX_PITCH_ADJUSTMENT;
-            if (correction < -MAX_PITCH_ADJUSTMENT) correction = -MAX_PITCH_ADJUSTMENT;
+            if (correction > maxPitchAdjustment) correction = maxPitchAdjustment;
+            if (correction < -maxPitchAdjustment) correction = -maxPitchAdjustment;
             
             targetPitch = 1.0f - correction; 
         }
@@ -257,6 +246,8 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
 
             AL10.alBufferData(bufferId, format, frame.buffer, sampleRate);
             AL10.alSourceQueueBuffers(sourceId, bufferId);
+
+            frame.freeBuffer();
 
             bufferToFrame.put(bufferId, frame);
             playingFrames.offer(frame);
@@ -319,9 +310,6 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
             int bufferId = AL10.alSourceUnqueueBuffers(sourceId);
             if (AL10.alGetError() != AL10.AL_NO_ERROR) break;
             availableBuffers.offer(bufferId);
-
-            AudioFrame stale = bufferToFrame.remove(bufferId);
-            if (stale != null) stale.freeBuffer();
 
             queued--;
         }
@@ -394,7 +382,7 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     }
 
     @Override
-    public long getCurrentAudioPts() {
+    public synchronized long getCurrentAudioPts() {
         return this.currentAudioPts;
     }
 
@@ -410,8 +398,9 @@ public class VideoProjectorSpeakers extends BaseEveryFrameCombatPlugin implement
     }
 
     @Override
-    public void notifySeek(long targetUs) {
+    public synchronized void notifySeek(long targetUs) {
         this.currentAudioPts = targetUs;
         this.wallClockSeconds = targetUs / 1_000_000.0;
+        this.currentPitch = 1.0f;
     }
 }
