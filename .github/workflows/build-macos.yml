@@ -39,34 +39,46 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/xiph/ogg.git
           cd ogg
+
           ./autogen.sh
-          # --host triggers cross-compilation mode
+
+          export CC="clang"
+          export CXX="clang++"
+          export CFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+          
           ./configure \
             --prefix="$DEPS_PREFIX" \
             --disable-shared \
             --enable-static \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
+            --host=x86_64-apple-darwin
+            
           make -j$(sysctl -n hw.ncpu)
           make install
+
 
       - name: Build libvorbis (static x86_64)
         run: |
           git clone --depth=1 https://github.com/xiph/vorbis.git
           cd vorbis
+          
           ./autogen.sh
           
           sed -i '' 's/-force_cpusubtype_ALL//g' configure
 
+          export CC="clang"
+          export CXX="clang++"
+          export CFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+
           export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+          
           ./configure \
             --prefix="$DEPS_PREFIX" \
             --disable-shared \
             --enable-static \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
+            --host=x86_64-apple-darwin
+            
           make -j$(sysctl -n hw.ncpu)
           make install
 
@@ -74,17 +86,64 @@ jobs:
         run: |
           git clone --depth=1 https://github.com/xiph/opus.git
           cd opus
+          
           ./autogen.sh
+          
+          export CC="clang"
+          export CXX="clang++"
+          export CFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+          
           ./configure \
             --prefix="$DEPS_PREFIX" \
             --disable-shared \
             --enable-static \
             --disable-extra-programs \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
+            --disable-doc \
+            --host=x86_64-apple-darwin
+            
           make -j$(sysctl -n hw.ncpu)
           make install
+
+      - name: Verify Architectures (Strict x86_64)
+        run: |
+          # Define the libraries to check
+          libs=(
+            "$DEPS_PREFIX/lib/libogg.a"
+            "$DEPS_PREFIX/lib/libvorbis.a"
+            "$DEPS_PREFIX/lib/libopus.a"
+            "$DEPS_PREFIX/lib/libdav1d.a"
+          )
+
+          failed=0
+
+          for lib in "${libs[@]}"; do
+            # 1. Check if file exists
+            if [ ! -f "$lib" ]; then
+              echo "::error::File not found: $lib"
+              failed=1
+              continue
+            fi
+
+            # 2. Check architecture
+            # 'lipo -archs' returns just the arch string (e.g., "x86_64" or "arm64")
+            arch=$(lipo -archs "$lib")
+            
+            echo "Checking $lib... Found: '$arch'"
+
+            if [ "$arch" != "x86_64" ]; then
+              echo "::error::Architecture mismatch for $lib! Expected 'x86_64', but found '$arch'."
+              failed=1
+            fi
+          done
+
+          # 3. Fail the job if any library was wrong
+          if [ "$failed" -eq 1 ]; then
+            echo "One or more libraries were not compiled for x86_64."
+            exit 1
+          else
+            echo "Success: All libraries are valid x86_64 binaries."
+          fi
 
       - name: Build libdav1d (static x86_64)
         run: |
