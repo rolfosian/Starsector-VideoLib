@@ -98,7 +98,8 @@ jobs:
           meson setup build \
             --default-library=static \
             --buildtype=release \
-            --prefix="$DEPS_PREFIX"
+            --prefix="$DEPS_PREFIX" \
+            -Dcpu_family=x86_64
 
           ninja -C build
           ninja -C build install
