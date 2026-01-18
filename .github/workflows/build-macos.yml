@@ -35,72 +35,90 @@ jobs:
           brew update
           brew install nasm yasm meson ninja automake autoconf libtool pkg-config
 
-      # - name: Build libogg (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/ogg.git
-      #     cd ogg
-      #     ./autogen.sh
-      #     # --host triggers cross-compilation mode
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+      - name: Build libogg (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/ogg.git
+          cd ogg
+          ./autogen.sh
+          # --host triggers cross-compilation mode
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
-      # - name: Build libvorbis (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/vorbis.git
-      #     cd vorbis
-      #     ./autogen.sh
+      - name: Build libvorbis (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/vorbis.git
+          cd vorbis
+          ./autogen.sh
           
-      #     sed -i '' 's/-force_cpusubtype_ALL//g' configure
+          sed -i '' 's/-force_cpusubtype_ALL//g' configure
 
-      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
-      # - name: Build libopus (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/opus.git
-      #     cd opus
-      #     ./autogen.sh
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --disable-extra-programs \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+      - name: Build libopus (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/opus.git
+          cd opus
+          ./autogen.sh
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --disable-extra-programs \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
       - name: Build libdav1d (static x86_64)
         run: |
           git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
           cd dav1d-src
+          
+          cat <<EOF > x86_64-cross.txt
+          [binaries]
+          c = 'clang'
+          cpp = 'clang++'
+          objc = 'clang'
+          objcpp = 'clang++'
+          ar = 'ar'
+          strip = 'strip'
 
-          export CFLAGS="-arch x86_64"
-          export CXXFLAGS="-arch x86_64"
-          export LDFLAGS="-arch x86_64"
+          [host_machine]
+          system = 'darwin'
+          cpu_family = 'x86_64'
+          cpu = 'x86_64'
+          endian = 'little'
+
+          [built-in options]
+          c_args = ['-arch', 'x86_64']
+          cpp_args = ['-arch', 'x86_64']
+          c_link_args = ['-arch', 'x86_64']
+          cpp_link_args = ['-arch', 'x86_64']
+          EOF
 
           meson setup build \
+            --cross-file x86_64-cross.txt \
+            --buildtype release \
             --default-library=static \
-            --buildtype=release \
-            --prefix="$DEPS_PREFIX" \
-            -Dcpu_family=x86_64
-
+            --prefix="$DEPS_PREFIX"
+            
           ninja -C build
           ninja -C build install
 
