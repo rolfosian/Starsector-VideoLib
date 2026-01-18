@@ -95,45 +95,27 @@ jobs:
           ninja
           ninja install
 
-      # - name: See structure of deps prefix
-      #   run: |
-      #     echo "DEPS_PREFIX=$DEPS_PREFIX"
-      #     find "$DEPS_PREFIX" -print
-
-      # - name: See contents of pkgconfig
-      #   run: |
-      #     echo "DEPS_PREFIX=$DEPS_PREFIX"
-      #     PKG_DIR="$DEPS_PREFIX/lib/pkgconfig"
-          
-      #     if [ -d "$PKG_DIR" ]; then
-      #       for file in "$PKG_DIR"/*; do
-      #         echo "----------------------------------------"
-      #         echo "Contents of: $(basename "$file")"
-      #         echo "----------------------------------------"
-      #         cat "$file"
-      #         echo -e "\n"
-      #       done
-      #     else
-      #       echo "Directory $PKG_DIR does not exist."
-      #     fi
-
-      - name: Copy pkg-config files into FFmpeg prefix
+      - name: See structure of deps prefix
         run: |
           echo "DEPS_PREFIX=$DEPS_PREFIX"
-      
-          SRC_DIR="$DEPS_PREFIX/lib/pkgconfig"
-          DEST_DIR="${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/pkgconfig"
-      
-          echo "Source pkgconfig dir: $SRC_DIR"
-          echo "Destination pkgconfig dir: $DEST_DIR"
-      
-          if [ ! -d "$SRC_DIR" ]; then
-            echo "Source directory does not exist: $SRC_DIR"
-            exit 0
+          find "$DEPS_PREFIX" -print
+
+      - name: See contents of pkgconfig
+        run: |
+          echo "DEPS_PREFIX=$DEPS_PREFIX"
+          PKG_DIR="$DEPS_PREFIX/lib/pkgconfig"
+          
+          if [ -d "$PKG_DIR" ]; then
+            for file in "$PKG_DIR"/*; do
+              echo "----------------------------------------"
+              echo "Contents of: $(basename "$file")"
+              echo "----------------------------------------"
+              cat "$file"
+              echo -e "\n"
+            done
+          else
+            echo "Directory $PKG_DIR does not exist."
           fi
-      
-          mkdir -p "$DEST_DIR"
-          cp -v "$SRC_DIR"/*.pc "$DEST_DIR"/
 
       - name: Fetch FFmpeg source
         run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
@@ -141,7 +123,8 @@ jobs:
       - name: Build FFmpeg (static x86_64)
         working-directory: ffmpeg-src
         run: |
-
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
           ./configure \
             --disable-everything \
             --disable-doc \
@@ -152,7 +135,7 @@ jobs:
             --enable-gpl \
             --enable-static \
             --disable-shared \
-            --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
+            --prefix="$DEPS_PREFIX" \
             --enable-cross-compile \
             --target-os=darwin \
             --arch=x86_64 \
@@ -171,11 +154,11 @@ jobs:
           make -j"$(sysctl -n hw.ncpu)"
           make install
 
-      - name: Debug FFmpeg install
-        run: |
-          ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
-          # Verify the binary is actually x86_64
-          lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
+      # - name: Debug FFmpeg install
+      #   run: |
+      #     ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
+      #     # Verify the binary is actually x86_64
+      #     lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
 
       # - name: Build JNI bridge (ffmpegjni.dylib)
       #   env:
