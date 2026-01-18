@@ -101,10 +101,10 @@ jobs:
           ninja
           ninja install
 
-          - name: See structure of deps prefix
-          run: |
-            echo "DEPS_PREFIX=$DEPS_PREFIX"
-            find "$DEPS_PREFIX" -print
+      - name: See structure of deps prefix
+        run: |
+          echo "DEPS_PREFIX=$DEPS_PREFIX"
+          find "$DEPS_PREFIX" -print
       # - name: Fetch FFmpeg source
       #   run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
