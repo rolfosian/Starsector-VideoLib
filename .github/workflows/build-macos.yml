@@ -35,65 +35,73 @@ jobs:
           brew update
           brew install nasm yasm meson ninja automake autoconf libtool pkg-config
 
-      - name: Build libogg (static x86_64)
-        run: |
-          git clone --depth=1 https://github.com/xiph/ogg.git
-          cd ogg
-          ./autogen.sh
-          # --host triggers cross-compilation mode
-          ./configure \
-            --prefix="$DEPS_PREFIX" \
-            --disable-shared \
-            --enable-static \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
-          make -j$(sysctl -n hw.ncpu)
-          make install
+      # - name: Build libogg (static x86_64)
+      #   run: |
+      #     git clone --depth=1 https://github.com/xiph/ogg.git
+      #     cd ogg
+      #     ./autogen.sh
+      #     # --host triggers cross-compilation mode
+      #     ./configure \
+      #       --prefix="$DEPS_PREFIX" \
+      #       --disable-shared \
+      #       --enable-static \
+      #       --host=x86_64-apple-darwin \
+      #       CFLAGS="-arch x86_64" \
+      #       LDFLAGS="-arch x86_64"
+      #     make -j$(sysctl -n hw.ncpu)
+      #     make install
 
-      - name: Build libvorbis (static x86_64)
-        run: |
-          git clone --depth=1 https://github.com/xiph/vorbis.git
-          cd vorbis
-          ./autogen.sh
+      # - name: Build libvorbis (static x86_64)
+      #   run: |
+      #     git clone --depth=1 https://github.com/xiph/vorbis.git
+      #     cd vorbis
+      #     ./autogen.sh
           
-          sed -i '' 's/-force_cpusubtype_ALL//g' configure
+      #     sed -i '' 's/-force_cpusubtype_ALL//g' configure
 
-          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
-          ./configure \
-            --prefix="$DEPS_PREFIX" \
-            --disable-shared \
-            --enable-static \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
-          make -j$(sysctl -n hw.ncpu)
-          make install
+      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+      #     ./configure \
+      #       --prefix="$DEPS_PREFIX" \
+      #       --disable-shared \
+      #       --enable-static \
+      #       --host=x86_64-apple-darwin \
+      #       CFLAGS="-arch x86_64" \
+      #       LDFLAGS="-arch x86_64"
+      #     make -j$(sysctl -n hw.ncpu)
+      #     make install
 
-      - name: Build libopus (static x86_64)
-        run: |
-          git clone --depth=1 https://github.com/xiph/opus.git
-          cd opus
-          ./autogen.sh
-          ./configure \
-            --prefix="$DEPS_PREFIX" \
-            --disable-shared \
-            --enable-static \
-            --disable-extra-programs \
-            --host=x86_64-apple-darwin \
-            CFLAGS="-arch x86_64" \
-            LDFLAGS="-arch x86_64"
-          make -j$(sysctl -n hw.ncpu)
-          make install
+      # - name: Build libopus (static x86_64)
+      #   run: |
+      #     git clone --depth=1 https://github.com/xiph/opus.git
+      #     cd opus
+      #     ./autogen.sh
+      #     ./configure \
+      #       --prefix="$DEPS_PREFIX" \
+      #       --disable-shared \
+      #       --enable-static \
+      #       --disable-extra-programs \
+      #       --host=x86_64-apple-darwin \
+      #       CFLAGS="-arch x86_64" \
+      #       LDFLAGS="-arch x86_64"
+      #     make -j$(sysctl -n hw.ncpu)
+      #     make install
 
       - name: Build libdav1d (static x86_64)
         run: |
           git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
           cd dav1d-src
-          mkdir build && cd build
-          meson setup --default-library=static --buildtype=release --prefix="$DEPS_PREFIX" ..
-          ninja
-          ninja install
+
+          export CFLAGS="-arch x86_64"
+          export CXXFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+
+          meson setup build \
+            --default-library=static \
+            --buildtype=release \
+            --prefix="$DEPS_PREFIX"
+
+          ninja -C build
+          ninja -C build install
 
       - name: See structure of deps prefix
         run: |
@@ -135,7 +143,7 @@ jobs:
             --enable-gpl \
             --enable-static \
             --disable-shared \
-            --prefix="$DEPS_PREFIX" \
+            --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
             --enable-cross-compile \
             --target-os=darwin \
             --arch=x86_64 \
