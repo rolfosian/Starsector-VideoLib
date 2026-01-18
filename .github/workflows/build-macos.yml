@@ -35,56 +35,56 @@ jobs:
           brew update
           brew install nasm yasm meson ninja automake autoconf libtool pkg-config
 
-      # - name: Build libogg (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/ogg.git
-      #     cd ogg
-      #     ./autogen.sh
-      #     # --host triggers cross-compilation mode
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+      - name: Build libogg (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/ogg.git
+          cd ogg
+          ./autogen.sh
+          # --host triggers cross-compilation mode
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
-      # - name: Build libvorbis (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/vorbis.git
-      #     cd vorbis
-      #     ./autogen.sh
+      - name: Build libvorbis (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/vorbis.git
+          cd vorbis
+          ./autogen.sh
           
-      #     sed -i '' 's/-force_cpusubtype_ALL//g' configure
+          sed -i '' 's/-force_cpusubtype_ALL//g' configure
 
-      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
-      # - name: Build libopus (static x86_64)
-      #   run: |
-      #     git clone --depth=1 https://github.com/xiph/opus.git
-      #     cd opus
-      #     ./autogen.sh
-      #     ./configure \
-      #       --prefix="$DEPS_PREFIX" \
-      #       --disable-shared \
-      #       --enable-static \
-      #       --disable-extra-programs \
-      #       --host=x86_64-apple-darwin \
-      #       CFLAGS="-arch x86_64" \
-      #       LDFLAGS="-arch x86_64"
-      #     make -j$(sysctl -n hw.ncpu)
-      #     make install
+      - name: Build libopus (static x86_64)
+        run: |
+          git clone --depth=1 https://github.com/xiph/opus.git
+          cd opus
+          ./autogen.sh
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --disable-extra-programs \
+            --host=x86_64-apple-darwin \
+            CFLAGS="-arch x86_64" \
+            LDFLAGS="-arch x86_64"
+          make -j$(sysctl -n hw.ncpu)
+          make install
 
       - name: Build libdav1d (static x86_64)
         run: |
@@ -99,48 +99,49 @@ jobs:
         run: |
           echo "DEPS_PREFIX=$DEPS_PREFIX"
           find "$DEPS_PREFIX" -print
-      # - name: Fetch FFmpeg source
-      #   run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
-
-      # - name: Build FFmpeg (static x86_64)
-      #   working-directory: ffmpeg-src
-      #   run: |
-      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
           
-      #     ./configure \
-      #       --disable-everything \
-      #       --disable-doc \
-      #       --disable-programs \
-      #       --disable-debug \
-      #       --disable-ffplay \
-      #       --disable-ffprobe \
-      #       --enable-gpl \
-      #       --enable-static \
-      #       --disable-shared \
-      #       --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
-      #       --enable-cross-compile \
-      #       --target-os=darwin \
-      #       --arch=x86_64 \
-      #       --enable-libvorbis \
-      #       --enable-libopus \
-      #       --enable-libdav1d \
-      #       --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
-      #       --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
-      #       --enable-demuxer=matroska,mov,image2,gif \
-      #       --enable-pic \
-      #       --cc="clang" \
-      #       --cxx="clang++" \
-      #       --extra-cflags="-fPIC -arch x86_64 -I$DEPS_PREFIX/include" \
-      #       --extra-ldflags="-arch x86_64 -L$DEPS_PREFIX/lib"
-          
-      #     make -j"$(sysctl -n hw.ncpu)"
-      #     make install
+      - name: Fetch FFmpeg source
+        run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
-      # - name: Debug FFmpeg install
-      #   run: |
-      #     ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
-      #     # Verify the binary is actually x86_64
-      #     lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
+      - name: Build FFmpeg (static x86_64)
+        working-directory: ffmpeg-src
+        run: |
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
+          ./configure \
+            --disable-everything \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --enable-gpl \
+            --enable-static \
+            --disable-shared \
+            --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
+            --enable-cross-compile \
+            --target-os=darwin \
+            --arch=x86_64 \
+            --enable-libvorbis \
+            --enable-libopus \
+            --enable-libdav1d \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+            --enable-demuxer=matroska,mov,image2,gif \
+            --enable-pic \
+            --cc="clang" \
+            --cxx="clang++" \
+            --extra-cflags="-fPIC -arch x86_64 -I$DEPS_PREFIX/include" \
+            --extra-ldflags="-arch x86_64 -L$DEPS_PREFIX/lib"
+          
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+
+      - name: Debug FFmpeg install
+        run: |
+          ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
+          # Verify the binary is actually x86_64
+          lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
 
       # - name: Build JNI bridge (ffmpegjni.dylib)
       #   env:
