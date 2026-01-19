@@ -6,15 +6,15 @@ import org.json.JSONObject;
 import org.json.JSONException;
 import org.apache.log4j.Logger;
 
-import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 
 import data.scripts.ffmpeg.FFmpeg;
-import data.scripts.projector.Projector;
-import data.scripts.projector.TransientTexProjector;
 import data.scripts.util.TexReflection;
+
+import data.scripts.projector.AutoTexProjector;
+import data.scripts.projector.AutoTexProjector.AutoTexProjectorAPI;
 
 @SuppressWarnings("unchecked")
 public class VideoPaths {
@@ -26,8 +26,8 @@ public class VideoPaths {
     private static Map<String, String> imageMap = new HashMap<>();
     private static String[] imageKeys;
 
-    private static Map<String, EveryFrameScript> transientTexOverrides = new HashMap<>();
-    private static EveryFrameScript[] transientTexOverrideArr;
+    private static Map<String, AutoTexProjectorAPI> autoTexOverrides = new HashMap<>();
+    private static AutoTexProjectorAPI[] autoTexOverrideArr;
 
     protected static void populate() {
         if (populated) return;
@@ -96,7 +96,7 @@ public class VideoPaths {
                     }
                 }
                 
-                JSONObject textureOverrides = getJSONObject(modId, pathData, "textureOverrides", logger);
+                JSONObject textureOverrides = getJSONObject(modId, pathData, "autoTexProjectorOverrides", logger);
                 if (textureOverrides != null) {
                     Iterator<String> texturePaths = textureOverrides.keys();
 
@@ -111,23 +111,18 @@ public class VideoPaths {
                         if (!TexReflection.texObjectMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException(texturePath + "not found in Starsector texture repository for video override: " + videoId);
                         }
-                        if (transientTexOverrides.containsKey(texturePath)) {
+                        if (autoTexOverrides.containsKey(texturePath)) {
                             throw new IllegalArgumentException("video override already found for texture " + texturePath);
                         }
     
-                        Projector ours = TransientTexProjector.instantiator.instantiate(videoId, width, height);
+                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(videoId, width, height);
                         Object original = TexReflection.texObjectMap.get(texturePath);
                         TexReflection.transplantTexFields(original, ours);
-                        
-                        // for (String k : TexReflection.texObjectMap.keySet()) {
-                        //     if (k.startsWith("graphics/portraits"))
-                        //     TexReflection.texObjectMap.put(k, ours);
-                        // }
 
                         TexReflection.texObjectMap.put(texturePath, ours);
-                        transientTexOverrides.put(texturePath, (EveryFrameScript)ours);
+                        autoTexOverrides.put(texturePath, ours);
     
-                        logger.info("Instantiated transient video override for texture " + texturePath + " using videoId " + videoId);
+                        logger.info("Instantiated transient video override for texture " + texturePath + " using videoId " + videoId + " located at " + videoMap.get(videoId));
                     }
                 }
             }
@@ -139,7 +134,7 @@ public class VideoPaths {
         String[] arr = new String[0];
         videoKeys = videoKeyz.toArray(arr);
         imageKeys = imageKeyz.toArray(arr);
-        transientTexOverrideArr = new ArrayList<>(transientTexOverrides.values()).toArray(new EveryFrameScript[0]);
+        autoTexOverrideArr = new ArrayList<>(autoTexOverrides.values()).toArray(new AutoTexProjectorAPI[0]);
 
         populated = true;
     }
@@ -156,12 +151,12 @@ public class VideoPaths {
         return result;
     }
 
-    public static Projector getTransientTexOverride(String texturePath) {
-        return (Projector) transientTexOverrides.get(texturePath);
+    public static AutoTexProjectorAPI getTransientTexOverride(String texturePath) {
+        return autoTexOverrides.get(texturePath);
     }
 
-    protected static EveryFrameScript[] getTransientTexOverrides() {
-        return transientTexOverrideArr;
+    protected static AutoTexProjectorAPI[] getAutoTexOverrides() {
+        return autoTexOverrideArr;
     }
 
     public static String[] imageKeys() {

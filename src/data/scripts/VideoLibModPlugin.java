@@ -15,9 +15,10 @@ import com.fs.starfarer.api.campaign.PlanetAPI;
 import data.scripts.ffmpeg.FFmpeg;
 
 import data.scripts.planetlistener.PlanetProjectorListener;
+import data.scripts.projector.AutoTexProjector;
 import data.scripts.projector.PlanetProjector;
 import data.scripts.projector.Projector;
-import data.scripts.projector.TransientTexProjector;
+import data.scripts.projector.AutoTexProjector.AutoTexProjectorAPI;
 import data.scripts.util.TexReflection;
 import data.scripts.util.VideoUtils;
 
@@ -52,7 +53,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
         
         TexReflection.init();
         VideoUtils.init();
-        TransientTexProjector.init();
+        AutoTexProjector.init();
         VideoPaths.populate();
 
         mainThread = Thread.currentThread();
@@ -131,8 +132,8 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
 
-        for (EveryFrameScript projector : VideoPaths.getTransientTexOverrides()) {
-            ((Projector)projector).pause();
+        for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides()) {
+            projector.timeout();
         }
 
         if (newGame) return;

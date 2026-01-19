@@ -20,18 +20,22 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
 import data.scripts.util.TexReflection;
+import rolflectionlib.inheritor.Inherit;
 
 /**
  * Direct subclass of obfuscated Texture class implementing EveryFrameScript and Projector interfaces. Automatically stops and starts itself depending on if it is being rendered or not.
  */
-public class TransientTexProjector implements Opcodes {
-    public static interface TransientTexInstantiator {
-        public Projector instantiate(String videoId, int width, int height);
+public class AutoTexProjector implements Opcodes {
+    public static interface AutoTexInstantiator {
+        public AutoTexProjectorAPI instantiate(String videoId, int width, int height);
     }
-    public static final TransientTexInstantiator instantiator;
+    public static interface AutoTexProjectorAPI extends EveryFrameScript, Projector {
+        public void changeVideo(String videoId, int width, int height, long startVideoUs);
+        public void timeout();
+    }
 
     public static void print(String msg) {
-        Logger.getLogger(TransientTexProjector.class).info(msg);
+        Logger.getLogger(AutoTexProjector.class).info(msg);
     }
 
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
@@ -47,10 +51,10 @@ public class TransientTexProjector implements Opcodes {
     public static final Class<?> transientTexClass;
 
     static {
-        cl cl = new cl();
+        AutoTexClassLoader cl = new AutoTexClassLoader();
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
-        String className = "data/scripts/projector/TransientTex";
+        String className = "data/scripts/projector/AutoTexProjektor";
         String superName = Type.getInternalName(TexReflection.texClass);
     
         String decoderName = Type.getInternalName(Decoder.class);
@@ -68,7 +72,7 @@ public class TransientTexProjector implements Opcodes {
         String texReflectionInternal = Type.getInternalName(TexReflection.class);
         String bindMethodName = TexReflection.texObjectBindMethodName;
         
-        // public class TransientTex extends textureClass implements EveryFrameScript, Projector
+        // public class AutoTexProjektor extends textureClass implements EveryFrameScript, Projector
         cw.visit(
             V17,
             ACC_PUBLIC,
@@ -76,14 +80,14 @@ public class TransientTexProjector implements Opcodes {
             null,
             superName,
             new String[] {
-                Type.getInternalName(EveryFrameScript.class),
-                Type.getInternalName(Projector.class)
+                Type.getInternalName(AutoTexProjectorAPI.class)
             }
         );
 
-        cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "TIMEOUT_FRAMES", "I", null, 3);
+        cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "TIMEOUT_FRAMES", "I", null, 2);
 
         cw.visitField(ACC_PRIVATE, "timeoutFrames", "I", null, 0).visitEnd();
+        cw.visitField(ACC_PRIVATE, "timedOut", "Z", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "isDone", "Z", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "runWhilePaused", "Z", null, null).visitEnd();
 
@@ -165,6 +169,10 @@ public class TransientTexProjector implements Opcodes {
 
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitInsn(ICONST_1);
+        ctor.visitFieldInsn(PUTFIELD, className, "timedOut", "Z");
+
+        ctor.visitVarInsn(ALOAD, 0);
+        ctor.visitInsn(ICONST_1);
         ctor.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
@@ -172,7 +180,7 @@ public class TransientTexProjector implements Opcodes {
         ctor.visitFieldInsn(PUTFIELD, className, "runWhilePaused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitInsn(ICONST_1);
+        ctor.visitInsn(ICONST_0);
         ctor.visitFieldInsn(PUTFIELD, className, "paused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
@@ -290,22 +298,22 @@ public class TransientTexProjector implements Opcodes {
                 "I"
             );
         
-            Label notPaused = new Label();
+            Label notTimedOut = new Label();
 
-            // if (!paused) goto notPaused
+            // if (!timedOut) goto notTimedOut
             bind.visitVarInsn(ALOAD, 0);
-            bind.visitFieldInsn(GETFIELD, className, "paused", "Z");
-            bind.visitJumpInsn(IFEQ, notPaused);
+            bind.visitFieldInsn(GETFIELD, className, "timedOut", "Z");
+            bind.visitJumpInsn(IFEQ, notTimedOut);
 
             // isDone = false;
             bind.visitVarInsn(ALOAD, 0);
             bind.visitInsn(ICONST_0);
             bind.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
 
-            // paused = false;
+            // timedOut = false;
             bind.visitVarInsn(ALOAD, 0);
             bind.visitInsn(ICONST_0);
-            bind.visitFieldInsn(PUTFIELD, className, "paused", "Z");
+            bind.visitFieldInsn(PUTFIELD, className, "timedOut", "Z");
         
             /* Global.getSector().addTransientScript(this) */
             bind.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
@@ -318,7 +326,7 @@ public class TransientTexProjector implements Opcodes {
                 true
             );
         
-            bind.visitLabel(notPaused);
+            bind.visitLabel(notTimedOut);
         
             /* super.bind() */
             // bind.visitLdcInsn(GL11.GL_TEXTURE_2D);
@@ -341,6 +349,193 @@ public class TransientTexProjector implements Opcodes {
         }
 
         {
+            MethodVisitor mv = cw.visitMethod(
+                ACC_PUBLIC,
+                "changeVideo",
+                "(Ljava/lang/String;IIJ)V",
+                null,
+                null
+            );
+            mv.visitCode();
+        
+            Label lSkipDelete = new Label();
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
+            mv.visitJumpInsn(IFEQ, lSkipDelete);
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "textureBuffer", texBufferDesc);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                texBufferInternalName,
+                "deleteTexture",
+                "(I)V",
+                true
+            );
+        
+            mv.visitLabel(lSkipDelete);
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                decoderName,
+                "finish",
+                "()V",
+                true
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                Type.getInternalName(VideoPaths.class),
+                "getVideoPath",
+                "(Ljava/lang/String;)Ljava/lang/String;",
+                false
+            );
+            mv.visitFieldInsn(
+                PUTFIELD,
+                className,
+                "videoFilePath",
+                "Ljava/lang/String;"
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ILOAD, 2);
+            mv.visitFieldInsn(PUTFIELD, className, "width", "I");
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ILOAD, 3);
+            mv.visitFieldInsn(PUTFIELD, className, "height", "I");
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitTypeInsn(NEW, muteDecoderName);
+            mv.visitInsn(DUP);
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "videoFilePath", "Ljava/lang/String;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "width", "I");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "height", "I");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "MODE", playModeDesc);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "EOF_MODE", eofModeDesc);
+        
+            mv.visitMethodInsn(
+                INVOKESPECIAL,
+                muteDecoderName,
+                "<init>",
+                "("
+                    + "Ldata/scripts/projector/Projector;"
+                    + "Ljava/lang/String;"
+                    + "II"
+                    + playModeDesc
+                    + eofModeDesc
+                    + ")V",
+                false
+            );
+        
+            mv.visitFieldInsn(
+                PUTFIELD,
+                className,
+                "decoder",
+                decoderDesc
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitVarInsn(LLOAD, 4);
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                decoderName,
+                "start",
+                "(J)V",
+                true
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                decoderName,
+                "getTextureBuffer",
+                "()" + texBufferDesc,
+                true
+            );
+            mv.visitFieldInsn(
+                PUTFIELD,
+                className,
+                "textureBuffer",
+                texBufferDesc
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                decoderName,
+                "getCurrentVideoTextureId",
+                "()I",
+                true
+            );
+            mv.visitFieldInsn(
+                PUTFIELD,
+                className,
+                "currentTextureId",
+                "I"
+            );
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                texReflectionInternal,
+                "setTexObjId",
+                "(Ljava/lang/Object;I)V",
+                false
+            );
+        
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "timeout", "()V", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_1);
+            mv.visitFieldInsn(PUTFIELD, className, "timedOut", "Z");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_1);
+            mv.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_0);
+            mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
+            
+            mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
+
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "advance", "(F)V", null, null);
             mv.visitCode();
 
@@ -348,9 +543,9 @@ public class TransientTexProjector implements Opcodes {
             Label lReturn = new Label();
             Label lSkipDelete = new Label();
 
-            // if (!paused)
+            // if (!timedOut)
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "paused", "Z");
+            mv.visitFieldInsn(GETFIELD, className, "timedOut", "Z");
             mv.visitJumpInsn(IFNE, lReturn);
 
             mv.visitVarInsn(ALOAD, 0);
@@ -366,23 +561,15 @@ public class TransientTexProjector implements Opcodes {
             
             // timed out
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_1);
-            mv.visitFieldInsn(PUTFIELD, className, "paused", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_1);
-            mv.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
-            
-            mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
+            mv.visitMethodInsn(INVOKEVIRTUAL, className, "timeout", "()V", false);
 
             mv.visitInsn(RETURN);
             mv.visitLabel(lContinue);
+
+            // if (!paused)
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "paused", "Z");
+            mv.visitJumpInsn(IFNE, lReturn);
 
             // int newId = decoder.getCurrentVideoTextureId(dt);
             mv.visitVarInsn(ALOAD, 0);
@@ -488,9 +675,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "isRendering", "()Z", null, null);
             mv.visitCode();
-            mv.visitVarInsn(ALOAD, 0); // load 'this'
-            mv.visitFieldInsn(GETFIELD, className, "isRendering", "Z"); // get field
-            mv.visitInsn(IRETURN); // return boolean
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "isRendering", "Z");
+            mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -498,9 +687,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "paused", "()Z", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "paused", "Z");
             mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -508,9 +699,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "play", "()V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "paused", "Z"); // paused = false
+            mv.visitFieldInsn(PUTFIELD, className, "paused", "Z");
+
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();
@@ -519,21 +712,10 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "stop", "()V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(ICONST_1);
             mv.visitFieldInsn(PUTFIELD, className, "paused", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_1);
-            mv.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
-            
-            mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
 
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
@@ -543,21 +725,10 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "pause", "()V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(ICONST_1);
             mv.visitFieldInsn(PUTFIELD, className, "paused", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_1);
-            mv.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
-            
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
-            
-            mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
 
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
@@ -567,9 +738,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "unpause", "()V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "paused", "Z"); // paused = false
+            mv.visitFieldInsn(PUTFIELD, className, "paused", "Z");
+
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();
@@ -578,9 +751,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getWidth", "()I", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "width", "I");
             mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -588,9 +763,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getHeight", "()I", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "height", "I");
             mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -598,9 +775,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "isDone", "()Z", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "isDone", "Z");
             mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -608,9 +787,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "runWhilePaused", "()Z", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "runWhilePaused", "Z");
             mv.visitInsn(IRETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -618,9 +799,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getDecoder", "()" + decoderDesc, null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
             mv.visitInsn(ARETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -628,9 +811,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getPlayMode", "()" + playModeDesc, null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "MODE", playModeDesc);
             mv.visitInsn(ARETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -638,9 +823,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setPlayMode", "(" + playModeDesc + ")V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitVarInsn(ALOAD, 1);
             mv.visitFieldInsn(PUTFIELD, className, "MODE", playModeDesc);
+
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();
@@ -649,9 +836,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getEOFMode", "()" + eofModeDesc, null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "EOF_MODE", eofModeDesc);
             mv.visitInsn(ARETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -659,9 +848,11 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setEOFMode", "(" + eofModeDesc + ")V", null, null);
             mv.visitCode();
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitVarInsn(ALOAD, 1);
             mv.visitFieldInsn(PUTFIELD, className, "EOF_MODE", eofModeDesc);
+
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
             mv.visitEnd();
@@ -670,8 +861,10 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getSpeakers", "()" + Type.getDescriptor(Speakers.class), null, null);
             mv.visitCode();
+
             mv.visitInsn(ACONST_NULL);
             mv.visitInsn(ARETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -679,8 +872,10 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getControlPanel", "()" + Type.getDescriptor(PlayerControlPanel.class), null, null);
             mv.visitCode();
+
             mv.visitInsn(ACONST_NULL);
             mv.visitInsn(ARETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
@@ -688,14 +883,16 @@ public class TransientTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "restart", "()V", null, null);
             mv.visitCode();
+            
             mv.visitInsn(RETURN);
+
             mv.visitMaxs(0, 0);
             mv.visitEnd();
         }
 
         cw.visitEnd();
         byte[] classBytes = cw.toByteArray();
-        // Inherit.dumpClass(classBytes, "DSAIFHSAFHSA.class");
+        Inherit.dumpClass(classBytes, "DSAIFHSAFHSA.class");
         transientTexClass = cl.define(classBytes, className.replace("/", "."));
 
         cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
@@ -703,13 +900,13 @@ public class TransientTexProjector implements Opcodes {
         cw.visit(
             V17,
             ACC_PUBLIC,
-            "data/scripts/projector/TransientTexInstantiator",
+            "data/scripts/projector/AutoTexInstantiator",
             null,
             "java/lang/Object",
-            new String[] {Type.getInternalName(TransientTexInstantiator.class)}
+            new String[] {Type.getInternalName(AutoTexInstantiator.class)}
         );
 
-        // public TransientTexInstantiator() {
+        // public AutoTexInstantiator() {
         //     super(); // Object()
         // }
         ctor = cw.visitMethod(
@@ -728,11 +925,11 @@ public class TransientTexProjector implements Opcodes {
 
         {
             String transientTexClassName = Type.getInternalName(transientTexClass);
-            // public Projector instantiate(String videoId, int width, int height);
+            // public AutoTexProjectorAPI instantiate(String videoId, int width, int height);
             MethodVisitor mv = cw.visitMethod(
                 ACC_PUBLIC,
                 "instantiate",
-                "(Ljava/lang/String;II)" + Type.getDescriptor(Projector.class),
+                "(Ljava/lang/String;II)" + Type.getDescriptor(AutoTexProjectorAPI.class),
                 null,
                 null
             );
@@ -761,17 +958,21 @@ public class TransientTexProjector implements Opcodes {
         }
         cw.visitEnd();
 
-        Class<?> instantiatorClass = cl.define(cw.toByteArray(), "data.scripts.projector.TransientTexInstantiator");
         try {
-            instantiator = (TransientTexInstantiator) MethodHandles.lookup().findConstructor(instantiatorClass, MethodType.methodType(void.class)).invoke();
+            instantiator = (AutoTexInstantiator) MethodHandles.lookup().findConstructor(
+                cl.define(cw.toByteArray(), "data.scripts.projector.AutoTexInstantiator"),
+                MethodType.methodType(void.class)
+            ).invoke();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static class cl extends ClassLoader {
-        public cl() {
-            super(TransientTexProjector.class.getClassLoader());
+    public static final AutoTexInstantiator instantiator;
+
+    private static class AutoTexClassLoader extends ClassLoader {
+        public AutoTexClassLoader() {
+            super(AutoTexProjector.class.getClassLoader());
         }
         public Class<?> define(byte[] classBytes, String name) {
             return defineClass(name, classBytes, 0, classBytes.length);
@@ -781,10 +982,11 @@ public class TransientTexProjector implements Opcodes {
     public static void init() {}
 }
 
-// public class TransientTexProjector extends com.fs.graphics.Object implements EveryFrameScript, EveryFrameCombatPlugin, Projector {
+// public class AutoTexProjektor extends com.fs.graphics.Object implements AutoTexProjectorAPI {
 //     private static final int TIMEOUT_FRAMES = 50;
 
 //     private int timeoutFrames;
+//     private boolean timedOut;
 //     private boolean isDone;
 //     private boolean runWhilePaused;
 
@@ -802,7 +1004,7 @@ public class TransientTexProjector implements Opcodes {
 //     private TexBuffer textureBuffer;
 //     private int currentTextureId;
 
-//     public TransientTexProjector(String videoId, int width, int height) {
+//     public AutoTexProjektor(String videoId, int width, int height) {
 //         super(GL11.GL_TEXTURE_2D, 0);
 
 //         this.videoFilePath = VideoPaths.getVideoPath(videoId);
@@ -812,6 +1014,7 @@ public class TransientTexProjector implements Opcodes {
 //         this.MODE = PlayMode.PLAYING;
 //         this.EOF_MODE = EOFMode.LOOP;
 
+//         this.timedOut = true;
 //         this.isDone = true;
 //         this.runWhilePaused = true;
 //         this.paused = true;
@@ -822,16 +1025,16 @@ public class TransientTexProjector implements Opcodes {
 //         this.decoder.start(0);
 //         this.textureBuffer = decoder.getTextureBuffer();
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
-//         TexReflection.setTexObjId((com.fs.graphics.Object)this, currentTextureId);
+//         TexReflection.setTexObjId(this, currentTextureId);
 //     }
     
 //     @Override // bind
 //     public void Ø00000() {
 //         timeoutFrames = 0;
 
-//        if (paused) {
+//        if (timedOut) {
 //            isDone = false;
-//            paused = false;
+//            timedOut = false;
 //            Global.getSector().addTransientScript(this);
 //        }
 
@@ -841,21 +1044,45 @@ public class TransientTexProjector implements Opcodes {
 //     }
 
 //     @Override
+//     public void changeVideo(String videoId, int width, int height, long videoStartUs) {
+//         if (this.currentTextureId != 0) this.textureBuffer.deleteTexture(this.currentTextureId);
+//         this.decoder.finish();
+
+//         this.videoFilePath = VideoPaths.getVideoPath(videoId);
+//         this.width = width;
+//         this.height = height;
+
+//         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
+//         this.decoder.start(videoStartUs);
+//         this.textureBuffer = decoder.getTextureBuffer();
+//         this.currentTextureId = decoder.getCurrentVideoTextureId();
+//         TexReflection.setTexObjId(this, currentTextureId);
+//     }
+
+//     @Override
+//     public void timeout() {
+//         timedOut = true;
+//         isDone = true;
+//         timeoutFrames= 0;
+//         Global.getSector().removeTransientScript(this);
+//     }
+
+//     @Override
 //     public void advance(float dt) {
-//         if (!paused) {
+//         if (!timedOut) {
 //             if (timeoutFrames++ > TIMEOUT_FRAMES) {
-//                 paused = true;
-//                 timeoutFrames= 0;
-//                 Global.getSector().removeTransientScript(this);
+//                 timeout();
 //                 return;
 //             }
 
-//             int newId = decoder.getCurrentVideoTextureId(dt);
-//             if (newId != currentTextureId) {
-//                 TexReflection.setTexObjId(this, newId);
+//             if (!paused) {
+//                 int newId = decoder.getCurrentVideoTextureId(dt);
+//                 if (newId != currentTextureId) {
+//                     TexReflection.setTexObjId(this, newId);
 
-//                 if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
-//                 currentTextureId = newId;
+//                     if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
+//                     currentTextureId = newId;
+//                 }
 //             }
 //         }
 //     }
@@ -877,15 +1104,11 @@ public class TransientTexProjector implements Opcodes {
 
 //     @Override
 //     public void stop() {
-//         Global.getSector().removeTransientScript(this);
-//         isDone = true;
 //         paused = true;
 //     }
 
 //     @Override
 //     public void pause() {
-//         Global.getSector().removeTransientScript(this);
-//         isDone = true;
 //         paused = true;
 //     }
 
