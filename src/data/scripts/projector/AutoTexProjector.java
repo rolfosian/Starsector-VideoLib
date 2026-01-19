@@ -20,7 +20,7 @@ import data.scripts.decoder.MuteDecoder;
 import data.scripts.playerui.PlayerControlPanel;
 import data.scripts.speakers.Speakers;
 import data.scripts.util.TexReflection;
-import rolflectionlib.inheritor.Inherit;
+// import rolflectionlib.inheritor.Inherit;
 
 /**
  * Direct subclass of obfuscated Texture class implementing EveryFrameScript and Projector interfaces. Automatically stops and starts itself depending on if it is being rendered or not.
@@ -32,6 +32,7 @@ public class AutoTexProjector implements Opcodes {
     public static interface AutoTexProjectorAPI extends EveryFrameScript, Projector {
         public void changeVideo(String videoId, int width, int height, long startVideoUs);
         public void timeout();
+        public void setOriginalTexture(String texturePath, Object texture);
     }
 
     public static void print(String msg) {
@@ -103,7 +104,10 @@ public class AutoTexProjector implements Opcodes {
 
         cw.visitField(ACC_PRIVATE, "decoder", decoderDesc, null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "textureBuffer", texBufferDesc, null, null).visitEnd();
-        cw.visitField(ACC_PRIVATE, "currentTextureId", "I", null, 0).visitEnd();
+        cw.visitField(ACC_PRIVATE, "currentTextureId", "I", null, null).visitEnd();
+
+        cw.visitField(ACC_PRIVATE, "originalTexture", "Ljava/lang/Object;", null, null).visitEnd();
+        cw.visitField(ACC_PRIVATE, "originalTexturePath", "Ljava/lang/String;", null, null).visitEnd();
     
         /* constructor */
         MethodVisitor ctor = cw.visitMethod(
@@ -511,6 +515,40 @@ public class AutoTexProjector implements Opcodes {
         }
 
         {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setOriginalTexture", "(Ljava/lang/String;Ljava/lang/Object;)V", null, null);
+            mv.visitCode();
+        
+            Label isNonNull = new Label();
+        
+            // if (this.originalTexture != null)
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexture", "Ljava/lang/Object;");
+            mv.visitJumpInsn(IFNULL, isNonNull);
+        
+            // throw new IllegalArgumentException("originalTexture is already set for this texture override");
+            mv.visitTypeInsn(NEW, "java/lang/IllegalArgumentException");
+            mv.visitInsn(DUP);
+            mv.visitLdcInsn("originalTexture is already set for this texture override");
+            mv.visitMethodInsn(INVOKESPECIAL, "java/lang/IllegalArgumentException", "<init>", "(Ljava/lang/String;)V", false);
+            mv.visitInsn(ATHROW);
+        
+            mv.visitLabel(isNonNull);
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 2);
+            mv.visitFieldInsn(PUTFIELD, className, "originalTexture", "Ljava/lang/Object;");
+        
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitFieldInsn(PUTFIELD, className, "originalTexturePath", "Ljava/lang/String;");
+
+            mv.visitInsn(RETURN);
+        
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "timeout", "()V", null, null);
             mv.visitCode();
 
@@ -666,6 +704,37 @@ public class AutoTexProjector implements Opcodes {
             mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
+
+            Label lReturn = new Label();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexturePath", "Ljava/lang/String;");
+            mv.visitJumpInsn(IFNULL, lReturn);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexture", "Ljava/lang/Object;");
+            mv.visitJumpInsn(IFNULL, lReturn);
+
+            mv.visitFieldInsn(GETSTATIC, texReflectionName, "texObjectMap", "Ljava/util/Map;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexturePath", "Ljava/lang/String;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexture", "Ljava/lang/Object;");
+            mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
+            mv.visitInsn(POP);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexturePath", "Ljava/lang/String;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                Type.getInternalName(VideoPaths.class),
+                "removeAutoTexOverride",
+                "(Ljava/lang/String;" + Type.getDescriptor(AutoTexProjectorAPI.class) + ")V",
+                false
+            );
+
+            mv.visitLabel(lReturn);
 
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
@@ -892,7 +961,7 @@ public class AutoTexProjector implements Opcodes {
 
         cw.visitEnd();
         byte[] classBytes = cw.toByteArray();
-        Inherit.dumpClass(classBytes, "DSAIFHSAFHSA.class");
+        // Inherit.dumpClass(classBytes, "DSAIFHSAFHSA.class");
         transientTexClass = cl.define(classBytes, className.replace("/", "."));
 
         cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
@@ -1004,6 +1073,9 @@ public class AutoTexProjector implements Opcodes {
 //     private TexBuffer textureBuffer;
 //     private int currentTextureId;
 
+//     private Object originalTexture;
+//     private String originalTexturePath;
+
 //     public AutoTexProjektor(String videoId, int width, int height) {
 //         super(GL11.GL_TEXTURE_2D, 0);
 
@@ -1057,6 +1129,13 @@ public class AutoTexProjector implements Opcodes {
 //         this.textureBuffer = decoder.getTextureBuffer();
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
 //         TexReflection.setTexObjId(this, currentTextureId);
+//     }
+
+//     @Override
+//     public void setOriginalTexture(String texturePath, Object texture) {
+//         if (this.originalTexture != null) throw new IllegalArgumentException("originalTexture is already set for this texture override");
+//         this.originalTexture = texture;
+//         this.originalTexturePath = texturePath;
 //     }
 
 //     @Override
@@ -1138,6 +1217,10 @@ public class AutoTexProjector implements Opcodes {
 //         decoder.finish();
 //         decoder = null;
 //         Global.getSector().removeTransientScript(this);
+//         if (originalTexturePath != null && originalTexture != null) {
+//              TexReflection.texObjectMap.put(originalTexturePath, originalTexture);
+//              VideoPaths.removeAutoTexOverride(originalTexturePath, this);
+//         }
 //     }
 
 //     @Override
