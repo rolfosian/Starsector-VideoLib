@@ -81,9 +81,8 @@ public class TexReflection {
     public static final MethodHandle getModifiersHandle;
     public static final MethodHandle getParameterTypesHandle;
     public static final MethodHandle getReturnTypeHandle;
-    
-    // private static final MethodHandle constructorNewInstanceHandle;
-    private static final MethodHandle getConstructorParameterTypesHandle;
+
+    public static final MethodHandle getConstructorParameterTypesHandle;
 
     static {
         try {
