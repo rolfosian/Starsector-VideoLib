@@ -29,7 +29,8 @@ jobs:
             openjdk17-jdk \
             nasm yasm meson ninja \
             automake autoconf libtool pkgconf \
-            gettext-dev file zlib-dev bzip2-dev
+            gettext-dev file zlib-dev bzip2-dev \
+            gnu-libiconv
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -190,14 +191,8 @@ jobs:
           PREFIX: ${{ github.workspace }}/ffmpeg-static/linux
         run: |
           mkdir -p "$OUT_DIR"
-
-          # Linux/Musl Specific Flags
-          # -shared: Create shared library
-          # -fPIC: Position Independent Code
-          # -Wl,--no-undefined: Ensure all symbols are resolved
-          # -Wl,-z,defs: Strict symbol checking
           
-          CFLAGS="-O3 -DNDEBUG -fPIC -fvisibility=hidden"
+          CFLAGS="-Wl,-Bstatic -O3 -DNDEBUG -fPIC -fvisibility=hidden"
           
           INCLUDES=(
             "-I$PREFIX/include"
@@ -211,14 +206,6 @@ jobs:
             "-L$DEPS_PREFIX/lib"
           )
 
-          FFMPEG_LIBS=(
-            "-lavformat"
-            "-lavcodec"
-            "-lswscale"
-            "-lswresample"
-            "-lavutil"
-          )
-
           STATIC_DEPS=(
             "-ldav1d"
             "-lvorbis"
@@ -227,27 +214,43 @@ jobs:
             "-logg"
           )
 
+          STATIC_LIBS=(
+            "-lavformat"
+            "-lavcodec"
+            "-lswscale"
+            "-lswresample"
+            "-lavutil"
+            "-ldav1d"
+            "-lvorbis"
+            "-lvorbisenc"
+            "-lopus"
+            "-logg"
+            "-liconv"
+            "-lz"
+            "-lbz2"
+          )
+
           SYS_LIBS=(
             "-lm"
-            "-lz"
             "-lpthread"
             "-ldl"
-            "-lbz2"
-            "-liconv"
           )
 
           echo "Compiling and Linking JNI .so..."
           
-          gcc $CFLAGS \
+          gcc -shared \
+            $CFLAGS \
             "${INCLUDES[@]}" \
             -o "$OUT_DIR/ffmpegjni.so" \
             "$SRC" \
             "${LIB_PATHS[@]}" \
             -Wl,-z,notext \
-            -Wl,--start-group \
-            "${FFMPEG_LIBS[@]}" \
-            "${STATIC_DEPS[@]}" \
-            -Wl,--end-group \
+            -Wl,-Bsymbolic \
+            -Wl,-Bstatic \
+              -Wl,--start-group \
+              "${STATIC_LIBS[@]}" \
+              -Wl,--end-group \
+            -Wl,-Bdynamic \
             "${SYS_LIBS[@]}"
 
           echo "Verifying Dependencies (ldd):"
