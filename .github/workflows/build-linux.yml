@@ -32,7 +32,6 @@ jobs:
             gettext-dev file \
             zlib-dev zlib-static \
             bzip2-dev bzip2-static \
-            gnu-libiconv gnu-libiconv-dev gnu-libiconv-static
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -227,7 +226,6 @@ jobs:
             "-lvorbisenc"
             "-lopus"
             "-logg"
-            "-liconv"
             "-lz"
             "-lbz2"
           )
