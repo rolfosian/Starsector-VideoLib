@@ -235,7 +235,7 @@ jobs:
         run: |
           mkdir -p "$OUT_DIR"
 
-          CFLAGS="-O3 -DNDEBUG -fPIC -arch x86_64 -mmacosx-version-min=10.15 -fvisibility=hidden"
+          CFLAGS="-O3 -DNDEBUG -fPIC -arch x86_64 -fvisibility=hidden"
           
           INCLUDES=(
             "-I$PREFIX/include"
@@ -273,6 +273,15 @@ jobs:
             "-liconv"
           )
 
+          FRAMEWORKS=(
+            "-framework" "CoreFoundation"
+            "-framework" "CoreVideo"
+            "-framework" "VideoToolbox"
+            "-framework" "CoreMedia"
+            "-framework" "AudioToolbox"
+            "-framework" "Security"
+          )
+
           echo "Compiling and Linking JNI dylib..."
           
           clang $CFLAGS \
@@ -284,6 +293,7 @@ jobs:
             "${LIB_PATHS[@]}" \
             "${FFMPEG_LIBS[@]}" \
             "${STATIC_DEPS[@]}" \
+            "${FRAMEWORKS[@]}" \
             "${SYS_LIBS[@]}"
 
           echo "Verifying Dependencies (otool):"
