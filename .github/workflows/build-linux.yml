@@ -29,7 +29,7 @@ jobs:
             openjdk17-jdk \
             nasm yasm meson ninja \
             automake autoconf libtool pkgconf \
-            gettext-dev file
+            gettext-dev file zlib-dev bzip2-dev
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -229,6 +229,8 @@ jobs:
           SYS_LIBS=(
             "-lm"
             "-lz"
+            "-lpthread"
+            "-ldl"
             # libiconv is often built-in to musl, but if needed externally:
             # "-liconv" 
           )
