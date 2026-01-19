@@ -271,12 +271,6 @@ jobs:
             "-lbz2"
             "-lpthread"
             "-liconv"
-            "-framework CoreFoundation"
-            "-framework CoreVideo"
-            "-framework CoreMedia"
-            "-framework VideoToolbox"
-            "-framework Security"
-            "-framework AudioToolbox"
           )
 
           echo "Compiling and Linking JNI dylib..."
@@ -294,7 +288,6 @@ jobs:
 
           echo "Verifying Dependencies (otool):"
           otool -L "$OUT_DIR/ffmpegjni.dylib"
-
 
       - name: Upload artifacts (macOS)
         uses: actions/upload-artifact@v4
