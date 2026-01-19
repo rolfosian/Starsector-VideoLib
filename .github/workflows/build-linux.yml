@@ -29,8 +29,10 @@ jobs:
             openjdk17-jdk \
             nasm yasm meson ninja \
             automake autoconf libtool pkgconf \
-            gettext-dev file zlib-dev bzip2-dev \
-            gnu-libiconv
+            gettext-dev file \
+            zlib-dev zlib-static \
+            bzip2-dev bzip2-static \
+            gnu-libiconv gnu-libiconv-dev gnu-libiconv-static
 
       - name: Checkout
         uses: actions/checkout@v4
