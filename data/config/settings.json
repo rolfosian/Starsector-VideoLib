@@ -6,6 +6,9 @@
                 "vl_ufos" : "data/videos/ufos.mp4",
                 "vl_ufos_t" : "data/videos/ufos_transparent.webm",
                 "vl_mop" : "data/videos/fred-fred-mopping.gif",
+                "avs" : "data/videos/lol.mp4",
+                "avs2" : "data/videos/avs.mp4",
+                "ktf" : "data/videos/ktf.webm",
                 "vl_brule" : "data/videos/brule.gif"
             },
 
@@ -14,7 +17,7 @@
                 "vl_png" : "data/videos/png.png"
             },
 
-            "textureOverrides" : {
+            "autoTexProjectorOverrides" : {
                 "graphics/portraits/roflos.png" : {
                     "width" : 128,
                     "height" : 128,
