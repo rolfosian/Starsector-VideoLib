@@ -150,7 +150,6 @@ jobs:
       - name: Build FFmpeg (static musl)
         working-directory: ffmpeg-src
         run: |
-          unset CFLAGS CXXFLAGS LDFLAGS
           export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
           
           ./configure \
@@ -198,7 +197,7 @@ jobs:
           # -Wl,--no-undefined: Ensure all symbols are resolved
           # -Wl,-z,defs: Strict symbol checking
           
-          CFLAGS="-O3 -DNDEBUG -fPIC -shared -fvisibility=hidden"
+          CFLAGS="-O3 -DNDEBUG -fPIC -fvisibility=hidden"
           
           INCLUDES=(
             "-I$PREFIX/include"
