@@ -12,7 +12,7 @@ on:
       - ffmpeg-jni/src/ffmpegjni.c
 
 jobs:
-  build-linux-musl:
+  build-linux:
     name: Linux Build
     runs-on: ubuntu-22.04
 
@@ -43,7 +43,7 @@ jobs:
           echo "CXXFLAGS=-O3 -fPIC" >> $GITHUB_ENV
           echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk" >> $GITHUB_ENV
 
-      - name: Build libogg (static musl)
+      - name: Build libogg (static)
         run: |
           git clone --depth=1 https://github.com/xiph/ogg.git
           cd ogg
@@ -57,7 +57,7 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Build libvorbis (static musl)
+      - name: Build libvorbis (static)
         run: |
           git clone --depth=1 https://github.com/xiph/vorbis.git
           cd vorbis
@@ -75,7 +75,7 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Build libopus (static musl)
+      - name: Build libopus (static)
         run: |
           git clone --depth=1 https://github.com/xiph/opus.git
           cd opus
@@ -91,7 +91,7 @@ jobs:
           make -j$(nproc)
           make install
 
-      - name: Build libdav1d (static musl)
+      - name: Build libdav1d (static)
         run: |
           git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
           cd dav1d-src
@@ -101,7 +101,8 @@ jobs:
             --buildtype release \
             --default-library=static \
             -Db_staticpic=true \
-            --prefix="$DEPS_PREFIX"
+            --prefix="$DEPS_PREFIX" \
+            --libdir=lib
             
           ninja -C build
           ninja -C build install
@@ -148,7 +149,7 @@ jobs:
       - name: Fetch FFmpeg source
         run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
-      - name: Build FFmpeg (static musl)
+      - name: Build FFmpeg (static)
         working-directory: ffmpeg-src
         run: |
           export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
@@ -256,10 +257,10 @@ jobs:
           # verify it is not linking against glibc
           ldd "$OUT_DIR/ffmpegjni.so"
 
-      - name: Upload artifacts (Linux Musl)
+      - name: Upload artifacts (Linux)
         uses: actions/upload-artifact@v4
         with:
-          name: linux-musl-build
+          name: linux-build
           path: |
             ffmpeg-static/linux
             deps-static
