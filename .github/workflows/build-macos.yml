@@ -21,13 +21,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: Set up JDK 17
-      #   id: setup-java
-      #   uses: actions/setup-java@v4
-      #   with:
-      #     distribution: temurin
-      #     java-version: "17"
-      #     architecture: x64
+      - name: Set up JDK 17
+        id: setup-java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          architecture: x64
 
       - name: Install build dependencies
 
@@ -182,92 +182,125 @@ jobs:
             echo "Success: All libraries are valid x86_64 binaries."
           fi
 
-      # - name: Fetch FFmpeg source
-      #   run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+      - name: Fetch FFmpeg source
+        run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
 
-      # - name: Build FFmpeg (static x86_64)
-      #   working-directory: ffmpeg-src
-      #   run: |
-      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+      - name: Build FFmpeg (static x86_64)
+        working-directory: ffmpeg-src
+        run: |
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
           
-      #     ./configure \
-      #       --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
-      #       --pkg-config-flags="--static" \
-      #       --disable-everything \
-      #       --disable-doc \
-      #       --disable-programs \
-      #       --disable-debug \
-      #       --disable-ffplay \
-      #       --disable-ffprobe \
-      #       --enable-gpl \
-      #       --enable-static \
-      #       --disable-shared \
-      #       --enable-cross-compile \
-      #       --target-os=darwin \
-      #       --arch=x86_64 \
-      #       --enable-libvorbis \
-      #       --enable-libopus \
-      #       --enable-libdav1d \
-      #       --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
-      #       --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
-      #       --enable-demuxer=matroska,mov,image2,gif \
-      #       --enable-pic \
-      #       --cc="clang" \
-      #       --cxx="clang++" \
-      #       --extra-cflags="-fPIC -arch x86_64 -I$DEPS_PREFIX/include" \
-      #       --extra-ldflags="-arch x86_64 -L$DEPS_PREFIX/lib"
+          ./configure \
+            --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/mac" \
+            --pkg-config-flags="--static" \
+            --disable-everything \
+            --disable-doc \
+            --disable-programs \
+            --disable-debug \
+            --disable-ffplay \
+            --disable-ffprobe \
+            --enable-gpl \
+            --enable-static \
+            --disable-shared \
+            --enable-cross-compile \
+            --target-os=darwin \
+            --arch=x86_64 \
+            --enable-libvorbis \
+            --enable-libopus \
+            --enable-libdav1d \
+            --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+            --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+            --enable-demuxer=matroska,mov,image2,gif \
+            --enable-pic \
+            --cc="clang" \
+            --cxx="clang++" \
+            --extra-cflags="-fPIC -arch x86_64 -I$DEPS_PREFIX/include" \
+            --extra-ldflags="-arch x86_64 -L$DEPS_PREFIX/lib"
           
-      #     make -j"$(sysctl -n hw.ncpu)"
-      #     make install
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
 
-      # - name: Verify FFmpeg Architecture
-      #   run: |
-      #     ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
-      #     # Verify the binary is actually x86_64
-      #     lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
+      - name: Verify FFmpeg Architecture
+        run: |
+          ls -R "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib"
+          # Verify the binary is actually x86_64
+          lipo -info "${GITHUB_WORKSPACE}/ffmpeg-static/mac/lib/libavcodec.a"
 
-      # - name: Build JNI bridge (ffmpegjni.dylib)
-      #   env:
-      #     JAVA_HOME: ${{ env.JAVA_HOME }}
-      #     SRC: ffmpeg-jni/src/ffmpegjni.c
-      #     OUT_DIR: ffmpeg-jni/bin/mac
-      #     PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
-      #     DAV1D_PREFIX: ${{ github.workspace }}/dav1d-static
-      #   run: |
-      #     mkdir -p "$OUT_DIR"
-      #     clang -O2 -DNDEBUG -fPIC \
-      #       -I"$PREFIX/include" \
-      #       -I"$JAVA_HOME/include" \
-      #       -I"$JAVA_HOME/include/darwin" \
-      #       -I"$DEPS_PREFIX/include" \
-      #       -o "$OUT_DIR/ffmpegjni.dylib" \
-      #       -dynamiclib \
-      #       -Wl,-undefined,error \
-      #       -arch x86_64 \
-      #       -mmacosx-version-min=10.15 \
-      #       "$SRC" \
-      #       -L"$PREFIX/lib" \
-      #       -L"$DEPS_PREFIX/lib" \
-      #       "$PREFIX/lib/libswscale.a" \
-      #       "$PREFIX/lib/libavformat.a" \
-      #       "$PREFIX/lib/libavcodec.a" \
-      #       "$PREFIX/lib/libavutil.a" \
-      #       "$PREFIX/lib/libswresample.a" \
-      #       "$DEPS_PREFIX/lib/libdav1d.a" \
-      #       -lpthread \
-      #       -lm \
-      #       -lz \
-      #       -lbz2 \
-      #       -liconv \
-      #       -framework CoreVideo \
-      #       -framework VideoToolbox \
-      #       -framework CoreMedia \
-      #       -framework CoreFoundation
-      # - name: Upload artifacts (macOS)
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: macos-build
-      #     path: |
-      #       ffmpeg-static/mac
-      #       deps-static
-      #       ffmpeg-jni/bin/mac/ffmpegjni.dylib
+      - name: Build JNI bridge (ffmpegjni.dylib)
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
+          SRC: ffmpeg-jni/src/ffmpegjni.c
+          OUT_DIR: ffmpeg-jni/bin/mac
+          PREFIX: ${{ github.workspace }}/ffmpeg-static/mac
+        run: |
+          mkdir -p "$OUT_DIR"
+
+          CFLAGS="-O3 -DNDEBUG -fPIC -arch x86_64 -mmacosx-version-min=10.15 -fvisibility=hidden"
+          
+          INCLUDES=(
+            "-I$PREFIX/include"
+            "-I$DEPS_PREFIX/include"
+            "-I$JAVA_HOME/include"
+            "-I$JAVA_HOME/include/darwin"
+          )
+
+          LIB_PATHS=(
+            "-L$PREFIX/lib"
+            "-L$DEPS_PREFIX/lib"
+          )
+
+          FFMPEG_LIBS=(
+            "-lavformat"
+            "-lavcodec"
+            "-lswscale"
+            "-lswresample"
+            "-lavutil"
+          )
+
+          STATIC_DEPS=(
+            "-ldav1d"
+            "-lvorbis"
+            "-lvorbisenc"
+            "-lopus"
+            "-logg"
+          )
+
+          SYS_LIBS=(
+            "-lm"
+            "-lz"
+            "-lbz2"
+            "-lpthread"
+            "-liconv"
+            "-framework CoreFoundation"
+            "-framework CoreVideo"
+            "-framework CoreMedia"
+            "-framework VideoToolbox"
+            "-framework Security"
+            "-framework AudioToolbox"
+          )
+
+          echo "Compiling and Linking JNI dylib..."
+          
+          clang $CFLAGS \
+            -dynamiclib \
+            -Wl,-undefined,error \
+            "${INCLUDES[@]}" \
+            -o "$OUT_DIR/ffmpegjni.dylib" \
+            "$SRC" \
+            "${LIB_PATHS[@]}" \
+            "${FFMPEG_LIBS[@]}" \
+            "${STATIC_DEPS[@]}" \
+            "${SYS_LIBS[@]}"
+
+          echo "Verifying Dependencies (otool):"
+          otool -L "$OUT_DIR/ffmpegjni.dylib"
+
+
+      - name: Upload artifacts (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-build
+          path: |
+            ffmpeg-static/mac
+            deps-static
+            ffmpeg-jni/bin/mac/ffmpegjni.dylib
