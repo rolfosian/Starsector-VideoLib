@@ -106,6 +106,7 @@ jobs:
           ninja -C build install
 
       - name: Verify Architectures (ELF Check)
+        shell: bash
         run: |
           libs=(
             "$DEPS_PREFIX/lib/libogg.a"
@@ -174,6 +175,7 @@ jobs:
       #     make install
 
       # - name: Build JNI bridge (libffmpegjni.so)
+      #   shell: bash
       #   env:
       #     SRC: ffmpeg-jni/src/ffmpegjni.c
       #     OUT_DIR: ffmpeg-jni/bin/linux-musl
