@@ -232,8 +232,8 @@ jobs:
             "-lz"
             "-lpthread"
             "-ldl"
-            # libiconv is often built-in to musl, but if needed externally:
-            # "-liconv" 
+            "-lbz2"
+            "-liconv"
           )
 
           echo "Compiling and Linking JNI .so..."
