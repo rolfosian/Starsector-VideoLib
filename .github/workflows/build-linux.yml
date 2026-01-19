@@ -13,25 +13,24 @@ on:
 
 jobs:
   build-linux-musl:
-    name: Linux Musl (Alpine)
+    name: Linux Build
     runs-on: ubuntu-22.04
-    container:
-      image: alpine:latest
+
     env:
       DEPS_PREFIX: ${{ github.workspace }}/deps-static
     steps:
       - name: Install System Prerequisites
         run: |
-          apk update
-          apk add --no-cache \
-            nodejs git bash curl tar \
-            build-base linux-headers \
-            openjdk17-jdk \
-            nasm yasm meson ninja \
-            automake autoconf libtool pkgconf \
-            gettext-dev file \
-            zlib-dev zlib-static \
-            bzip2-dev bzip2-static \
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            curl git tar file \
+            openjdk-17-jdk-headless \
+            nasm yasm meson ninja-build \
+            automake autoconf libtool pkg-config \
+            gettext \
+            zlib1g-dev \
+            libbz2-dev
 
       - name: Checkout
         uses: actions/checkout@v4
