@@ -11,49 +11,241 @@ on:
       - .github/workflows/build-linux.yml
       - ffmpeg-jni/src/ffmpegjni.c
 
-# permissions:
-#   contents: write
-
 jobs:
-  build-linux:
-    name: Linux
+  build-linux-musl:
+    name: Linux Musl (Alpine)
     runs-on: ubuntu-22.04
+    container:
+      image: alpine:latest
+    env:
+      DEPS_PREFIX: ${{ github.workspace }}/deps-static
     steps:
+      - name: Install System Prerequisites
+        run: |
+          apk update
+          apk add --no-cache \
+            nodejs git bash curl tar \
+            build-base linux-headers \
+            openjdk17-jdk \
+            nasm yasm meson ninja \
+            automake autoconf libtool pkgconf \
+            gettext-dev file
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Install build dependencies
+      - name: Setup Environment Variables
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-          build-essential zlib1g-dev unzip
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+          echo "CFLAGS=-O3 -fPIC" >> $GITHUB_ENV
+          echo "CXXFLAGS=-O3 -fPIC" >> $GITHUB_ENV
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk" >> $GITHUB_ENV
 
-      - name: Build JNI bridge (ffmpegjni.so)
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
+      - name: Build libogg (static musl)
         run: |
-          unzip -o ${{ github.workspace }}/ffmpeg-static/linux/ffmpeg-static-linux.zip -d ${{ github.workspace }}/ffmpeg-static/linux
-          chmod +x ./ffmpeg-jni/src/buildlinux.sh
-          ./ffmpeg-jni/src/buildlinux.sh
+          git clone --depth=1 https://github.com/xiph/ogg.git
+          cd ogg
+          ./autogen.sh
+          
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static
+            
+          make -j$(nproc)
+          make install
 
-      - name: Upload artifacts (linux)
-        uses: actions/upload-artifact@v4
-        with:
-          name: linux-build
-          path: |
-            ffmpeg-jni/bin/linux/ffmpegjni.so
+      - name: Build libvorbis (static musl)
+        run: |
+          git clone --depth=1 https://github.com/xiph/vorbis.git
+          cd vorbis
+          ./autogen.sh
 
-      # - name: Commit and push built binary (Linux)
-      #   if: ${{ github.event_name == 'push' }}
-      #   uses: stefanzweifel/git-auto-commit-action@v5
+          export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig"
+
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --with-ogg-libraries="$DEPS_PREFIX/lib" \
+            --with-ogg-includes="$DEPS_PREFIX/include"
+            
+          make -j$(nproc)
+          make install
+
+      - name: Build libopus (static musl)
+        run: |
+          git clone --depth=1 https://github.com/xiph/opus.git
+          cd opus
+          ./autogen.sh
+          
+          ./configure \
+            --prefix="$DEPS_PREFIX" \
+            --disable-shared \
+            --enable-static \
+            --disable-extra-programs \
+            --disable-doc
+            
+          make -j$(nproc)
+          make install
+
+      - name: Build libdav1d (static musl)
+        run: |
+          git clone --depth=1 https://code.videolan.org/videolan/dav1d.git dav1d-src
+          cd dav1d-src
+
+          # -Db_staticpic=true ensures fPIC is used for the static lib
+          meson setup build \
+            --buildtype release \
+            --default-library=static \
+            -Db_staticpic=true \
+            --prefix="$DEPS_PREFIX"
+            
+          ninja -C build
+          ninja -C build install
+
+      - name: Verify Architectures (ELF Check)
+        run: |
+          libs=(
+            "$DEPS_PREFIX/lib/libogg.a"
+            "$DEPS_PREFIX/lib/libvorbis.a"
+            "$DEPS_PREFIX/lib/libopus.a"
+            "$DEPS_PREFIX/lib/libdav1d.a"
+          )
+
+          failed=0
+          for lib in "${libs[@]}"; do
+            if [ ! -f "$lib" ]; then
+              echo "::error::File not found: $lib"
+              failed=1
+              continue
+            fi
+            
+            # Check if it's an ELF 64-bit object
+            file_info=$(file "$lib")
+            echo "Checking $lib: $file_info"
+            
+            if [[ "$file_info" != *"ELF"* ]]; then
+               echo "::error::Not an ELF file: $lib"
+               failed=1
+            fi
+          done
+
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+
+      # - name: Fetch FFmpeg source
+      #   run: git clone --depth=1 https://github.com/FFmpeg/FFmpeg.git ffmpeg-src
+
+      # - name: Build FFmpeg (static musl)
+      #   working-directory: ffmpeg-src
+      #   run: |
+      #     export PKG_CONFIG_PATH="$DEPS_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
+          
+      #     ./configure \
+      #       --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/linux-musl" \
+      #       --pkg-config-flags="--static" \
+      #       --disable-everything \
+      #       --disable-doc \
+      #       --disable-programs \
+      #       --disable-debug \
+      #       --disable-ffplay \
+      #       --disable-ffprobe \
+      #       --enable-gpl \
+      #       --enable-static \
+      #       --disable-shared \
+      #       --target-os=linux \
+      #       --arch=x86_64 \
+      #       --enable-libvorbis \
+      #       --enable-libopus \
+      #       --enable-libdav1d \
+      #       --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
+      #       --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
+      #       --enable-demuxer=matroska,mov,image2,gif \
+      #       --enable-pic \
+      #       --cc="gcc" \
+      #       --cxx="g++" \
+      #       --extra-cflags="-fPIC -I$DEPS_PREFIX/include" \
+      #       --extra-ldflags="-L$DEPS_PREFIX/lib"
+          
+      #     make -j"$(nproc)"
+      #     make install
+
+      # - name: Build JNI bridge (libffmpegjni.so)
+      #   env:
+      #     SRC: ffmpeg-jni/src/ffmpegjni.c
+      #     OUT_DIR: ffmpeg-jni/bin/linux-musl
+      #     PREFIX: ${{ github.workspace }}/ffmpeg-static/linux-musl
+      #   run: |
+      #     mkdir -p "$OUT_DIR"
+
+      #     # Linux/Musl Specific Flags
+      #     # -shared: Create shared library
+      #     # -fPIC: Position Independent Code
+      #     # -Wl,--no-undefined: Ensure all symbols are resolved
+      #     # -Wl,-z,defs: Strict symbol checking
+          
+      #     CFLAGS="-O3 -DNDEBUG -fPIC -shared -fvisibility=hidden"
+          
+      #     INCLUDES=(
+      #       "-I$PREFIX/include"
+      #       "-I$DEPS_PREFIX/include"
+      #       "-I$JAVA_HOME/include"
+      #       "-I$JAVA_HOME/include/linux"
+      #     )
+
+      #     LIB_PATHS=(
+      #       "-L$PREFIX/lib"
+      #       "-L$DEPS_PREFIX/lib"
+      #     )
+
+      #     FFMPEG_LIBS=(
+      #       "-lavformat"
+      #       "-lavcodec"
+      #       "-lswscale"
+      #       "-lswresample"
+      #       "-lavutil"
+      #     )
+
+      #     STATIC_DEPS=(
+      #       "-ldav1d"
+      #       "-lvorbis"
+      #       "-lvorbisenc"
+      #       "-lopus"
+      #       "-logg"
+      #     )
+
+      #     SYS_LIBS=(
+      #       "-lm"
+      #       "-lz"
+      #       # libiconv is often built-in to musl, but if needed externally:
+      #       # "-liconv" 
+      #     )
+
+      #     echo "Compiling and Linking JNI .so..."
+          
+      #     gcc $CFLAGS \
+      #       "${INCLUDES[@]}" \
+      #       -o "$OUT_DIR/libffmpegjni.so" \
+      #       "$SRC" \
+      #       "${LIB_PATHS[@]}" \
+      #       -Wl,--start-group \
+      #       "${FFMPEG_LIBS[@]}" \
+      #       "${STATIC_DEPS[@]}" \
+      #       -Wl,--end-group \
+      #       "${SYS_LIBS[@]}"
+
+      #     echo "Verifying Dependencies (ldd):"
+      #     # verify it is not linking against glibc
+      #     ldd "$OUT_DIR/libffmpegjni.so"
+
+      # - name: Upload artifacts (Linux Musl)
+      #   uses: actions/upload-artifact@v4
       #   with:
-      #     commit_message: "chore(ci): update Linux ffmpegjni.so"
-      #     file_pattern: ffmpeg-jni/bin/linux/ffmpegjni.so
-      #     branch: ${{ github.ref_name }}
-      
+      #     name: linux-musl-build
+      #     path: |
+      #       ffmpeg-static/linux
+      #       deps-static
+      #       ffmpeg-jni/bin/linux/libffmpegjni.so
