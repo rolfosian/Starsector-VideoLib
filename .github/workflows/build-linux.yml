@@ -161,7 +161,6 @@ jobs:
           
           ./configure \
             --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/linux" \
-            --pkg-config-flags="--static" \
             --disable-everything \
             --disable-doc \
             --disable-programs \
@@ -231,14 +230,14 @@ jobs:
             "-lvorbisenc"
             "-lopus"
             "-logg"
-            "-lz"
-            "-lbz2"
           )
 
           SYS_LIBS=(
             "-lm"
             "-lpthread"
             "-ldl"
+            "-lz"
+            "-lbz2"
           )
 
           echo "Compiling and Linking JNI .so..."
