@@ -2,9 +2,9 @@
     "id": "video_lib",
     "name": "VideoLib",
     "author": "rolfos",
-    "version": "0.0.2a",
-    "description": "Library with plugins to render videos on panels/planets/ringbands.",
+    "version": "0.0.5",
+    "description": "Library with plugins to render videos on (including but not limited to) panels/planets/ringbands.",
     "gameVersion": "0.98a-RC8",
-    "modPlugin": "data.scripts.VideoLibModPlugin",
+    "modPlugin": "videolib.VideoLibModPlugin",
     "jars": ["jars/VideoLib.jar"]
 }

@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <math.h>
-#include "data_scripts_FFmpeg.h"
+#include <pthread.h>
+#include <sys/stat.h>
 
 #include <libavformat/avformat.h>
 #include <libavutil/avutil.h>
@@ -13,8 +14,8 @@
 #include <libswresample/swresample.h>
 #include <libavutil/channel_layout.h>
 #include <libavutil/audio_fifo.h>
-#include <pthread.h>
-#include <sys/stat.h>
+
+#include "videolib_FFmpeg.h"
 
 int test_path(const char *path) {
     struct stat sb;
@@ -54,14 +55,14 @@ void printe(JNIEnv* env, const char* msg) {
     (*env)->DeleteLocalRef(env, args);
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz, jint audioSampleRate) {
-    VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/VideoFrame"));
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_init(JNIEnv *env, jclass clazz, jint audioSampleRate) {
+    VideoFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "videolib/ffmpeg/VideoFrame"));
     VideoFrameClassCtor = (*env)->GetMethodID(env, VideoFrameClass, "<init>", "(Ljava/nio/ByteBuffer;JJ)V");
 
-    AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "data/scripts/ffmpeg/AudioFrame"));
+    AudioFrameClass = (*env)->NewGlobalRef(env, (*env)->FindClass(env, "videolib/ffmpeg/AudioFrame"));
     AudioFrameClassCtor = (*env)->GetMethodID(env, AudioFrameClass, "<init>", "(Ljava/nio/ByteBuffer;JJ)V");
 
-    jclass localFFmpeg = (*env)->FindClass(env, "data/scripts/ffmpeg/FFmpeg");
+    jclass localFFmpeg = (*env)->FindClass(env, "videolib/ffmpeg/FFmpeg");
     FFmpegClass = (*env)->NewGlobalRef(env, localFFmpeg);
     (*env)->DeleteLocalRef(env, localFFmpeg);
     
@@ -74,13 +75,13 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_init(JNIEnv *env, jclass 
     AUDIO_DEVICE_SAMPLE_RATE = (int) audioSampleRate;
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jlong ptr) {
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_freeBuffer(JNIEnv *env, jclass cls, jlong ptr) {
     if (ptr != 0) {
         free((void *)ptr);
     }
 }
 
-JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_fileExists(JNIEnv *env, jclass clazz, jstring filePath) {
+JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_fileExists(JNIEnv *env, jclass clazz, jstring filePath) {
     if (!filePath) {
         return JNI_FALSE;
     }
@@ -105,7 +106,7 @@ typedef struct {
     jobject byte_buffer; // GlobalRef to DirectByteBuffer wrapping rgb_buffer
 } FFmpegImageContext;
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     if (!test_path(filename)) {
@@ -294,7 +295,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openImage(JNIEnv *env, j
     return (jlong)(intptr_t)ctx;
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closeImage(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closeImage(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "closeImage: null context pointer");
@@ -311,7 +312,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closeImage(JNIEnv *env, j
     free(ctx);
 }
 
-JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_getImageBuffer(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_getImageBuffer(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getImageBuffer: null context pointer");
@@ -338,7 +339,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_getImageBuffer(JNIEnv 
     return ctx->byte_buffer;
 }
 
-JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isImageRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isImageRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "isImageRGBA: null context pointer");
@@ -348,7 +349,7 @@ JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isImageRGBA(JNIEnv *e
     return (ctx->rgb_type == 1) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, jclass clazz, jlong ptr, jint newWidth, jint newHeight) {
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, jclass clazz, jlong ptr, jint newWidth, jint newHeight) {
     FFmpegImageContext *ctx = (FFmpegImageContext *)(intptr_t)ptr;
     if (!ctx || !ctx->rgb_buffer || ctx->width <= 0 || ctx->height <= 0) {
         printe(env, "resizeImage: invalid context or buffer state");
@@ -513,7 +514,7 @@ typedef struct {
     pthread_mutex_t mutex;
 } FFmpegPipeContext;
 
-JNIEXPORT jboolean JNICALL Java_data_scripts_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "isRGBA: null context pointer");
@@ -740,7 +741,7 @@ int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
     return 1;
 }
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     if (!test_path(filename)) {
@@ -1286,7 +1287,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
     return NULL;
 }
 
-JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "readFrameNoSound: null context pointer");
@@ -1443,7 +1444,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_readFrameNoSound(JNIEn
     return NULL;
 }
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz,
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz,
     jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
@@ -1940,7 +1941,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jc
     return (jlong)(intptr_t)ctx;
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ctx_ptr;
     if (!ctx) {
         printe(env, "closePipe: null context pointer");
@@ -1994,7 +1995,7 @@ JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jc
     free(ctx);
 }
 
-JNIEXPORT void JNICALL Java_data_scripts_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass clazz, jlong ptr, jlong targetUs) {
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass clazz, jlong ptr, jlong targetUs) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "seek: null context pointer");
@@ -2303,7 +2304,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
     return NULL;
 }
 
-JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
+JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_read(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ctx_ptr;
     if (!ctx) {
         printe(env, "read: null context pointer");
@@ -2519,7 +2520,7 @@ JNIEXPORT jobject JNICALL Java_data_scripts_ffmpeg_FFmpeg_read(JNIEnv *env, jcla
     return NULL;
 }
 
-JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getAudioSampleRate: null context pointer");
@@ -2529,7 +2530,7 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv
     return ctx->out_sample_rate;
 }
 
-JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getAudioChannels: null context pointer");
@@ -2539,7 +2540,7 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *
     return ctx->out_channels;
 }
 
-JNIEXPORT jfloat JNICALL Java_data_scripts_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jfloat JNICALL Java_videolib_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env, jclass clazz, jlong ptr) {
     if (!ptr) {
         printe(env, "getVideoFps: null context pointer");
         return 0.0f;
@@ -2554,7 +2555,7 @@ JNIEXPORT jfloat JNICALL Java_data_scripts_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env
     return 0.0f;
 }
 
-JNIEXPORT jdouble JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationSeconds(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jdouble JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationSeconds(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationSeconds: null context pointer");
@@ -2564,7 +2565,7 @@ JNIEXPORT jdouble JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationSeconds(JNI
     return ctx->duration_seconds;
 }
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationUs: null context pointer");
@@ -2574,7 +2575,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getDurationUs(JNIEnv *en
     return ctx->duration_us;
 }
 
-JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationUs: null context pointer");
@@ -2588,7 +2589,7 @@ JNIEXPORT jint JNICALL Java_data_scripts_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *en
     return result;
 }
 
-JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getTotalFrameCount(JNIEnv *env, jclass clazz, jlong ptr) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_getTotalFrameCount(JNIEnv *env, jclass clazz, jlong ptr) {
     FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getTotalFrameCount: null context pointer");
@@ -2625,7 +2626,7 @@ JNIEXPORT jlong JNICALL Java_data_scripts_ffmpeg_FFmpeg_getTotalFrameCount(JNIEn
     return result;
 }
 
-JNIEXPORT jintArray JNICALL Java_data_scripts_ffmpeg_FFmpeg_getWidthAndHeight(JNIEnv *env, jclass clazz, jstring jfilepath) {
+JNIEXPORT jintArray JNICALL Java_videolib_ffmpeg_FFmpeg_getWidthAndHeight(JNIEnv *env, jclass clazz, jstring jfilepath) {
     const char *filepath = (*env)->GetStringUTFChars(env, jfilepath, NULL);
     if (!filepath) {
         printe(env, "getWidthAndHeight: failed to get filepath string");

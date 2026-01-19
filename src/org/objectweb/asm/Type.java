@@ -27,7 +27,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 package org.objectweb.asm;
 
-import data.scripts.util.TexReflection;
+import videolib.util.TexReflection;
 
 // MINOR PATCH FOR STARSECTOR
 // import rolflectionlib.util.RolfLectionUtil;
