@@ -161,6 +161,7 @@ jobs:
           
           ./configure \
             --prefix="${GITHUB_WORKSPACE}/ffmpeg-static/linux" \
+            --pkg-config-flags="--static" \
             --disable-everything \
             --disable-doc \
             --disable-programs \
