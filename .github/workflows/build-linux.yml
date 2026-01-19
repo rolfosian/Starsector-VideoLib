@@ -105,7 +105,7 @@ jobs:
           ninja -C build
           ninja -C build install
 
-      - name: Verify Architectures (ELF Check)
+      - name: Verify Architectures (x86_64 Check)
         shell: bash
         run: |
           libs=(
@@ -114,25 +114,32 @@ jobs:
             "$DEPS_PREFIX/lib/libopus.a"
             "$DEPS_PREFIX/lib/libdav1d.a"
           )
-
+      
           failed=0
+      
           for lib in "${libs[@]}"; do
             if [ ! -f "$lib" ]; then
               echo "::error::File not found: $lib"
               failed=1
               continue
             fi
-            
-            # Check if it's an ELF 64-bit object
-            file_info=$(file "$lib")
-            echo "Checking $lib: $file_info"
-            
-            if [[ "$file_info" != *"ELF"* ]]; then
-               echo "::error::Not an ELF file: $lib"
-               failed=1
-            fi
+      
+            echo "Checking $lib contents:"
+            for obj in $(ar t "$lib"); do
+              ar x "$lib" "$obj"
+              arch_info=$(file "$obj")
+              echo "  $obj: $arch_info"
+      
+              # fail if not x86-64
+              if [[ "$arch_info" != *"x86-64"* ]]; then
+                echo "::error::$obj in $lib is not x86_64"
+                failed=1
+              fi
+      
+              rm "$obj"
+            done
           done
-
+      
           if [ "$failed" -eq 1 ]; then
             exit 1
           fi
