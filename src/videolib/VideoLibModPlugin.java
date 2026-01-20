@@ -37,20 +37,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     @Override
     public void onApplicationLoad() {
-        if (Global.getSettings().isSoundEnabled()) {
-            ALCcontext context = ALC10.alcGetCurrentContext();
-            ALCdevice device = ALC10.alcGetContextsDevice(context);
-
-            IntBuffer buffer = BufferUtils.createIntBuffer(1);
-            ALC10.alcGetInteger(device, ALC10.ALC_FREQUENCY, buffer);
-            int sampleRate = buffer.get(0);
-            FFmpeg.init(sampleRate);
-            FFmpeg.AUDIO_SAMPLE_RATE = sampleRate;
-
-        } else {
-            FFmpeg.init(0);
-        }
-        
+        FFmpeg.init();
         TexReflection.init();
         VideoUtils.init();
         AutoTexProjector.init();

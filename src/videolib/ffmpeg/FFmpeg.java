@@ -1,8 +1,13 @@
 package videolib.ffmpeg;
 
-import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+
 import org.apache.log4j.Logger;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.openal.ALC10;
+import org.lwjgl.openal.ALCcontext;
+import org.lwjgl.openal.ALCdevice;
 
 import com.fs.starfarer.api.Global;
 
@@ -19,7 +24,6 @@ public class FFmpeg {
 
     public static final boolean IS_LINUX;
     public static int AUDIO_SAMPLE_RATE;
-    public static final Cleaner cleaner = Cleaner.create();
 
     public static final int AVERROR_BSF_NOT_FOUND      = -1179861752;
     public static final int AVERROR_BUG                = -558323010;
@@ -126,34 +130,45 @@ public class FFmpeg {
         }
     }
 
+    public static void init() {}
     static {
         String osName = System.getProperty("os.name").toLowerCase();
+        String rootModPath = Global.getSettings().getModManager().getModSpec("video_lib").getPath();
 
         if (osName.startsWith("windows")) {
-            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/windows/";
-
-            System.load(binDir + "ffmpegjni.dll");  // our bridge
+            System.load(rootModPath + "/ffmpeg-jni/bin/windows/ffmpegjni.dll");
             IS_LINUX = false;
 
         } else if (osName.startsWith("linux")) {
-            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/linux/";
-
-            System.load(binDir + "ffmpegjni.so"); // our bridge
+            System.load(rootModPath + "/ffmpeg-jni/bin/linux/ffmpegjni.so");
             IS_LINUX = true;
 
         } else if (osName.startsWith("mac")) {
-            String binDir = Global.getSettings().getModManager().getModSpec("video_lib").getPath() + "/ffmpeg-jni/bin/mac/";
-
-            System.load(binDir + "ffmpegjni.dylib"); // our bridge
+            System.load(rootModPath + "/ffmpeg-jni/bin/mac/ffmpegjni.dylib");
             IS_LINUX = false;
 
         } else {
             throw new UnsupportedOperationException("Unsupported OS: " + osName);
         }
+
+        if (Global.getSettings().isSoundEnabled()) {
+            ALCcontext context = ALC10.alcGetCurrentContext();
+            ALCdevice device = ALC10.alcGetContextsDevice(context);
+
+            IntBuffer buffer = BufferUtils.createIntBuffer(1);
+            ALC10.alcGetInteger(device, ALC10.ALC_FREQUENCY, buffer);
+            int sampleRate = buffer.get(0);
+            init(sampleRate);
+            AUDIO_SAMPLE_RATE = sampleRate;
+
+        } else {
+            init(0);
+        }
     }
 
     // Native methods
-    public static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
+    private static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
+
     public static native void freeBuffer(long bufferPtr);
     public static native boolean fileExists(String filePath);
     public static native int[] getWidthAndHeight(String filepath);
