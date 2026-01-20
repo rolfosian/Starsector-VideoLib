@@ -109,7 +109,7 @@ public class VideoPaths {
                         int height = overrideData.getInt("height");
     
                         if (!TexReflection.texObjectMap.containsKey(texturePath)) {
-                            throw new IllegalArgumentException(texturePath + "not found in Starsector texture repository for video override: " + videoId);
+                            throw new IllegalArgumentException(texturePath + " not found in Starsector texture repository for video override: " + videoId);
                         }
                         if (autoTexMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException("video override already found for texture " + texturePath);
