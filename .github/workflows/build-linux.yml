@@ -179,6 +179,7 @@ jobs:
             --enable-decoder=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,opus,vorbis,libdav1d \
             --enable-parser=h264,hevc,vp8,vp9,mjpeg,png,webp,gif,aac,mpegaudio \
             --enable-demuxer=matroska,mov,image2,gif \
+            --enable-protocol=file \
             --enable-pic \
             --cc="gcc" \
             --cxx="g++" \
