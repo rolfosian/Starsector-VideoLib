@@ -302,9 +302,10 @@ public class DecoderWithSound implements Decoder {
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
 
-        boolean isRGBA = FFmpeg.isRGBA(pipePtr);
+        // boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         // print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        // this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        this.textureBuffer = new RGBATextureBuffer(30);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();

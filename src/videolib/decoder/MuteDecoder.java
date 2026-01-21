@@ -223,9 +223,10 @@ public class MuteDecoder implements Decoder {
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
 
-        boolean isRGBA = FFmpeg.isRGBA(pipePtr);
+        // boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         // print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
+        // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
+        this.textureBuffer = new RGBATextureBuffer(10);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 

@@ -188,16 +188,9 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclas
         return 0;
     }
 
-    // Determine if source has alpha channel and choose appropriate output format
-    int rgb_type = 0;
-    {
-        enum AVPixelFormat pix_fmt = codec_ctx->pix_fmt;
-        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
-        rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
-    }
-    enum AVPixelFormat target_fmt = (rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+    int rgb_type = 1;
+    enum AVPixelFormat target_fmt = AV_PIX_FMT_RGBA;
 
-    // Create scaler to requested size
     sws_ctx = sws_getContext(
         codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
         width, height, target_fmt,
@@ -227,7 +220,6 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclas
     }
     av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1);
 
-    // Decode first frame
     AVPacket *pkt = av_packet_alloc();
     int got = 0;
     while (av_read_frame(fmt_ctx, pkt) >= 0 && !got) {
@@ -249,7 +241,6 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclas
     }
     av_packet_free(&pkt);
 
-    // We only need the RGB buffer after this; release decoding resources
     av_frame_free(&decoded);
     avcodec_free_context(&codec_ctx);
     avformat_close_input(&fmt_ctx);
@@ -370,12 +361,12 @@ JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, jcla
         return;
     }
     src->data[0] = ctx->rgb_buffer;
-    src->linesize[0] = ctx->width * (ctx->rgb_type == 1 ? 4 : 3); // 4 for RGBA, 3 for RGB
+    src->linesize[0] = ctx->width * 4;
     src->width = ctx->width;
     src->height = ctx->height;
-    src->format = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+    src->format = AV_PIX_FMT_RGBA;
 
-    enum AVPixelFormat target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+    enum AVPixelFormat target_fmt = AV_PIX_FMT_RGBA;
     struct SwsContext *sws = sws_getContext(
         ctx->width, ctx->height, src->format,
         newWidth, newHeight, target_fmt,
@@ -388,7 +379,7 @@ JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_resizeImage(JNIEnv *env, jcla
         return;
     }
 
-    int bytes_per_pixel = (ctx->rgb_type == 1) ? 4 : 3; // 4 for RGBA, 3 for RGB
+    int bytes_per_pixel = 4; // 4 for RGBA, 3 for RGB
     int new_size = newWidth * newHeight * bytes_per_pixel;
     // If shrinking or same size, reuse existing buffer; otherwise allocate new
     uint8_t *target_buffer = NULL;
@@ -972,11 +963,8 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     } else {
         ctx->vpx_alpha_channel = 0;
 
-        enum AVPixelFormat pix_fmt = ctx->video_ctx->pix_fmt;
-        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
-        ctx->rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
-        
-        target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+        ctx->rgb_type = 1;
+        target_fmt = AV_PIX_FMT_RGBA;
 
         sws_ctx = sws_getContext(
             codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt,
@@ -1444,8 +1432,7 @@ JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *e
     return NULL;
 }
 
-JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz,
-    jstring jfilename, jint width, jint height, jlong startUs) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     if (!test_path(filename)) {
@@ -1796,11 +1783,8 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     } else {
         ctx->vpx_alpha_channel = 0;
 
-        enum AVPixelFormat pix_fmt = ctx->video_ctx->pix_fmt;
-        const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(pix_fmt);
-        ctx->rgb_type = (desc && (desc->flags & AV_PIX_FMT_FLAG_ALPHA)) ? 1 : 0; // 0=RGB, 1=RGBA
-        
-        target_fmt = (ctx->rgb_type == 1) ? AV_PIX_FMT_RGBA : AV_PIX_FMT_RGB24;
+        ctx->rgb_type = 1;
+        target_fmt = AV_PIX_FMT_RGBA;
 
         sws_ctx = sws_getContext(
             vctx->width, vctx->height, vctx->pix_fmt,
@@ -1833,7 +1817,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
         return 0;
     }
     
-    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
+    int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 32);
     uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
     if (!rgb_buffer) {
         printe(env, "openPipe: failed to allocate RGB buffer");
@@ -1860,7 +1844,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
         return 0;
     }
     
-    if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
+    if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 32) < 0) {
         printe(env, "openPipe: failed to fill image arrays");
 
         av_free(rgb_buffer);
