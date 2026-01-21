@@ -1,10 +1,7 @@
 package videolib;
 
-import java.nio.IntBuffer;
 import java.util.*;
 
-import org.lwjgl.BufferUtils;
-import org.lwjgl.openal.*;
 import org.apache.log4j.Logger;
 
 import com.fs.starfarer.api.BaseModPlugin;
