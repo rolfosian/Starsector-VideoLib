@@ -17,127 +17,111 @@ public class TextureBuffer implements TexBuffer {
         logger.info(sb.toString());
     }
 
-    protected final VideoFrame[] videoFrames;
-    protected final TextureFrame[] textures;
-
-    protected final int maxActiveTextures;
-    protected int size;
     protected final int capacity;
+    protected final VideoFrame[] videoFrames;
+    protected int textureId;
+    protected int width;
+    protected int height;
+
+    protected int size;
     protected int head;
     protected int tail;
-    protected int activeTextures = 0;
 
-    public TextureBuffer(int capacity, int maxActiveTextures) {
-        this.maxActiveTextures = maxActiveTextures;
+    protected long lastRemovedPts;
+
+    public TextureBuffer(int capacity) {
         this.capacity = capacity;
-        this.textures = new TextureFrame[capacity];
+
         this.videoFrames = new VideoFrame[capacity];
+
         this.size = 0;
         this.head = 0;
         this.tail = 0;
     }
 
+    @Override
+    public int getTextureId() {
+        return this.textureId;
+    }
+
+    @Override
+    public void initTexStorage(int width, int height) {
+        int previousAlignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
+
+        if (this.textureId != 0) GL11.glDeleteTextures(this.textureId);
+        this.textureId = GL11.glGenTextures();
+
+        this.width = width;
+        this.height = height;
+
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+
+        GL11.glTexImage2D(
+            GL11.GL_TEXTURE_2D,
+            0,
+            GL11.GL_RGB,
+            width,
+            height,
+            0,
+            GL11.GL_RGB,
+            GL11.GL_UNSIGNED_BYTE,
+            (ByteBuffer) null
+        );
+        
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, previousAlignment);
+    }
+    
+    @Override
     public int size() {
         return size;
     }
 
+    @Override
     public boolean isEmpty() {
         return size == 0;
     }
 
+    @Override
     public boolean isFull() {
         return size == capacity;
     }
 
+    @Override
     public void add(VideoFrame frame) {
         videoFrames[tail] = frame;
-        textures[tail] = null;
         tail = (tail + 1) % capacity;
         size++;
     }
 
-    // Should only be called if size > 0
-    public long peekPts() {
-        TextureFrame texFrame = textures[head];
-        if (texFrame != null) return texFrame.pts;
-        return videoFrames[head].pts;
-    }
+    @Override
+    public long update() {
+        if (size == 0) return lastRemovedPts;
+        VideoFrame removed = null;
 
-    // remember to glDeleteTextures with removed.id later (and only call this on the main thread)
-    public TextureFrame pop(int width, int height) {
-        if (size == 0) return null;
-        TextureFrame removed = textures[head];
+        if (videoFrames[head] != null) {
+            removed = videoFrames[head];
+            lastRemovedPts = removed.pts;
+            updateTexture(removed.buffer);
+            removed.freeBuffer();
 
-        if (removed == null && videoFrames[head] != null) {
-            removed = new TextureFrame(
-                createGLTextureFromFrame(videoFrames[head].buffer, width, height),
-                videoFrames[head].pts
-            );
-            videoFrames[head].freeBuffer();
             videoFrames[head] = null;
         }
-        textures[head] = null;
         
         head = (head + 1) % capacity;
         size--;
-        return removed;
+
+        return removed == null ? lastRemovedPts : removed.pts;
     }
 
-    public void convertSome(int width, int height, int maxConversions) {
-        int idx = head;
-        for (int i = 0; i < size && maxConversions > 0; i++) {
-            if (activeTextures >= maxActiveTextures) break;
-            
-            if (videoFrames[idx] != null && textures[idx] == null) {
-                textures[idx] = new TextureFrame(
-                    createGLTextureFromFrame(videoFrames[idx].buffer, width, height),
-                    videoFrames[idx].pts
-                );
-                
-                videoFrames[idx].freeBuffer();
-                videoFrames[idx] = null;
-                maxConversions--;
-            }
-            idx = (idx + 1) % capacity;
-        }
-    }
-
-    public void convertAll(int width, int height) {
-        int idx = head;
-        for (int i = 0; i < size; i++) {
-            if (videoFrames[idx] != null && textures[idx] == null) {
-                textures[idx] = new TextureFrame(
-                    createGLTextureFromFrame(videoFrames[idx].buffer, width, height),
-                    videoFrames[idx].pts
-                );
-
-                videoFrames[idx].freeBuffer();
-                videoFrames[idx] = null;
-            }
-            idx = (idx + 1) % capacity;
-        }
-    }
-
-    public void convertFront(int width, int height) {
-        if (isEmpty() || activeTextures >= maxActiveTextures) return;
-
-        if (videoFrames[head] != null && textures[head] == null) {
-            textures[head] = new TextureFrame(
-                createGLTextureFromFrame(videoFrames[head].buffer, width, height),
-                videoFrames[head].pts
-            );
-            videoFrames[head].freeBuffer();
-            videoFrames[head] = null;
-        }
-    }
-
+    @Override
     public void clear() {
         int idx = head;
         for (int i = 0; i < size; i++) {
-            if (textures[idx] != null) {
-                deleteTexture(textures[idx].id);
-                textures[idx] = null;
-            }
             if (videoFrames[idx] != null) {
                 videoFrames[idx].freeBuffer();
                 videoFrames[idx] = null;
@@ -149,31 +133,31 @@ public class TextureBuffer implements TexBuffer {
         size = 0;
         head = 0;
         tail = 0;
-        activeTextures = 0;
     }
 
-    // this can only be called on the main thread as we need the thread's context to upload and render these textures on the main thread also GL11 is not thread safe
-    protected int createGLTextureFromFrame(ByteBuffer frameBuffer, int width, int height) {
-        if (frameBuffer == null) return -1;
-
-        int textureId = GL11.glGenTextures();
+    protected void updateTexture(ByteBuffer frameBuffer) {
         int previousAlignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
-
+    
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGB, width, height, 0,
-                          GL11.GL_RGB, GL11.GL_UNSIGNED_BYTE, frameBuffer);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+    
+        GL11.glTexSubImage2D(
+            GL11.GL_TEXTURE_2D,
+            0,
+            0,
+            0,
+            width,
+            height,
+            GL11.GL_RGB,
+            GL11.GL_UNSIGNED_BYTE,
+            frameBuffer
+        );
+    
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, previousAlignment);
-
-        activeTextures++;
-        return textureId;
     }
 
-    public void deleteTexture(int id) {
-        GL11.glDeleteTextures(id);
-        activeTextures--;
+    public void cleanupTexStorage() {
+        GL11.glDeleteTextures(textureId);
     }
 }

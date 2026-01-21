@@ -121,7 +121,6 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourTexObj, newId);
             
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -146,7 +145,6 @@ public class RingBandProjector implements EveryFrameScript, Projector {
         // TexReflection.setRingBandTexId(ringBand, originalTexId);
 
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

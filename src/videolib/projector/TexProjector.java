@@ -82,7 +82,6 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(textureWrapper, newId);
             
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -95,7 +94,6 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(textureWrapper, newId);
             
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -117,7 +115,6 @@ public class TexProjector extends BaseEveryFrameCombatPlugin implements EveryFra
         TexReflection.setTexObjId(textureWrapper, originalTextureId);
 
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

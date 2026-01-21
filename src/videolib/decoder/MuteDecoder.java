@@ -11,11 +11,9 @@ import videolib.VideoModes.PlayMode;
 
 import videolib.buffers.RGBATextureBuffer;
 import videolib.buffers.TextureBuffer;
-import videolib.buffers.TextureFrame;
 
 import videolib.VideoLibModPlugin;
 
-import org.lwjgl.opengl.GL11;
 import org.apache.log4j.Logger;
 
 public class MuteDecoder implements Decoder {
@@ -41,7 +39,7 @@ public class MuteDecoder implements Decoder {
     private long pipePtr;
     private TextureBuffer textureBuffer;
 
-    private float gameFps = 0f;
+    // private float gameFps = 0f;
     private float videoFps = 0f;
     private float spf = 0f;
     private double videoDurationSeconds = 0;
@@ -182,37 +180,16 @@ public class MuteDecoder implements Decoder {
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
-        gameFps = 1 / deltaTime;
+        // gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
         synchronized(textureBuffer) {
-            boolean switched = false;
-
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
                 
-                TextureFrame texture = textureBuffer.pop(width, height);
-
-                if (texture != null) {
-                    switched = true;
-                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
-
-                    currentVideoTextureId = texture.id;
-                    currentVideoPts = texture.pts;
-                }
-            }
-
-            if (!switched) {
-
-                if (gameFps <= videoFps) {
-                    textureBuffer.convertFront(width, height);
-
-                } else {
-                    textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
-                }
+                currentVideoPts = textureBuffer.update();
             }
         }
-
         return currentVideoTextureId;
     }
 
@@ -220,16 +197,7 @@ public class MuteDecoder implements Decoder {
         while (textureBuffer.isEmpty()) sleep(1); 
 
         synchronized(textureBuffer) {
-            TextureFrame texture = textureBuffer.pop(width, height);
-
-            if (texture != null) {
-                int oldTextureId = currentVideoTextureId;
-
-                currentVideoTextureId = texture.id;
-                currentVideoPts = texture.pts;
-
-                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) textureBuffer.deleteTexture(oldTextureId);
-            }
+            currentVideoPts = textureBuffer.update();
         }
         return currentVideoTextureId;
     }
@@ -257,16 +225,15 @@ public class MuteDecoder implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         // print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10, 5) : new TextureBuffer(10, 5);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
+        this.textureBuffer.initTexStorage(width, height);
+        this.currentVideoTextureId = this.textureBuffer.getTextureId();
 
         decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
         decodeThread.start();
         // print("MuteDecoder decoderLoop thread started");
 
         while(textureBuffer.isEmpty()) sleep(1);
-        synchronized(textureBuffer) {
-            textureBuffer.convertFront(width, height);
-        }
         return;
     }
 
@@ -292,6 +259,7 @@ public class MuteDecoder implements Decoder {
         // print("Clearing Texture/Video Buffer");
         synchronized(textureBuffer) {
             textureBuffer.clear();
+            textureBuffer.cleanupTexStorage();
         }
         // textureBuffer.glDeleteBuffers();
     }

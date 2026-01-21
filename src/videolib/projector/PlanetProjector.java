@@ -210,8 +210,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         int newId = decoder.getCurrentVideoTextureId(deltaTime);
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourPlanetTexObj, newId);
-            
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -269,7 +267,6 @@ public class PlanetProjector implements EveryFrameScript, Projector {
         resetPlanetState();
 
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 

@@ -74,7 +74,7 @@ public class AutoTexProjector implements Opcodes {
         String texReflectionInternal = Type.getInternalName(TexReflection.class);
         String bindMethodName = TexReflection.texObjectBindMethodName;
         
-        // public class AutoTexProjektor extends textureClass implements EveryFrameScript, Projector
+        // public class AutoTexProjektor extends textureClass implements AutoTexProjectorAPI
         cw.visit(
             V17,
             ACC_PUBLIC,
@@ -363,26 +363,6 @@ public class AutoTexProjector implements Opcodes {
             );
             mv.visitCode();
         
-            Label lSkipDelete = new Label();
-        
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitJumpInsn(IFEQ, lSkipDelete);
-        
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "textureBuffer", texBufferDesc);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitMethodInsn(
-                INVOKEINTERFACE,
-                texBufferInternalName,
-                "deleteTexture",
-                "(I)V",
-                true
-            );
-        
-            mv.visitLabel(lSkipDelete);
-        
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
             mv.visitMethodInsn(
@@ -628,17 +608,6 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ILOAD, 2);
             mv.visitMethodInsn(INVOKESTATIC, texReflectionInternal, "setTexObjId", "(Ljava/lang/Object;I)V", false);
 
-            // // if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitJumpInsn(IFEQ, lSkipDelete);
-
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "textureBuffer", texBufferDesc);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitMethodInsn(INVOKEINTERFACE, texBufferInternalName, "deleteTexture", "(I)V", true);
-
             // currentTextureId = newId;
             mv.visitLabel(lSkipDelete);
             mv.visitVarInsn(ALOAD, 0);
@@ -655,26 +624,6 @@ public class AutoTexProjector implements Opcodes {
         {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "finish", "()V", null, null);
             mv.visitCode();
-
-            // if (currentTextureId != 0)
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            Label lSkipDelete = new Label();
-            mv.visitJumpInsn(IFEQ, lSkipDelete);
-
-            // textureBuffer.deleteTexture(currentTextureId);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "textureBuffer", texBufferDesc);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitMethodInsn(INVOKEINTERFACE, texBufferInternalName, "deleteTexture", "(I)V", true);
-
-            // currentTextureId = 0;
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitInsn(ICONST_0);
-            mv.visitFieldInsn(PUTFIELD, className, "currentTextureId", "I");
-
-            mv.visitLabel(lSkipDelete);
 
             // isDone = true;
             mv.visitVarInsn(ALOAD, 0);
@@ -1130,7 +1079,6 @@ public class AutoTexProjector implements Opcodes {
 
 //     @Override
 //     public void changeVideo(String videoId, int width, int height, long videoStartUs) {
-//         if (this.currentTextureId != 0) this.textureBuffer.deleteTexture(this.currentTextureId);
 //         this.decoder.finish();
 
 //         this.videoFilePath = VideoPaths.getVideoPath(videoId);
@@ -1172,7 +1120,6 @@ public class AutoTexProjector implements Opcodes {
 //                 if (newId != currentTextureId) {
 //                     TexReflection.setTexObjId(this, newId);
 
-//                     if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
 //                     currentTextureId = newId;
 //                 }
 //             }
@@ -1221,11 +1168,6 @@ public class AutoTexProjector implements Opcodes {
 
 //     @Override
 //     public void finish() {
-//         if (currentTextureId != 0) {
-//             textureBuffer.deleteTexture(currentTextureId);
-//             currentTextureId = 0;
-//         }
-
 //         isDone = true;
 //         decoder.finish();
 //         decoder = null;

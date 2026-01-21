@@ -92,7 +92,6 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourTexObj, newId);
             
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -105,7 +104,6 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
         if (newId != currentTextureId) {
             TexReflection.setTexObjId(ourTexObj, newId);
             
-            if (currentTextureId != 0) textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = newId;
         }
     }
@@ -128,11 +126,6 @@ public class SpriteProjector extends BaseEveryFrameCombatPlugin implements Every
     public void finish() {
         TexReflection.setSpriteTexObj(sprite, originalTexObj);
         TexReflection.setSpriteTexId(sprite, originalTexId);
-
-        if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
-            currentTextureId = 0;
-        }
 
         isDone = true;
         decoder.finish();

@@ -2,7 +2,6 @@ package videolib.decoder;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.openal.AL10;
-import org.lwjgl.opengl.GL11;
 
 import videolib.ffmpeg.AudioFrame;
 import videolib.ffmpeg.FFmpeg;
@@ -14,12 +13,10 @@ import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
 
 import videolib.buffers.TextureBuffer;
-// import videolib.buffers.TextureBufferList;
-import videolib.buffers.TextureFrame;
 import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.RGBATextureBuffer;
-// import videolib.buffers.RGBATextureBufferList;
 import videolib.buffers.TexBuffer;
+
 import videolib.playerui.PlayerControlPanel;
 import videolib.projector.Projector;
 import videolib.speakers.Speakers;
@@ -49,7 +46,7 @@ public class DecoderWithSound implements Decoder {
     private TexBuffer textureBuffer;
     private AudioFrameBuffer audioBuffer;
 
-    private float gameFps = 0f;
+    // private float gameFps = 0f;
     private float videoFps = 0f;
     private float spf = 0f;
     private double videoDurationSeconds = 0;
@@ -253,46 +250,20 @@ public class DecoderWithSound implements Decoder {
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
-        gameFps = 1 / deltaTime;
+        // gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
 
         currentAudioPts = speakers.getCurrentAudioPts();
         if (lastRenderedAudioPts == currentAudioPts) return currentVideoTextureId;
 
         synchronized(textureBuffer) {
-            boolean switched = false;
-
             while (timeAccumulator >= spf) {
                 timeAccumulator -= spf;
                 
-                TextureFrame texture = textureBuffer.pop(width, height);
-                if (texture != null) {
-                    switched = true;
+                currentVideoPts = textureBuffer.update();
 
-                    if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
-
-                    currentVideoTextureId = texture.id;
-                    currentVideoPts = texture.pts;
-
-                    while (!textureBuffer.isEmpty() && (currentAudioPts > currentVideoPts) ) {
-                        texture = textureBuffer.pop(width, height);
-                        
-                        if (texture != null) {
-                            if (currentVideoTextureId != 0) textureBuffer.deleteTexture(currentVideoTextureId);
-        
-                            currentVideoTextureId = texture.id;
-                            currentVideoPts = texture.pts;
-                        }
-                    }
-                }
-            }
-
-            if (!switched) {
-
-                if (gameFps <= videoFps) {
-                    textureBuffer.convertFront(width, height);
-                } else {
-                    textureBuffer.convertSome(width, height, Math.round(gameFps / videoFps) + 2);
+                while (!textureBuffer.isEmpty() && (currentAudioPts > currentVideoPts) ) {
+                    currentVideoPts = textureBuffer.update();
                 }
             }
         }
@@ -305,16 +276,7 @@ public class DecoderWithSound implements Decoder {
         while (textureBuffer.isEmpty()) sleep(1); 
 
         synchronized(textureBuffer) {
-            TextureFrame texture = textureBuffer.pop(width, height);
-
-            if (texture != null) {
-                int oldTextureId = currentVideoTextureId;
-
-                currentVideoTextureId = texture.id;
-                currentVideoPts = texture.pts;
-
-                if (oldTextureId != 0 && oldTextureId != currentVideoTextureId) textureBuffer.deleteTexture(oldTextureId);
-            }
+            currentVideoPts = textureBuffer.update();
         }
         return currentVideoTextureId;
     }
@@ -342,7 +304,9 @@ public class DecoderWithSound implements Decoder {
 
         boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         // print("isRGBA=", isRGBA);
-        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30, 5) : new TextureBuffer(30, 5);
+        this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        this.textureBuffer.initTexStorage(width, height);
+        this.currentVideoTextureId = this.textureBuffer.getTextureId();
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
         audioChannels = FFmpeg.getAudioChannels(pipePtr);
@@ -356,9 +320,6 @@ public class DecoderWithSound implements Decoder {
         // print("DecoderWithSound decoderLoop thread started");
 
         while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
-        synchronized(textureBuffer) {
-            textureBuffer.convertFront(width, height);
-        }
         return;
     }
 
@@ -384,6 +345,7 @@ public class DecoderWithSound implements Decoder {
         // print("Clearing Texture/Video Buffer");
         synchronized(textureBuffer) {
             textureBuffer.clear();
+            textureBuffer.cleanupTexStorage();
         }
         synchronized(audioBuffer) {
             audioBuffer.clear();

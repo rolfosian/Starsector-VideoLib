@@ -252,7 +252,6 @@ public class AudioVideoProjector extends VideoProjector {
         isRendering = true;
 
         if (this.MODE == PlayMode.STOPPED && currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
         this.speakers.play();
@@ -274,7 +273,6 @@ public class AudioVideoProjector extends VideoProjector {
         decoder.seek(0);
 
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             this.currentTextureId = decoder.getCurrentVideoTextureId();
         }
     }
@@ -282,7 +280,6 @@ public class AudioVideoProjector extends VideoProjector {
 
     public void restart() {
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
         speakers.restart();
@@ -292,7 +289,6 @@ public class AudioVideoProjector extends VideoProjector {
         isRendering = false;
 
         if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
             currentTextureId = 0;
         }
 
@@ -317,9 +313,7 @@ public class AudioVideoProjector extends VideoProjector {
     }
 
     public void setTextureBuffer(TexBuffer buffer) {
-        if (currentTextureId != 0) {
-            textureBuffer.deleteTexture(currentTextureId);
-        }
+        currentTextureId = buffer.getTextureId();
         this.textureBuffer = buffer;
     }
 
