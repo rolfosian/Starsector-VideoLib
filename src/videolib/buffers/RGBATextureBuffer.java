@@ -40,11 +40,7 @@ public class RGBATextureBuffer extends TextureBuffer {
 
     @Override
     protected void updateTexture(ByteBuffer frameBuffer) {
-        int previousAlignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
-    
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
-        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 4);
-    
         GL11.glTexSubImage2D(
             GL11.GL_TEXTURE_2D,
             0,
@@ -58,6 +54,5 @@ public class RGBATextureBuffer extends TextureBuffer {
         );
     
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-        GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, previousAlignment);
     }
 }

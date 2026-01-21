@@ -101,21 +101,16 @@ public class TextureBuffer implements TexBuffer {
     @Override
     public long update() {
         if (size == 0) return lastRemovedPts;
-        VideoFrame removed = null;
 
-        if (videoFrames[head] != null) {
-            removed = videoFrames[head];
-            lastRemovedPts = removed.pts;
-            updateTexture(removed.buffer);
-            removed.freeBuffer();
+        VideoFrame removed = videoFrames[head];
+        updateTexture(removed.buffer);
+        removed.freeBuffer();
 
-            videoFrames[head] = null;
-        }
+        videoFrames[head] = null;
         
         head = (head + 1) % capacity;
         size--;
-
-        return removed == null ? lastRemovedPts : removed.pts;
+        return lastRemovedPts = removed.pts;
     }
 
     @Override
