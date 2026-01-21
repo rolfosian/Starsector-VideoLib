@@ -157,6 +157,7 @@ public class TextureBuffer implements TexBuffer {
         GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, previousAlignment);
     }
 
+    @Override
     public void cleanupTexStorage() {
         GL11.glDeleteTextures(textureId);
     }

@@ -12,10 +12,8 @@ public class RGBATextureBuffer extends TextureBuffer {
 
     @Override
     public void initTexStorage(int width, int height) {
-        if (this.textureId != 0) {
-            GL11.glDeleteTextures(this.textureId);
-            this.textureId = GL11.glGenTextures();
-        }
+        if (this.textureId != 0) GL11.glDeleteTextures(this.textureId);
+        this.textureId = GL11.glGenTextures();
 
         this.width = width;
         this.height = height;
