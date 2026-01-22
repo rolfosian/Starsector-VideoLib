@@ -56,7 +56,7 @@ public class MuteDecoder implements Decoder {
     private float timeAccumulator = 0f;
 
     public MuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        print("Initializing MuteDecoder for file " + videoFilePath);
+        print("Initializing MuteDecoder for file " + videoFilePath + " using class " + videoProjector.getClass().getName());
         this.videoProjector = videoProjector;
         this.videoFilePath = videoFilePath;
 
@@ -226,7 +226,7 @@ public class MuteDecoder implements Decoder {
         // boolean isRGBA = FFmpeg.isRGBA(pipePtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
-        this.textureBuffer = new RGBATextureBuffer(10);
+        this.textureBuffer = new RGBATextureBuffer(5);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 

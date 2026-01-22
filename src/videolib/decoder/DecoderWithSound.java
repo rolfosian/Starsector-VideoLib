@@ -70,12 +70,12 @@ public class DecoderWithSound implements Decoder {
     private float timeAccumulator = 0f;
 
     public DecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        print("Initializing DecoderWithSound for file " + videoFilePath);
+        print("Initializing DecoderWithSound for file " + videoFilePath + " using class " + videoProjector.getClass().getName());
         this.videoFilePath = videoFilePath;
 
         this.videoProjector = videoProjector;
 
-        this.audioBuffer = new AudioFrameBuffer(60);
+        this.audioBuffer = new AudioFrameBuffer(30);
 
         this.width = width;
         this.height = height;
