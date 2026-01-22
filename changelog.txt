@@ -1,0 +1,23 @@
+Version 0.1.0
+
+- Restructured packages. Instead of data.scripts.* it is now videolib.* to be more identifiable
+
+- New feature: AutoTexProjector class
+    A texture override class designed to run permanently while the game is running for things like animated portraits and illustrations.
+    Decoder keeps file handle open indefinitely
+    Has a frame timeout of 2 frames; if the texture is not bound then it will go dormant.
+    Data driven; see settings.json and the corresponding portrait file for an example usage
+    You can get a handle on it via VideoPaths.getAutoTexProjectorOverride(key in the settings.json) if you want to pause it or change the video it uses
+
+- Added changelog
+- Added version files
+- Added actual play/pause/stop "icons" to buttons on control panel
+- Added an animated gif portrait for an AutoTexProjector example
+
+- Changed everything to just use RGBA frames instead of selectively using RGBA/RGB24 as simple grug fix for alignment/padding errors resulting from videos with wacky resolutions
+- Refactored and cleaned up frame buffer handling
+
+- Fixed freeze related to seeking to end on video player control panel
+- Fixed texture uploads rendering upside down without postprocessing
+- Fixed crash related to GL unpack alignment when uploading textures with a funky resolution to gpu
+- "Fixed" audio drifting progressively behind video on linux (Works on my machine™)

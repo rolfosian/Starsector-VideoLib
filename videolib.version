@@ -1,0 +1,13 @@
+{
+  "modName": "VideoLib",
+  "modThreadId": "34134",
+  "masterVersionFile": "https://raw.githubusercontent.com/rolfosian/Starsector-VideoLib/main/videolib.version",
+  "changelogURL": "https://raw.githubusercontent.com/rolfosian/Starsector-VideoLib/main/changelog.txt",
+  "directDownloadURL": "https://github.com/rolfosian/Starsector-VideoLib/releases/download/v0.0.5/VideoLib.0.1.0.zip",
+  "modVersion":
+    {
+      "major": "0",
+      "minor": "1",
+      "patch": "0"
+    }
+}
