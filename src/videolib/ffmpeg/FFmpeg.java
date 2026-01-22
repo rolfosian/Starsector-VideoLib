@@ -170,6 +170,7 @@ public class FFmpeg {
     private static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
 
     public static native void freeBuffer(long bufferPtr);
+    public static native long getFilePtr(String filePath);
     public static native boolean fileExists(String filePath);
     public static native int[] getWidthAndHeight(String filepath);
 
@@ -188,14 +189,14 @@ public class FFmpeg {
     public static native boolean isRGBA(long ptr); // YUVA420P and GIF alpha channel support
 
     public static native void seek(long ptr, long targetUs);
-    public static native void closePipe(long ptr);
+    public static native void closeCtx(long ptr);
 
     // raw rgb frames with no sound
-    public static native long openPipeNoSound(String filename, int width, int height, long startUs);
+    public static native long openCtxNoSound(String filename, int width, int height, long startUs);
     public static native VideoFrame readFrameNoSound(long ptr);
 
     // with sound
-    public static native long openPipe(String fileName, int width, int height, long startUs);
+    public static native long openCtx(String fileName, int width, int height, long startUs);
     public static native Frame read(long ptr);
 
     public static native int getAudioSampleRate(long ptr);

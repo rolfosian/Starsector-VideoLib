@@ -105,7 +105,7 @@ public class VideoLibPlanetsDemo implements BaseCommand {
         }
 
         // VERY IMPORTANT:
-        // Stop projectors and their decoders, close ffmpeg pipes and clean up when player leaves system, or otherwise via some other method
+        // Stop projectors and their decoders, close ffmpeg ctxs and clean up when player leaves system, or otherwise via some other method
         // Or leak the memory and leave the decoder thread running with the file open im not your boss
         Global.getSector().addTransientScript(new EveryFrameScript() {
             private boolean isDone = false;

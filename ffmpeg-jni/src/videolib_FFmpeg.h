@@ -97,18 +97,18 @@ JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_seek
 
 /*
  * Class:     videolib_ffmpeg_FFmpeg
- * Method:    closePipe
+ * Method:    closeCtx
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closePipe
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closeCtx
   (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     videolib_ffmpeg_FFmpeg
- * Method:    openPipeNoSound
+ * Method:    openCtxNoSound
  * Signature: (Ljava/lang/String;IIJ)J
  */
-JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtxNoSound
   (JNIEnv *, jclass, jstring, jint, jint, jlong);
 
 /*
@@ -121,10 +121,10 @@ JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_readFrameNoSound
 
 /*
  * Class:     videolib_ffmpeg_FFmpeg
- * Method:    openPipe
+ * Method:    openCtx
  * Signature: (Ljava/lang/String;IIJ)J
  */
-JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtx
   (JNIEnv *, jclass, jstring, jint, jint, jlong);
 
 /*
@@ -187,7 +187,7 @@ JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isRGBA
 /*
  * Class:     videolib_ffmpeg_FFmpeg
  * Method:    fileExists
- * Signature: (J)Z
+ * Signature: (Ljava/lang/String;)Z
  */
 JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_fileExists
 (JNIEnv *, jclass, jstring);

@@ -503,10 +503,10 @@ typedef struct {
     int error_status;
 
     pthread_mutex_t mutex;
-} FFmpegPipeContext;
+} FFmpegVideoLibContext;
 
 JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "isRGBA: null context pointer");
         return 0;
@@ -537,7 +537,7 @@ static void vflip_inplace(AVFrame *frame) {
 
 // vpx alpha channel is in side data, we need to extract it to then merge and then finally convert to rgba to put in buffer
 // impl adapted from JEEB's vp8 alpha detection and decode https://github.com/jeeb/ffmpeg/commit/1c8bdb404c67bdd36611afb66bd925fad6588660
-static int extract_alpha_packet(JNIEnv *env, FFmpegPipeContext *ctx, AVPacket *pkt, AVPacket **out_pkt) {
+static int extract_alpha_packet(JNIEnv *env, FFmpegVideoLibContext *ctx, AVPacket *pkt, AVPacket **out_pkt) {
     int ret = AVERROR_BUG2;
     AVPacket *alpha_packet = NULL;
 
@@ -587,7 +587,7 @@ failed:
     return 0;
 }
 
-static int merge_alpha_frame(JNIEnv *env, FFmpegPipeContext *ctx, AVFrame *alpha_frame, AVFrame *frame) {
+static int merge_alpha_frame(JNIEnv *env, FFmpegVideoLibContext *ctx, AVFrame *alpha_frame, AVFrame *frame) {
     int ret = AVERROR_BUG2;
 
     uint8_t *dst_data[4];
@@ -672,7 +672,7 @@ int isVpx(const char *codecName) {
 }
 
 // vpx alpha channel is in a separate stream
-int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
+int isAlphaChannel(JNIEnv *env, FFmpegVideoLibContext *ctx, jlong startUs) {
     AVPacket *pkt = av_packet_alloc();
     if (!pkt) {
         ctx->error_status = AVERROR(ENOMEM);
@@ -732,12 +732,12 @@ int isAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx, jlong startUs) {
     return 1;
 }
 
-JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtxNoSound(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     if (!test_path(filename)) {
         char error_msg[512];
-        snprintf(error_msg, sizeof(error_msg), "openPipeNoSound: file does not exist: %s", filename);
+        snprintf(error_msg, sizeof(error_msg), "openCtxNoSound: file does not exist: %s", filename);
         printe(env, error_msg);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -745,12 +745,12 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
 
     AVFormatContext *fmt_ctx = NULL;
     if (avformat_open_input(&fmt_ctx, filename, NULL, NULL) < 0) {
-        printe(env, "openPipeNoSound: failed to open input");
+        printe(env, "openCtxNoSound: failed to open input");
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     if (avformat_find_stream_info(fmt_ctx, NULL) < 0) {
-        printe(env, "openPipeNoSound: failed to find stream info");
+        printe(env, "openCtxNoSound: failed to find stream info");
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -758,7 +758,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
 
     int video_stream_index = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
     if (video_stream_index < 0) {
-        printe(env, "openPipeNoSound: no video stream found");
+        printe(env, "openCtxNoSound: no video stream found");
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -767,7 +767,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     AVCodecParameters *codecpar = fmt_ctx->streams[video_stream_index]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecpar->codec_id);
     if (!codec) {
-        printe(env, "openPipeNoSound: decoder not found");
+        printe(env, "openCtxNoSound: decoder not found");
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -775,14 +775,14 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
 
     AVCodecContext *codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx) {
-        printe(env, "openPipeNoSound: failed to allocate codec context");
+        printe(env, "openCtxNoSound: failed to allocate codec context");
 
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
     if (avcodec_parameters_to_context(codec_ctx, codecpar) < 0) {
-        printe(env, "openPipeNoSound: failed to copy codec parameters");
+        printe(env, "openCtxNoSound: failed to copy codec parameters");
 
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
@@ -791,7 +791,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
         return 0;
     }
     if (avcodec_open2(codec_ctx, codec, NULL) < 0) {
-        printe(env, "openPipeNoSound: failed to open codec");
+        printe(env, "openCtxNoSound: failed to open codec");
 
         avcodec_free_context(&codec_ctx);
         avformat_close_input(&fmt_ctx);
@@ -803,7 +803,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     AVFrame *frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
     if (!frame || !rgb_frame) {
-        printe(env, "openPipeNoSound: failed to allocate frames");
+        printe(env, "openCtxNoSound: failed to allocate frames");
 
         if (frame) av_frame_free(&frame);
         if (rgb_frame) av_frame_free(&rgb_frame);
@@ -815,9 +815,9 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
         return 0;
     }
 
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)malloc(sizeof(FFmpegPipeContext));
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)malloc(sizeof(FFmpegVideoLibContext));
     if (!ctx) {
-        printe(env, "openPipeNoSound: failed to allocate context structure");
+        printe(env, "openCtxNoSound: failed to allocate context structure");
 
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
@@ -944,7 +944,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
         );
 
         if (!ctx->alpha_sws_ctx) {
-            printe(env, "openPipeNoSound: failed to create scaler context for vpx alpha channel");
+            printe(env, "openCtxNoSound: failed to create scaler context for vpx alpha channel");
             
 
             av_frame_free(&frame);
@@ -974,7 +974,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     }
 
     if (!sws_ctx) {
-        printe(env, "openPipeNoSound: failed to create scaler context");
+        printe(env, "openCtxNoSound: failed to create scaler context");
 
         av_frame_free(&frame);
         av_frame_free(&rgb_frame);
@@ -997,7 +997,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 1);
     uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
     if (!rgb_buffer) {
-        printe(env, "openPipeNoSound: failed to allocate RGB buffer");
+        printe(env, "openCtxNoSound: failed to allocate RGB buffer");
 
         sws_freeContext(sws_ctx);
         av_frame_free(&frame);
@@ -1016,7 +1016,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
         return 0;
     }
     if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 1) < 0) {
-        printe(env, "openPipeNoSound: failed to fill image arrays");
+        printe(env, "openCtxNoSound: failed to fill image arrays");
 
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
@@ -1044,7 +1044,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
 
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
-        printe(env, "openPipeNoSound: failed to initialize mutex");
+        printe(env, "openCtxNoSound: failed to initialize mutex");
 
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
@@ -1071,7 +1071,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
 
         if (seek_result < 0) {
             char error_msg[256];
-            snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
+            snprintf(error_msg, sizeof(error_msg), "openCtx: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
             printe(env, error_msg);
 
         } else {
@@ -1086,7 +1086,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipeNoSound(JNIEnv *env,
     return (jlong)(intptr_t)ctx;
 }
 
-jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
+jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegVideoLibContext *ctx) {
     AVPacket *pkt = av_packet_alloc();
     AVPacket *alpha_pkt = NULL;
 
@@ -1276,7 +1276,7 @@ jobject readVpxAlphaChannelNoSound(JNIEnv *env, FFmpegPipeContext *ctx) {
 }
 
 JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "readFrameNoSound: null context pointer");
         return NULL;
@@ -1432,12 +1432,12 @@ JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_readFrameNoSound(JNIEnv *e
     return NULL;
 }
 
-JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
+JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtx(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
     const char *filename = (*env)->GetStringUTFChars(env, jfilename, NULL);
 
     if (!test_path(filename)) {
         char error_msg[512];
-        snprintf(error_msg, sizeof(error_msg), "openPipe: file does not exist: %s", filename);
+        snprintf(error_msg, sizeof(error_msg), "openCtx: file does not exist: %s", filename);
         printe(env, error_msg);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
@@ -1453,7 +1453,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     int stream_info_result = avformat_find_stream_info(fmt_ctx, NULL);
     if (stream_info_result < 0) {
         char error_msg[256];
-        snprintf(error_msg, sizeof(error_msg), "openPipe: failed to find stream info, error %d", stream_info_result);
+        snprintf(error_msg, sizeof(error_msg), "openCtx: failed to find stream info, error %d", stream_info_result);
         printe(env, error_msg);
 
         avformat_close_input(&fmt_ctx);
@@ -1483,7 +1483,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     }
     AVCodecContext *vctx = avcodec_alloc_context3(vcodec);
     if (!vctx) {
-        printe(env, "openPipe: failed to allocate video codec context");
+        printe(env, "openCtx: failed to allocate video codec context");
 
         avformat_close_input(&fmt_ctx);
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
@@ -1491,7 +1491,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     }
     
     if (avcodec_parameters_to_context(vctx, vpar) < 0) {
-        printe(env, "openPipe: failed to copy video codec parameters");
+        printe(env, "openCtx: failed to copy video codec parameters");
 
         avcodec_free_context(&vctx);
         avformat_close_input(&fmt_ctx);
@@ -1526,26 +1526,26 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
         if (acodec) {
             actx = avcodec_alloc_context3(acodec);
             if (!actx) {
-                printe(env, "openPipe: failed to allocate audio codec context");
+                printe(env, "openCtx: failed to allocate audio codec context");
             } else {
                 if (avcodec_parameters_to_context(actx, apar) < 0) {
-                    printe(env, "openPipe: failed to copy audio codec parameters");
+                    printe(env, "openCtx: failed to copy audio codec parameters");
                     avcodec_free_context(&actx);
                     actx = NULL;
                 } else if (avcodec_open2(actx, acodec, NULL) < 0) {
-                    printe(env, "openPipe: failed to open audio codec");
+                    printe(env, "openCtx: failed to open audio codec");
                     avcodec_free_context(&actx);
                     actx = NULL;
                 }
             }
         } else {
-            printe(env, "openPipe: audio decoder not found");
+            printe(env, "openCtx: audio decoder not found");
         }
 
         if (actx) {
             aframe = av_frame_alloc();
             if (!aframe) {
-                printe(env, "openPipe: failed to allocate audio frame");
+                printe(env, "openCtx: failed to allocate audio frame");
                 avcodec_free_context(&actx);
                 actx = NULL;
             } else {
@@ -1565,10 +1565,10 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
 
                 if (swr_alloc_set_opts2(&swr, &out_ch_layout, out_sample_fmt, out_sample_rate,
                                          &in_layout, actx->sample_fmt, actx->sample_rate, 0, NULL) < 0) {
-                    printe(env, "openPipe: failed to create audio resampler");
+                    printe(env, "openCtx: failed to create audio resampler");
                     swr = NULL;
                 } else if (swr_init(swr) < 0) {
-                    printe(env, "openPipe: failed to initialize audio resampler");
+                    printe(env, "openCtx: failed to initialize audio resampler");
                     swr_free(&swr);
                     swr = NULL;
                 }
@@ -1576,7 +1576,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
                 if (swr) {
                     fifo = av_audio_fifo_alloc(out_sample_fmt, out_channels, 1024);
                     if (!fifo) {
-                        printe(env, "openPipe: failed to allocate audio FIFO");
+                        printe(env, "openCtx: failed to allocate audio FIFO");
                         swr_free(&swr);
                         swr = NULL;
                     }
@@ -1589,7 +1589,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     AVFrame *vframe = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
     if (!vframe || !rgb_frame) {
-        printe(env, "openPipe: failed to allocate video frames");
+        printe(env, "openCtx: failed to allocate video frames");
 
         if (vframe) av_frame_free(&vframe);
         if (rgb_frame) av_frame_free(&rgb_frame);
@@ -1613,9 +1613,9 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
         fps = (float) r_frame_rate.num / (float) r_frame_rate.den;
     }
 
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)malloc(sizeof(FFmpegPipeContext));
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)malloc(sizeof(FFmpegVideoLibContext));
     if (!ctx) {
-        printe(env, "openPipe: failed to allocate context structure");
+        printe(env, "openCtx: failed to allocate context structure");
 
         av_frame_free(&vframe);
         av_frame_free(&rgb_frame);
@@ -1759,7 +1759,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
         );
 
         if (!ctx->alpha_sws_ctx) {
-            printe(env, "openPipeNoSound: failed to create scaler context for vpx alpha channel");
+            printe(env, "openCtxNoSound: failed to create scaler context for vpx alpha channel");
             
             av_frame_free(&vframe);
             av_frame_free(&rgb_frame);
@@ -1794,7 +1794,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     }
 
     if (!sws_ctx) {
-        printe(env, "openPipe: failed to create video scaler context");
+        printe(env, "openCtx: failed to create video scaler context");
 
         av_frame_free(&vframe);
         av_frame_free(&rgb_frame);
@@ -1820,7 +1820,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     int rgb_size = av_image_get_buffer_size(target_fmt, width, height, 32);
     uint8_t *rgb_buffer = (uint8_t *)av_malloc(rgb_size);
     if (!rgb_buffer) {
-        printe(env, "openPipe: failed to allocate RGB buffer");
+        printe(env, "openCtx: failed to allocate RGB buffer");
 
         sws_freeContext(sws_ctx);
         av_frame_free(&vframe);
@@ -1845,7 +1845,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     }
     
     if (av_image_fill_arrays(rgb_frame->data, rgb_frame->linesize, rgb_buffer, target_fmt, width, height, 32) < 0) {
-        printe(env, "openPipe: failed to fill image arrays");
+        printe(env, "openCtx: failed to fill image arrays");
 
         av_free(rgb_buffer);
         av_frame_free(&vframe);
@@ -1876,7 +1876,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     
     int mutex_init_result = pthread_mutex_init(&ctx->mutex, NULL);
     if (mutex_init_result != 0) {
-        printe(env, "openPipe: failed to initialize mutex");
+        printe(env, "openCtx: failed to initialize mutex");
 
         av_free(rgb_buffer);
         sws_freeContext(sws_ctx);
@@ -1908,7 +1908,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
 
         if (seek_result < 0) {
             char error_msg[256];
-            snprintf(error_msg, sizeof(error_msg), "openPipe: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
+            snprintf(error_msg, sizeof(error_msg), "openCtx: failed initial seek to %lld us, error %d", (long long)startUs, seek_result);
             printe(env, error_msg);
 
         } else {
@@ -1925,10 +1925,10 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openPipe(JNIEnv *env, jclass
     return (jlong)(intptr_t)ctx;
 }
 
-JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ctx_ptr;
+JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closeCtx(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ctx_ptr;
     if (!ctx) {
-        printe(env, "closePipe: null context pointer");
+        printe(env, "closeCtx: null context pointer");
         return;
     }
     
@@ -1980,7 +1980,7 @@ JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_closePipe(JNIEnv *env, jclass
 }
 
 JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass clazz, jlong ptr, jlong targetUs) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "seek: null context pointer");
         return;
@@ -2016,7 +2016,7 @@ JNIEXPORT void JNICALL Java_videolib_ffmpeg_FFmpeg_seek(JNIEnv *env, jclass claz
     pthread_mutex_unlock(&ctx->mutex);
 }
 
-jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
+jobject readVpxAlphaChannel(JNIEnv *env, FFmpegVideoLibContext *ctx) {
     AVPacket *pkt = av_packet_alloc();
     AVPacket *alpha_pkt = NULL;
 
@@ -2289,7 +2289,7 @@ jobject readVpxAlphaChannel(JNIEnv *env, FFmpegPipeContext *ctx) {
 }
 
 JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_read(JNIEnv *env, jclass clazz, jlong ctx_ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ctx_ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ctx_ptr;
     if (!ctx) {
         printe(env, "read: null context pointer");
         return NULL;
@@ -2505,7 +2505,7 @@ JNIEXPORT jobject JNICALL Java_videolib_ffmpeg_FFmpeg_read(JNIEnv *env, jclass c
 }
 
 JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getAudioSampleRate: null context pointer");
         return 0;
@@ -2515,7 +2515,7 @@ JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getAudioSampleRate(JNIEnv *en
 }
 
 JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getAudioChannels(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getAudioChannels: null context pointer");
         return 0;
@@ -2530,7 +2530,7 @@ JNIEXPORT jfloat JNICALL Java_videolib_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env, jc
         return 0.0f;
     }
     
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (ctx && ctx->fps > 0.0f) {
         return ctx->fps;
     }
@@ -2540,7 +2540,7 @@ JNIEXPORT jfloat JNICALL Java_videolib_ffmpeg_FFmpeg_getVideoFps(JNIEnv *env, jc
 }
 
 JNIEXPORT jdouble JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationSeconds(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationSeconds: null context pointer");
         return 0.0;
@@ -2550,7 +2550,7 @@ JNIEXPORT jdouble JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationSeconds(JNIEnv 
 }
 
 JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationUs: null context pointer");
         return 0;
@@ -2560,7 +2560,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_getDurationUs(JNIEnv *env, j
 }
 
 JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getDurationUs: null context pointer");
         return 42069;
@@ -2574,7 +2574,7 @@ JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_getErrorStatus(JNIEnv *env, j
 }
 
 JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_getTotalFrameCount(JNIEnv *env, jclass clazz, jlong ptr) {
-    FFmpegPipeContext *ctx = (FFmpegPipeContext *)(intptr_t)ptr;
+    FFmpegVideoLibContext *ctx = (FFmpegVideoLibContext *)(intptr_t)ptr;
     if (!ctx) {
         printe(env, "getTotalFrameCount: null context pointer");
         return 0;

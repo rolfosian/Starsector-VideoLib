@@ -41,7 +41,7 @@ public class DecoderWithSound implements Decoder {
     private String videoFilePath;
     private volatile boolean running = false;
     private Thread videoDecodeThread;
-    private long pipePtr;
+    private long ctxPtr;
 
     private TexBuffer textureBuffer;
     private AudioFrameBuffer audioBuffer;
@@ -88,16 +88,16 @@ public class DecoderWithSound implements Decoder {
         // print("DecoderWithSound decodeLoop started");
         while (running) {
             if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
-                Frame f = FFmpeg.read(pipePtr);
+                Frame f = FFmpeg.read(ctxPtr);
 
                 if (f == null) { // EOF / Error
-                    if (FFmpeg.getErrorStatus(pipePtr) != FFmpeg.AVERROR_EOF) {
-                        logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(pipePtr)
+                    if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
+                        logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(ctxPtr)
                         + ", interrupting main thread...",
-                        new RuntimeException(FFmpeg.getErrorMessage(pipePtr)));
+                        new RuntimeException(FFmpeg.getErrorMessage(ctxPtr)));
 
-                        FFmpeg.closePipe(pipePtr);
-                        pipePtr = 0;
+                        FFmpeg.closeCtx(ctxPtr);
+                        ctxPtr = 0;
                         textureBuffer.clear();
                         audioBuffer.clear();
 
@@ -288,21 +288,21 @@ public class DecoderWithSound implements Decoder {
         // print("Starting DecoderWithSound for file", videoFilePath);
         running = true;
 
-        pipePtr = FFmpeg.openPipe(videoFilePath, width, height, startUs);
-        // print("Opened FFmpeg pipe, ptr =", pipePtr);
+        ctxPtr = FFmpeg.openCtx(videoFilePath, width, height, startUs);
+        // print("Opened FFmpeg ctx, ptr =", ctxPtr);
 
-        if (pipePtr == 0) throw new RuntimeException("Failed to initiate FFmpeg pipe context for " + videoFilePath);
+        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
 
-        videoDurationSeconds = FFmpeg.getDurationSeconds(pipePtr);
-        videoDurationUs = FFmpeg.getDurationUs(pipePtr);
+        videoDurationSeconds = FFmpeg.getDurationSeconds(ctxPtr);
+        videoDurationUs = FFmpeg.getDurationUs(ctxPtr);
 
-        videoFps = FFmpeg.getVideoFps(pipePtr);
+        videoFps = FFmpeg.getVideoFps(ctxPtr);
         spf = 1 / videoFps;
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
 
-        // boolean isRGBA = FFmpeg.isRGBA(pipePtr);
+        // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
         this.textureBuffer = new RGBATextureBuffer(30);
@@ -310,8 +310,8 @@ public class DecoderWithSound implements Decoder {
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
-        audioChannels = FFmpeg.getAudioChannels(pipePtr);
-        audioSampleRate = FFmpeg.getAudioSampleRate(pipePtr);
+        audioChannels = FFmpeg.getAudioChannels(ctxPtr);
+        audioSampleRate = FFmpeg.getAudioSampleRate(ctxPtr);
         // print("Audio Channels=", audioChannels);
         // print("Audio Sample Rate=", audioSampleRate);
 
@@ -337,10 +337,10 @@ public class DecoderWithSound implements Decoder {
             throw new RuntimeException(e);
         }
 
-        if (pipePtr != 0) {
-            // print("Closing FFmpeg pipe");
-            FFmpeg.closePipe(pipePtr);
-            pipePtr = 0;
+        if (ctxPtr != 0) {
+            // print("Closing FFmpeg ctx");
+            FFmpeg.closeCtx(ctxPtr);
+            ctxPtr = 0;
         }
 
         // print("Clearing Texture/Video Buffer");
@@ -368,7 +368,7 @@ public class DecoderWithSound implements Decoder {
         synchronized(seekLock) {
             // print("Seeking to", targetUs, "µs");
 
-            FFmpeg.seek(pipePtr, targetUs);
+            FFmpeg.seek(ctxPtr, targetUs);
     
             synchronized(textureBuffer) {
                 textureBuffer.clear();
@@ -386,7 +386,7 @@ public class DecoderWithSound implements Decoder {
     public void seekWithoutClearingBuffer(long targetUs) {
         synchronized(seekLock) {
             // print("Seeking to", targetUs, "µs");
-            FFmpeg.seek(pipePtr, targetUs);
+            FFmpeg.seek(ctxPtr, targetUs);
         }
     }
 
@@ -457,15 +457,15 @@ public class DecoderWithSound implements Decoder {
     }
 
     public int getErrorStatus() {
-        return FFmpeg.getErrorStatus(pipePtr);
+        return FFmpeg.getErrorStatus(ctxPtr);
     }
 
     public void setVideoFilePath(String path) {
         this.videoFilePath = path;
     }
 
-    public long getFFmpegPipePtr() {
-        return this.pipePtr;
+    public long getFFmpegCtxPtr() {
+        return this.ctxPtr;
     }
 
     private void sleep(long millis) {

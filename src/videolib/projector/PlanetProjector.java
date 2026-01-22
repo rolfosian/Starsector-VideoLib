@@ -29,7 +29,7 @@ import videolib.speakers.VideoProjectorSpeakers;
 import videolib.util.TexReflection;
 import videolib.util.VideoUtils;
 
-/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something else to stop the decoder, close the ffmpeg pipe and reset the planet fields. Or just leak memory and leave the decoder thread running forever; I'm not your boss*/
+/**It is imperative to call this class's finish() method if the player leaves the system its planet is in or something else to stop the decoder, close the ffmpeg ctx and reset the planet fields. Or just leak memory and leave the decoder thread running forever; I'm not your boss*/
 public class PlanetProjector implements EveryFrameScript, Projector {
     private static final Logger logger = Logger.getLogger(VideoProjector.class);
     public static void print(Object... args) {

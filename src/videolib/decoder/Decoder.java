@@ -1,11 +1,13 @@
 package videolib.decoder;
 
+import com.fs.starfarer.api.Global;
+
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
 import videolib.buffers.TexBuffer;
 
 public interface Decoder {
-    public long getFFmpegPipePtr();
+    public long getFFmpegCtxPtr();
     public int getErrorStatus();
     public void seek(long targetUs);
     public void seekWithoutClearingBuffer(long targetUs);
