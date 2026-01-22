@@ -15,7 +15,7 @@
             },
 
             "autoTexProjectorOverrides" : { # example: defined in graphics/portraits in mod folder
-                "graphics/portraits/roflos.png" : { 
+                "graphics/portraits/vl_portrait_example.png" : { 
                     "width" : 128,
                     "height" : 128,
                     "videoId" : "vl_brule"
