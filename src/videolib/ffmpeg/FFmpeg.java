@@ -170,7 +170,6 @@ public class FFmpeg {
     private static native void init(int audioSampleRate); // ref AudioFrame/VideoFrame classes/constructors
 
     public static native void freeBuffer(long bufferPtr);
-    public static native long getFilePtr(String filePath);
     public static native boolean fileExists(String filePath);
     public static native int[] getWidthAndHeight(String filepath);
 
