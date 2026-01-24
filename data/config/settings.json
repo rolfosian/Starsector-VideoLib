@@ -18,6 +18,8 @@
                 "graphics/portraits/vl_portrait_example.png" : { 
                     "width" : 128,
                     "height" : 128,
+                    "campaignRunWhilePaused" : true, # EveryFrameScript.runWhilePaused() return value, if false then frames won't update for this override when campaign layer is paused
+                    "combatRunWhilePaused" : true, # AutoTexProjectorAPI.combatRunWhilePaused() impl return value, if false then frames won't update for this override when combat layer is paused
                     "videoId" : "vl_brule"
                 }
             }

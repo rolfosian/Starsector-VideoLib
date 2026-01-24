@@ -10,6 +10,7 @@ import org.objectweb.asm.*;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.SectorAPI;
+import com.fs.starfarer.api.combat.EveryFrameCombatPlugin;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
@@ -20,6 +21,7 @@ import videolib.decoder.MuteDecoder;
 import videolib.playerui.PlayerControlPanel;
 import videolib.speakers.Speakers;
 import videolib.util.TexReflection;
+
 // import rolflectionlib.inheritor.Inherit;
 
 /**
@@ -27,13 +29,22 @@ import videolib.util.TexReflection;
  */
 public class AutoTexProjector implements Opcodes {
     public static interface AutoTexInstantiator {
-        public AutoTexProjectorAPI instantiate(String videoId, int width, int height);
+        public AutoTexProjectorAPI instantiate(String videoId, int width, int height, boolean runWhilePaused, boolean combatRunWhilePaused);
     }
     public static interface AutoTexProjectorAPI extends EveryFrameScript, Projector {
-        public void changeVideo(String videoId, int width, int height, long startVideoUs);
         public int getCurrentTextureId();
+
+        public void changeVideo(String videoId, int width, int height, long startVideoUs);
+
         public void timeout();
+        public void unTimeOut();
+
         public void setOriginalTexture(String texturePath, Object texture);
+        public String getTexturePath();
+
+        public boolean combatRunWhilePaused();
+        public void setCombatRunWhilePaused(boolean runWhilePaused); // combat engine
+        public void setRunWhilePaused(boolean runWhilePaused); // for campaign layer
     }
 
     public static void print(String msg) {
@@ -57,6 +68,7 @@ public class AutoTexProjector implements Opcodes {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
 
         String className = "videolib/projector/AutoTexProjektor";
+        String autoTexInterfaceName = Type.getInternalName(AutoTexProjectorAPI.class);
         String superName = Type.getInternalName(TexReflection.texClass);
     
         String decoderName = Type.getInternalName(Decoder.class);
@@ -71,6 +83,7 @@ public class AutoTexProjector implements Opcodes {
         String playModeDesc = Type.getDescriptor(PlayMode.class);
         String eofModeDesc = Type.getDescriptor(EOFMode.class);
         
+        String videoPathsName = Type.getInternalName(VideoPaths.class);
         String texReflectionInternal = Type.getInternalName(TexReflection.class);
         String bindMethodName = TexReflection.texObjectBindMethodName;
         
@@ -82,16 +95,17 @@ public class AutoTexProjector implements Opcodes {
             null,
             superName,
             new String[] {
-                Type.getInternalName(AutoTexProjectorAPI.class)
+                autoTexInterfaceName
             }
         );
 
-        cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "TIMEOUT_FRAMES", "I", null, 2);
+        cw.visitField(ACC_PRIVATE | ACC_STATIC | ACC_FINAL, "TIMEOUT_FRAMES", "I", null, 1);
 
         cw.visitField(ACC_PRIVATE, "timeoutFrames", "I", null, 0).visitEnd();
         cw.visitField(ACC_PRIVATE, "timedOut", "Z", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "isDone", "Z", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "runWhilePaused", "Z", null, null).visitEnd();
+        cw.visitField(ACC_PRIVATE, "combatRunWhilePaused", "Z", null, null).visitEnd();
 
         cw.visitField(ACC_PRIVATE, "videoFilePath", "Ljava/lang/String;", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "width", "I", null, null).visitEnd();
@@ -104,17 +118,17 @@ public class AutoTexProjector implements Opcodes {
         cw.visitField(ACC_PRIVATE, "EOF_MODE", eofModeDesc, null, null).visitEnd();
 
         cw.visitField(ACC_PRIVATE, "decoder", decoderDesc, null, null).visitEnd();
-        cw.visitField(ACC_PRIVATE, "textureBuffer", texBufferDesc, null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "currentTextureId", "I", null, null).visitEnd();
 
         cw.visitField(ACC_PRIVATE, "originalTexture", "Ljava/lang/Object;", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "originalTexturePath", "Ljava/lang/String;", null, null).visitEnd();
+        cw.visitField(ACC_PRIVATE, "originalTextureId", "I", null, null).visitEnd();
     
         /* constructor */
         MethodVisitor ctor = cw.visitMethod(
             ACC_PUBLIC,
             "<init>",
-            "(Ljava/lang/String;II)V",
+            "(Ljava/lang/String;IIZZ)V",
             null,
             null
         );
@@ -143,6 +157,14 @@ public class AutoTexProjector implements Opcodes {
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitVarInsn(ILOAD, 3);
         ctor.visitFieldInsn(PUTFIELD, className, "height", "I");
+
+        ctor.visitVarInsn(ALOAD, 0);
+        ctor.visitVarInsn(ILOAD, 4);
+        ctor.visitFieldInsn(PUTFIELD, className, "runWhilePaused", "Z");
+
+        ctor.visitVarInsn(ALOAD, 0);
+        ctor.visitVarInsn(ILOAD, 5);
+        ctor.visitFieldInsn(PUTFIELD, className, "combatRunWhilePaused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitFieldInsn(
@@ -179,10 +201,6 @@ public class AutoTexProjector implements Opcodes {
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitInsn(ICONST_1);
         ctor.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
-
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitInsn(ICONST_1);
-        ctor.visitFieldInsn(PUTFIELD, className, "runWhilePaused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitInsn(ICONST_0);
@@ -247,12 +265,6 @@ public class AutoTexProjector implements Opcodes {
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
-        ctor.visitMethodInsn(INVOKEINTERFACE, decoderName, "getTextureBuffer", "()" + texBufferDesc, true);
-        ctor.visitFieldInsn(PUTFIELD, className, "textureBuffer", texBufferDesc);
-
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
         ctor.visitMethodInsn(
             INVOKEINTERFACE,
             decoderName,
@@ -309,44 +321,23 @@ public class AutoTexProjector implements Opcodes {
             bind.visitVarInsn(ALOAD, 0);
             bind.visitFieldInsn(GETFIELD, className, "timedOut", "Z");
             bind.visitJumpInsn(IFEQ, notTimedOut);
-
-            // isDone = false;
-            bind.visitVarInsn(ALOAD, 0);
-            bind.visitInsn(ICONST_0);
-            bind.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
-
-            // timedOut = false;
-            bind.visitVarInsn(ALOAD, 0);
-            bind.visitInsn(ICONST_0);
-            bind.visitFieldInsn(PUTFIELD, className, "timedOut", "Z");
         
-            /* Global.getSector().addTransientScript(this) */
-            bind.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
+            // this.unTimeout()
             bind.visitVarInsn(ALOAD, 0);
             bind.visitMethodInsn(
-                INVOKEINTERFACE,
-                "com/fs/starfarer/api/campaign/SectorAPI",
-                "addTransientScript",
-                "(Lcom/fs/starfarer/api/EveryFrameScript;)V",
-                true
+                INVOKEVIRTUAL,
+                className,
+                "unTimeout", "()V",
+                false
             );
-        
+            
             bind.visitLabel(notTimedOut);
         
             /* super.bind() */
-            // bind.visitLdcInsn(GL11.GL_TEXTURE_2D);
-            // bind.visitVarInsn(ALOAD, 0);
-            // bind.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            // bind.visitMethodInsn(INVOKESTATIC, "org/lwjgl/opengl/GL11", "glBindTexture", "(II)V", false);
-
+            bind.visitLdcInsn(GL11.GL_TEXTURE_2D);
             bind.visitVarInsn(ALOAD, 0);
-            bind.visitMethodInsn(
-                INVOKESPECIAL,
-                superName,
-                bindMethodName,
-                "()V",
-                false
-            );
+            bind.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
+            bind.visitMethodInsn(INVOKESTATIC, "org/lwjgl/opengl/GL11", "glBindTexture", "(II)V", false);
         
             bind.visitInsn(RETURN);
             bind.visitMaxs(0, 0);
@@ -451,23 +442,6 @@ public class AutoTexProjector implements Opcodes {
             mv.visitMethodInsn(
                 INVOKEINTERFACE,
                 decoderName,
-                "getTextureBuffer",
-                "()" + texBufferDesc,
-                true
-            );
-            mv.visitFieldInsn(
-                PUTFIELD,
-                className,
-                "textureBuffer",
-                texBufferDesc
-            );
-        
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
-            mv.visitMethodInsn(
-                INVOKEINTERFACE,
-                decoderName,
                 "getCurrentVideoTextureId",
                 "()I",
                 true
@@ -477,17 +451,6 @@ public class AutoTexProjector implements Opcodes {
                 className,
                 "currentTextureId",
                 "I"
-            );
-        
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitMethodInsn(
-                INVOKESTATIC,
-                texReflectionInternal,
-                "setTexObjId",
-                "(Ljava/lang/Object;I)V",
-                false
             );
         
             mv.visitInsn(RETURN);
@@ -518,6 +481,17 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitVarInsn(ALOAD, 2);
             mv.visitFieldInsn(PUTFIELD, className, "originalTexture", "Ljava/lang/Object;");
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 2);
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                texReflectionName,
+                "getTexObjId",
+                "(Ljava/lang/Object;)I",
+                false
+            );
+            mv.visitFieldInsn(PUTFIELD, className, "originalTextureId", "I");
         
             mv.visitVarInsn(ALOAD, 0);
             mv.visitVarInsn(ALOAD, 1);
@@ -545,9 +519,42 @@ public class AutoTexProjector implements Opcodes {
             mv.visitInsn(ICONST_0);
             mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
             
-            mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(SectorAPI.class), "removeTransientScript", "(Lcom/fs/starfarer/api/EveryFrameScript;)V", true);
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                videoPathsName,
+                "timeoutAutoTexOverride", "(L" + autoTexInterfaceName + ";)V"
+                ,false
+            );
+
+            mv.visitInsn(RETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "unTimeout", "()V", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_0);
+            mv.visitFieldInsn(PUTFIELD, className, "timedOut", "Z");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_0);
+            mv.visitFieldInsn(PUTFIELD, className, "isDone", "Z");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitInsn(ICONST_0);
+            mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                videoPathsName,
+                "unTimeoutAutoTexOverride", "(L" + autoTexInterfaceName + ";)V"
+                ,false
+            );
 
             mv.visitInsn(RETURN);
             mv.visitMaxs(0, 0);
@@ -558,14 +565,12 @@ public class AutoTexProjector implements Opcodes {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "advance", "(F)V", null, null);
             mv.visitCode();
 
+            // mv.visitVarInsn(FLOAD, 1);
+            // mv.visitMethodInsn(INVOKESTATIC, "java/lang/String", "valueOf", "(F)Ljava/lang/String;", false);
+            // mv.visitMethodInsn(INVOKESTATIC, Type.getInternalName(AutoTexProjector.class), "print", "(Ljava/lang/String;)V", false);
+
             Label lContinue = new Label();
             Label lReturn = new Label();
-            Label lSkipDelete = new Label();
-
-            // if (!timedOut)
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "timedOut", "Z");
-            mv.visitJumpInsn(IFNE, lReturn);
 
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(DUP);
@@ -596,23 +601,6 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(FLOAD, 1);
             mv.visitMethodInsn(INVOKEINTERFACE, decoderName, "getCurrentVideoTextureId", "(F)I", true);
             mv.visitVarInsn(ISTORE, 2);
-
-            // if (newId != currentTextureId)
-            mv.visitVarInsn(ILOAD, 2);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
-            mv.visitJumpInsn(IF_ICMPEQ, lReturn);
-
-            // videolib.util.TexReflection.setTexObjId(this, newId);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ILOAD, 2);
-            mv.visitMethodInsn(INVOKESTATIC, texReflectionInternal, "setTexObjId", "(Ljava/lang/Object;I)V", false);
-
-            // currentTextureId = newId;
-            mv.visitLabel(lSkipDelete);
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ILOAD, 2);
-            mv.visitFieldInsn(PUTFIELD, className, "currentTextureId", "I");
 
             mv.visitLabel(lReturn);
             mv.visitInsn(RETURN);
@@ -672,6 +660,18 @@ public class AutoTexProjector implements Opcodes {
             mv.visitFieldInsn(GETFIELD, className, "originalTexture", "Ljava/lang/Object;");
             mv.visitMethodInsn(INVOKEINTERFACE, "java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", true);
             mv.visitInsn(POP);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexture", "Ljava/lang/Object;");
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTextureId", "I");
+            mv.visitMethodInsn(
+                INVOKESTATIC,
+                texReflectionName,
+                "setTexObjId",
+                "(Ljava/lang/Object;I)V",
+                false
+            );
 
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "originalTexturePath", "Ljava/lang/String;");
@@ -816,6 +816,43 @@ public class AutoTexProjector implements Opcodes {
         }
 
         {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setRunWhilePaused", "()Z", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "setRunWhilePaused", "Z");
+            mv.visitInsn(IRETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "combatRunWhilePaused", "()Z", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "combatRunWhilePaused", "Z");
+            mv.visitInsn(IRETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setCombatRunWhilePaused", "(Z)V", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ILOAD, 1);
+            mv.visitFieldInsn(PUTFIELD, className, "combatRunWhilePaused", "Z");
+            mv.visitInsn(RETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getDecoder", "()" + decoderDesc, null, null);
             mv.visitCode();
 
@@ -921,6 +958,18 @@ public class AutoTexProjector implements Opcodes {
             mv.visitEnd();
         }
 
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getTexturePath", "()Ljava/lang/String;", null, null);
+            mv.visitCode();
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "originalTexturePath", "Ljava/lang/String;");
+            mv.visitInsn(ARETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
         cw.visitEnd();
         byte[] classBytes = cw.toByteArray();
         // Inherit.dumpClass(classBytes, "DSAIFHSAFHSA.class");
@@ -960,7 +1009,7 @@ public class AutoTexProjector implements Opcodes {
             MethodVisitor mv = cw.visitMethod(
                 ACC_PUBLIC,
                 "instantiate",
-                "(Ljava/lang/String;II)" + Type.getDescriptor(AutoTexProjectorAPI.class),
+                "(Ljava/lang/String;IIZZ)" + Type.getDescriptor(AutoTexProjectorAPI.class),
                 null,
                 null
             );
@@ -973,12 +1022,14 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 1);
             mv.visitVarInsn(ILOAD, 2);
             mv.visitVarInsn(ILOAD, 3);
+            mv.visitVarInsn(ILOAD, 4);
+            mv.visitVarInsn(ALOAD, 5);
             
             mv.visitMethodInsn(
                 INVOKESPECIAL,
                 transientTexClassName,
                 "<init>",
-                "(Ljava/lang/String;II)V",
+                "(Ljava/lang/String;IIZZ)V",
                 false
             );
             
@@ -1020,6 +1071,7 @@ public class AutoTexProjector implements Opcodes {
 //     private boolean timedOut;
 //     private boolean isDone;
 //     private boolean runWhilePaused;
+//     private boolean combatRunWhilePaused;
 
 //     private String videoFilePath;
 //     private int width;
@@ -1032,13 +1084,13 @@ public class AutoTexProjector implements Opcodes {
 //     private EOFMode EOF_MODE;
 
 //     private Decoder decoder;
-//     private TexBuffer textureBuffer;
 //     private int currentTextureId;
 
 //     private Object originalTexture;
 //     private String originalTexturePath;
+//     private int originalTextureId;
 
-//     public AutoTexProjektor(String videoId, int width, int height) {
+//     public AutoTexProjektor(String videoId, int width, int height, boolean runWhilePaused, boolean combatRunWhilePaused) {
 //         super(GL11.GL_TEXTURE_2D, 0);
 
 //         this.videoFilePath = VideoPaths.getVideoPath(videoId);
@@ -1050,16 +1102,15 @@ public class AutoTexProjector implements Opcodes {
 
 //         this.timedOut = true;
 //         this.isDone = true;
-//         this.runWhilePaused = true;
+//         this.runWhilePaused = runWhilePaused;
+//         this.combatRunWhilePaused = combatRunWhilePaused;
 //         this.paused = true;
 //         this.isRendering = true;
 //         this.timeoutFrames = 0;
 
 //         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
 //         this.decoder.start(0);
-//         this.textureBuffer = decoder.getTextureBuffer();
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
-//         TexReflection.setTexObjId(this, currentTextureId);
 //     }
     
 //     @Override // bind
@@ -1067,14 +1118,12 @@ public class AutoTexProjector implements Opcodes {
 //         timeoutFrames = 0;
 
 //        if (timedOut) {
-//            isDone = false;
-//            timedOut = false;
-//            Global.getSector().addTransientScript(this);
+//            unTimeout();
 //        }
 
-//        // GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
-//          super.Ø00000();
-//          return;
+//         GL11.glBindTexture(GL11.GL_TEXTURE_2D, currentTextureId);
+//         //super.Ø00000();
+//        return;
 //     }
 
 //     @Override
@@ -1087,9 +1136,7 @@ public class AutoTexProjector implements Opcodes {
 
 //         this.decoder = new MuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
 //         this.decoder.start(videoStartUs);
-//         this.textureBuffer = decoder.getTextureBuffer();
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
-//         TexReflection.setTexObjId(this, currentTextureId);
 //     }
 
 //     @Override
@@ -1104,7 +1151,15 @@ public class AutoTexProjector implements Opcodes {
 //         timedOut = true;
 //         isDone = true;
 //         timeoutFrames= 0;
-//         Global.getSector().removeTransientScript(this);
+//         VideoPaths.timeoutAutoTexOverride(AutoTexProjectorAPI autoTex);
+//     }
+
+//     @Override
+//     public void unTimeout() {
+//         timedOut = false;
+//         isDone = false;
+//         timeoutFrames= 0;
+//         VideoPaths.unTimeoutAutoTexOverride(AutoTexProjectorAPI autoTex);
 //     }
 
 //     @Override
@@ -1117,11 +1172,6 @@ public class AutoTexProjector implements Opcodes {
 
 //             if (!paused) {
 //                 int newId = decoder.getCurrentVideoTextureId(dt);
-//                 if (newId != currentTextureId) {
-//                     TexReflection.setTexObjId(this, newId);
-
-//                     currentTextureId = newId;
-//                 }
 //             }
 //         }
 //     }
@@ -1164,6 +1214,21 @@ public class AutoTexProjector implements Opcodes {
 //     @Override
 //     public void restart() {
 
+//     }
+
+//     @Override
+//     public boolean combatRunWhilePaused() {
+//         return this.combatRunWhilePaused;
+//     }
+
+//     @Override
+//     public void setCombatRunWhilePaused(boolean runWhilePaused) {
+//         this.combatRunWhilePaused = runWhilePaused;
+//     }
+
+//     @Override
+//     public String getTexturePath() {
+//         return this.originalTexturePath;
 //     }
 
 //     @Override
@@ -1216,6 +1281,11 @@ public class AutoTexProjector implements Opcodes {
 //     @Override
 //     public boolean isDone() {
 //         return isDone;
+//     }
+
+//     @Override
+//     public void setRunWhilePaused(boolean runWhilePaused) {
+//         this.runWhilePaused = runWhilePaused;
 //     }
 
 //     @Override

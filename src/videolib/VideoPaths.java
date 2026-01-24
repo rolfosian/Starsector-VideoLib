@@ -27,7 +27,9 @@ public class VideoPaths {
     private static String[] imageKeys;
 
     private static Map<String, AutoTexProjectorAPI> autoTexMap = new HashMap<>();
-    private static List<AutoTexProjectorAPI> autoTexOverrides;
+
+    private static List<AutoTexProjectorAPI> allAutoTexOverrides = new ArrayList<>();
+    private static List<AutoTexProjectorAPI> runWhilePausedCombatAutoTexOverrides = new ArrayList<>();
 
     protected static void populate() {
         if (populated) return;
@@ -107,6 +109,8 @@ public class VideoPaths {
                         String videoId = overrideData.getString("videoId");
                         int width = overrideData.getInt("width");
                         int height = overrideData.getInt("height");
+                        boolean campaignRunWhilePaused = isRunWhilePaused(overrideData, "campaign");
+                        boolean combatRunWhilePaused = isRunWhilePaused(overrideData, "combat");
     
                         if (!TexReflection.texObjectMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException(texturePath + " not found in Starsector texture repository for video override: " + videoId);
@@ -115,15 +119,11 @@ public class VideoPaths {
                             throw new IllegalArgumentException("video override already found for texture " + texturePath);
                         }
     
-                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(videoId, width, height);
-                        int initialTex = ours.getCurrentTextureId();
-
+                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(videoId, width, height, campaignRunWhilePaused, combatRunWhilePaused);
                         Object original = TexReflection.texObjectMap.get(texturePath);
+                        ours.setOriginalTexture(texturePath, original);
+
                         TexReflection.transplantTexFields(original, ours);
-
-                        TexReflection.setTexObjId(ours, initialTex);
-                        ours.setOriginalTexture(texturePath, textureOverrides);
-
                         TexReflection.texObjectMap.put(texturePath, ours);
                         autoTexMap.put(texturePath, ours);
     
@@ -139,7 +139,6 @@ public class VideoPaths {
         String[] arr = new String[0];
         videoKeys = videoKeyz.toArray(arr);
         imageKeys = imageKeyz.toArray(arr);
-        autoTexOverrides = new ArrayList<>(autoTexMap.values());
 
         populated = true;
     }
@@ -162,11 +161,29 @@ public class VideoPaths {
 
     public static void removeAutoTexOverride(String texturePath, AutoTexProjectorAPI autoTex) {
         autoTexMap.remove(texturePath);
-        autoTexOverrides.remove(autoTex);
+        allAutoTexOverrides.remove(autoTex);
+        if (autoTex.combatRunWhilePaused()) 
+            runWhilePausedCombatAutoTexOverrides.remove(autoTex);
     }
 
-    protected static List<AutoTexProjectorAPI> getAutoTexOverrides() {
-        return autoTexOverrides;
+    public static void timeoutAutoTexOverride(AutoTexProjectorAPI autoTex) {
+        Global.getSector().removeTransientScript(autoTex);
+        allAutoTexOverrides.remove(autoTex);
+        if (autoTex.combatRunWhilePaused()) 
+            runWhilePausedCombatAutoTexOverrides.remove(autoTex);
+    }
+
+    public static void unTimeoutAutoTexOverride(AutoTexProjectorAPI autoTex) {
+        Global.getSector().addTransientScript(autoTex);
+        allAutoTexOverrides.add(autoTex);
+        if (autoTex.combatRunWhilePaused()) {
+            runWhilePausedCombatAutoTexOverrides.add(autoTex);
+        }
+    }
+
+    protected static List<AutoTexProjectorAPI> getAutoTexOverrides(boolean isPaused) {
+        if (isPaused) return new ArrayList<>(runWhilePausedCombatAutoTexOverrides);
+        return new ArrayList<>(allAutoTexOverrides);
     }
 
     public static String[] imageKeys() {
@@ -183,6 +200,14 @@ public class VideoPaths {
         } catch (JSONException e) {
             logger.warn("Error for VideoLib path resolution for mod id " + modId + ": ", e);
             return null;
+        }
+    }
+
+    private static boolean isRunWhilePaused(JSONObject autoTexOverrideData, String prefix) {
+        try {
+            return autoTexOverrideData.getBoolean(prefix + "RunWhilePaused");
+        } catch (JSONException ignored) {
+            return true;
         }
     }
 }

@@ -14,7 +14,7 @@ public class VideoLibCombatPlugin extends BaseEveryFrameCombatPlugin {
     public void advance(float dt, List<InputEventAPI> events) {
         GameState state = Global.getCurrentState();
         if (state == GameState.COMBAT || state == GameState.TITLE) {
-            for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides()) {
+            for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides(Global.getCombatEngine().isPaused())) {
                 projector.advance(dt);
             }
         }

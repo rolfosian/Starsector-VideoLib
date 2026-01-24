@@ -116,7 +116,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
 
-        for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides()) {
+        for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides(false)) {
             projector.timeout();
         }
 
