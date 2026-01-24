@@ -176,14 +176,13 @@ public class VideoPaths {
     public static void unTimeoutAutoTexOverride(AutoTexProjectorAPI autoTex) {
         Global.getSector().addTransientScript(autoTex);
         allAutoTexOverrides.add(autoTex);
-        if (autoTex.combatRunWhilePaused()) {
+        if (autoTex.combatRunWhilePaused())
             runWhilePausedCombatAutoTexOverrides.add(autoTex);
-        }
+        
     }
 
     protected static List<AutoTexProjectorAPI> getAutoTexOverrides(boolean isPaused) {
-        if (isPaused) return new ArrayList<>(runWhilePausedCombatAutoTexOverrides);
-        return new ArrayList<>(allAutoTexOverrides);
+        return isPaused ? new ArrayList<>(allAutoTexOverrides) : new ArrayList<>(runWhilePausedCombatAutoTexOverrides);
     }
 
     public static String[] imageKeys() {

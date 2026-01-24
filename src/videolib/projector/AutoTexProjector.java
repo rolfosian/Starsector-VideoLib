@@ -10,16 +10,18 @@ import org.objectweb.asm.*;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.SectorAPI;
-import com.fs.starfarer.api.combat.EveryFrameCombatPlugin;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
 import videolib.VideoPaths;
+
 import videolib.buffers.TexBuffer;
 import videolib.decoder.Decoder;
 import videolib.decoder.MuteDecoder;
+
 import videolib.playerui.PlayerControlPanel;
 import videolib.speakers.Speakers;
+
 import videolib.util.TexReflection;
 
 // import rolflectionlib.inheritor.Inherit;
@@ -143,7 +145,7 @@ public class AutoTexProjector implements Opcodes {
         ctor.visitVarInsn(ALOAD, 1);
         ctor.visitMethodInsn(
             INVOKESTATIC,
-            Type.getInternalName(VideoPaths.class),
+            videoPathsName,
             "getVideoPath",
             "(Ljava/lang/String;)Ljava/lang/String;",
             false
@@ -368,7 +370,7 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 1);
             mv.visitMethodInsn(
                 INVOKESTATIC,
-                Type.getInternalName(VideoPaths.class),
+                videoPathsName,
                 "getVideoPath",
                 "(Ljava/lang/String;)Ljava/lang/String;",
                 false
@@ -678,7 +680,7 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitMethodInsn(
                 INVOKESTATIC,
-                Type.getInternalName(VideoPaths.class),
+                videoPathsName,
                 "removeAutoTexOverride",
                 "(Ljava/lang/String;" + Type.getDescriptor(AutoTexProjectorAPI.class) + ")V",
                 false
