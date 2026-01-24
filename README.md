@@ -3,15 +3,16 @@
 
 - **Video codecs**: AV1, H.264, HEVC, VP8, VP9, GIF. Audio: AAC, Opus, Vorbis, MP3.
 - **Alpha channel support**: YUVA420P (WEBM/VP9/VP8). See `data/videos/convert_to_alpha.py` for usage and compatibility notes. Animated GIFs with alpha channel are also converted to OpenGL RGBA textures.
+- **Texture overrides**: Most, if not all texture wrappers can be overridden via `TexProjector` or, `AutoTexProjector.AutoTexProjectorAPI` provides an automatic data driven instantiation via `settings.json` with decoders running all game indefinitely. To get a handle on any `AutoTexProjectorAPI` objects for some manual control, call `VideoPaths.getAutoTexProjectorOverride(String path/to/texture)`. Log available texture wrapper ids with console command: `runcode videolib.util.TexReflection.logTexWrapperIds()`.
 - **Image formats**: PNG, JPEG, WEBP, GIF. Alpha channel support for PNG and GIF (WEBP untested).
-- **UI embedding**: Anything that can host a `CustomPanelAPI` can host a video.
-- **Texture overrides**: Most texture wrappers can be overridden via `TexProjector`. Log available texture wrapper ids with console command: `runcode videolib.util.TexReflection.logTexWrapperIds()`.
-- **Sprite support**: Anything using a `Sprite` can be overridden (may require cloning/setting depending on context).
-- **Planet/Ringband support**: Replace planet texture layers (Planet, Cloud, Atmosphere, Glow, Shield, Shield2) and Ringband textures with videos.
+- **UI embedding**: Anything that can add a `CustomPanelAPI` UI component to it can have a video playing on it.
+- **Sprite support**: Anything using a `Sprite` object can be overridden (may require cloning/setting depending on context).
+- **Planet/Ringband support**: Replace planet texture layers (Planet, Cloud, Atmosphere, Glow, Shield, Shield2) and Ringband textures with videos also.
 
 ## Example: Video UI panel
 
 [Examples](./src/videolib/console/)
+[AutoTexProjector Example](./data/config/settings.json) with corresponding `graphics/portraits/vl_portrait_example.png` in the root mod directory.
 
 [For image/video file path resolution use settings.json](./data/config/settings.json) - the key under the `"VideoLib"` key should be your mod's id defined in `mod_info.json`
 
