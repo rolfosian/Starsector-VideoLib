@@ -21,3 +21,21 @@ Version 0.1.0
 - Fixed texture uploads rendering upside down without postprocessing
 - Fixed crash related to GL unpack alignment when uploading textures with a funky resolution to gpu
 - "Fixed" audio drifting progressively behind video on linux (Works on my machine™)
+
+Version 0.1.1
+
+- Added options for AutoTexProjector instantiation to give control over whether or not video frames update for textures during CombatEngine pause
+    See "campaignRunWhilePaused" and "combatRunWhilePaused" keys in example in settings.json. Defaults to true if not set.
+
+- Various minor AutoTexProjector optimizations
+- AutoTexProjectors will now use groups of 50 decoders per thread (maximum can be adjusted in settings.json)
+    Previously they used a thread for each individual decoder which resulted in many threads competing for java stack heap and used a ton of internal JVM memory.
+    If there was not much JVM heap headroom it also incurred a non-trivial "juggle" churning cost on the CPU.
+    This results in a much faster startup time and major reduction in heap usage.
+
+- Reduced AutoTexProjector timeout to 1 frame if its texture is not being rendered
+- New GroupedMuteDecoder class RGBATextureBuffer maximum capacity 3 decoded video frames down from 5 (The VideoFrames in system memory, pre-upload to GPU)
+
+- Fixed a minor AutoTexProjector manual control bug
+- Renamed some FFmpeg JNI bindings to something more appropriate
+- Added an FFmpeg JNI method to (very roughly) estimate passive memory usage of an open FFmpegVideoLibContext struct (i wouldnt trust it tbh)
