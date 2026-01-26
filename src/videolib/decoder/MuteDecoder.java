@@ -27,33 +27,33 @@ public class MuteDecoder implements Decoder {
         logger.info(sb.toString());
     }
 
-    private PlayMode PLAY_MODE;
-    private PlayMode OLD_PLAY_MODE;
-    private EOFMode EOF_MODE;
+    protected PlayMode PLAY_MODE;
+    protected PlayMode OLD_PLAY_MODE;
+    protected EOFMode EOF_MODE;
 
-    private Object seekLock = new Object();
+    protected Object seekLock = new Object();
 
-    private String videoFilePath;
-    private volatile boolean running = false;
-    private Thread decodeThread;
-    private long ctxPtr;
-    private TextureBuffer textureBuffer;
+    protected String videoFilePath;
+    protected volatile boolean running = false;
+    protected Thread decodeThread;
+    protected long ctxPtr;
+    protected TextureBuffer textureBuffer;
 
-    // private float gameFps = 0f;
-    private float videoFps = 0f;
-    private float spf = 0f;
-    private double videoDurationSeconds = 0;
-    private long videoDurationUs = 0;
+    // protected float gameFps = 0f;
+    protected float videoFps = 0f;
+    protected float spf = 0f;
+    protected double videoDurationSeconds = 0;
+    protected long videoDurationUs = 0;
 
-    private int currentVideoTextureId = 0;
-    private long currentVideoPts = 0;
+    protected int currentVideoTextureId = 0;
+    protected long currentVideoPts = 0;
 
     public final Projector videoProjector;
 
-    private int width;
-    private int height;
+    protected int width;
+    protected int height;
 
-    private float timeAccumulator = 0f;
+    protected float timeAccumulator = 0f;
 
     public MuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing MuteDecoder for file " + videoFilePath + " using class " + videoProjector.getClass().getName());
@@ -225,7 +225,7 @@ public class MuteDecoder implements Decoder {
         // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
-        this.textureBuffer = new RGBATextureBuffer(5);
+        this.textureBuffer = new RGBATextureBuffer(2);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 
@@ -353,10 +353,14 @@ public class MuteDecoder implements Decoder {
         return this.ctxPtr;
     }
 
-    private void sleep(long millis) {
+    protected static final void sleep(long millis) {
         try {
             Thread.sleep(millis);
         } catch(InterruptedException ignored) {}
+    }
+
+    public String getVideoFilePath() {
+        return this.videoFilePath;
     }
 
     public int getAudioChannels() {return 0;}

@@ -10,6 +10,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 
+import videolib.decoder.MuteDecoderGroup;
 import videolib.ffmpeg.FFmpeg;
 import videolib.util.TexReflection;
 
@@ -18,6 +19,8 @@ import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
 
 @SuppressWarnings("unchecked")
 public class VideoPaths {
+    private static int DECODERS_PER_GROUP;
+
     public static boolean populated = false;
 
     private static Map<String, String> videoMap = new HashMap<>();
@@ -31,15 +34,21 @@ public class VideoPaths {
     private static List<AutoTexProjectorAPI> allAutoTexOverrides = new ArrayList<>();
     private static List<AutoTexProjectorAPI> runWhilePausedCombatAutoTexOverrides = new ArrayList<>();
 
+    private static List<MuteDecoderGroup> muteDecoderGroups = new ArrayList<>();
+
     protected static void populate() {
         if (populated) return;
         Logger logger = Logger.getLogger(VideoPaths.class);
         List<String> videoKeyz = new ArrayList<>();
         List<String> imageKeyz = new ArrayList<>();
 
+        MuteDecoderGroup currMuteDecoderGroup = new MuteDecoderGroup();
+        muteDecoderGroups.add(currMuteDecoderGroup);
+
         try {
             ModManagerAPI modManager = Global.getSettings().getModManager();
             JSONObject settings = Global.getSettings().getJSONObject("VideoLib");
+            DECODERS_PER_GROUP = settings.getInt("decodersPerGroup");
             
             Iterator<String> modIds = settings.keys();
             while (modIds.hasNext()) {
@@ -118,15 +127,22 @@ public class VideoPaths {
                         if (autoTexMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException("video override already found for texture " + texturePath);
                         }
-    
-                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(videoId, width, height, campaignRunWhilePaused, combatRunWhilePaused);
+                        
+                        if (currMuteDecoderGroup.size() >= DECODERS_PER_GROUP) {
+                            currMuteDecoderGroup = new MuteDecoderGroup();
+                            muteDecoderGroups.add(currMuteDecoderGroup);
+                        }
+
+                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(currMuteDecoderGroup, videoId, width, height, campaignRunWhilePaused, combatRunWhilePaused);
                         Object original = TexReflection.texObjectMap.get(texturePath);
                         ours.setOriginalTexture(texturePath, original);
 
                         TexReflection.transplantTexFields(original, ours);
+                        TexReflection.setTexObjId(ours, ours.getCurrentTextureId());
+
                         TexReflection.texObjectMap.put(texturePath, ours);
                         autoTexMap.put(texturePath, ours);
-    
+
                         logger.info("Instantiated transient video override for texture " + texturePath + " using videoId " + videoId + " located at " + videoMap.get(videoId));
                     }
                 }
@@ -140,6 +156,8 @@ public class VideoPaths {
         videoKeys = videoKeyz.toArray(arr);
         imageKeys = imageKeyz.toArray(arr);
 
+        logger.info("Total MuteDecoder groups: " + String.valueOf(muteDecoderGroups.size()) + " | " + "Max Decoders per group: " + String.valueOf(DECODERS_PER_GROUP));
+        // logger.info("Total estimated indefinite AutoTexOverride VideoLibFFmpegContext usage (Excluding AVCodecContext): " + String.valueOf(totalAutoTexOverrideMem / 1024) + "KB");
         populated = true;
     }
 
@@ -182,7 +200,11 @@ public class VideoPaths {
     }
 
     protected static List<AutoTexProjectorAPI> getAutoTexOverrides(boolean isPaused) {
-        return isPaused ? new ArrayList<>(allAutoTexOverrides) : new ArrayList<>(runWhilePausedCombatAutoTexOverrides);
+        return isPaused ? new ArrayList<>(runWhilePausedCombatAutoTexOverrides) : new ArrayList<>(allAutoTexOverrides) ;
+    }
+
+    public static List<MuteDecoderGroup> getMuteDecoderGroups() {
+        return muteDecoderGroups;
     }
 
     public static String[] imageKeys() {

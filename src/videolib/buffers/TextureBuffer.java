@@ -130,6 +130,11 @@ public class TextureBuffer implements TexBuffer {
         tail = 0;
     }
 
+    @Override
+    public int capacity() {
+        return capacity;
+    }
+
     protected void updateTexture(ByteBuffer frameBuffer) {
         int previousAlignment = GL11.glGetInteger(GL11.GL_UNPACK_ALIGNMENT);
     

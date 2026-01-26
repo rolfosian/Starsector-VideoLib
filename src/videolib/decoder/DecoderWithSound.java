@@ -317,10 +317,9 @@ public class DecoderWithSound implements Decoder {
 
         videoDecodeThread = new Thread(this::decodeLoop, "DecoderWithSound-decodeLoop");
         videoDecodeThread.start();
+        while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
 
         // print("DecoderWithSound decoderLoop thread started");
-
-        while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
         return;
     }
 
@@ -472,5 +471,10 @@ public class DecoderWithSound implements Decoder {
         try {
             Thread.sleep(millis);
         } catch(InterruptedException ignored) {}
+    }
+
+    @Override
+    public String getVideoFilePath() {
+        return this.videoFilePath;
     }
 }

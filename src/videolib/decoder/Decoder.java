@@ -17,6 +17,7 @@ public interface Decoder {
 
     public float getSpf();
     public float getVideoFps();
+    public String getVideoFilePath();
     public void setVideoFilePath(String path);
     public long getCurrentVideoPts();
     public int getCurrentVideoTextureId();

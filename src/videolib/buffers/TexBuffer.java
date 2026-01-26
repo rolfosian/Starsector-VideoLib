@@ -5,6 +5,7 @@ import videolib.ffmpeg.VideoFrame;
 public interface TexBuffer {
     public void initTexStorage(int width, int height);
     public int getTextureId();
+    public int capacity();
     public int size();
     public boolean isEmpty();
     public boolean isFull();
