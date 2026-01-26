@@ -799,6 +799,8 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtxNoSound(JNIEnv *env, 
         (*env)->ReleaseStringUTFChars(env, jfilename, filename);
         return 0;
     }
+    codec_ctx->thread_count = 1;
+    codec_ctx->thread_type = FF_THREAD_SLICE;
 
     AVFrame *frame = av_frame_alloc();
     AVFrame *rgb_frame = av_frame_alloc();
@@ -2661,4 +2663,184 @@ cleanup:
     (*env)->ReleaseStringUTFChars(env, jfilepath, filepath);
     
     return result;
+}
+
+jint estimateCtxMem(FFmpegVideoLibContext* ctx, JNIEnv *env) {
+    if (ctx->video_ctx && ctx->video_frame) {
+        ctx->video_frame->format = ctx->video_ctx->pix_fmt;
+        ctx->video_frame->width  = ctx->video_ctx->width;
+        ctx->video_frame->height = ctx->video_ctx->height;
+        // Allocate buffer with 32-byte alignment
+        if (av_frame_get_buffer(ctx->video_frame, 32) < 0) {
+            printe(env, "Profiling: Failed to allocate video frame buffer");
+        }
+    }
+
+    // 2. Allocate Audio Frame Buffer
+    if (ctx->audio_ctx && ctx->audio_frame) {
+        ctx->audio_frame->format = ctx->audio_ctx->sample_fmt;
+        // If frame_size is 0 (some decoders), default to 1024 for estimation
+        ctx->audio_frame->nb_samples = ctx->audio_ctx->frame_size > 0 ? ctx->audio_ctx->frame_size : 1024;
+        av_channel_layout_copy(&ctx->audio_frame->ch_layout, &ctx->audio_ctx->ch_layout);
+        
+        if (av_frame_get_buffer(ctx->audio_frame, 0) < 0) {
+            printe(env, "Profiling: Failed to allocate audio frame buffer");
+        }
+    }
+
+    // 3. Allocate Alpha Frame Buffer
+    if (ctx->vpx_alpha_channel && ctx->alpha_ctx && ctx->alpha_frame) {
+        ctx->alpha_frame->format = ctx->alpha_ctx->pix_fmt;
+        ctx->alpha_frame->width  = ctx->alpha_ctx->width;
+        ctx->alpha_frame->height = ctx->alpha_ctx->height;
+        
+        if (av_frame_get_buffer(ctx->alpha_frame, 32) < 0) {
+            printe(env, "Profiling: Failed to allocate alpha frame buffer");
+        }
+    }
+
+    // ==========================================
+    // "Detailed" Memory Profiling
+    // ==========================================
+    
+    char profile_msg[4096];
+    size_t offset = 0;
+    size_t total_mem = 0;
+    size_t current_mem = 0;
+
+    // 1. Context Structure
+    current_mem = sizeof(FFmpegVideoLibContext);
+    total_mem += current_mem;
+    offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "FFmpegVideoLibContext: %zu\n", current_mem);
+
+    // 2. AVFormatContext (Struct + IO Buffer + Stream Overhead)
+    if (ctx->fmt_ctx) {
+        current_mem = sizeof(AVFormatContext);
+        // IO Buffer
+        if (ctx->fmt_ctx->pb) {
+            current_mem += ctx->fmt_ctx->pb->buffer_size;
+            current_mem += sizeof(AVIOContext);
+        }
+        // Streams overhead
+        for (unsigned int i = 0; i < ctx->fmt_ctx->nb_streams; i++) {
+            current_mem += sizeof(AVStream);
+            if (ctx->fmt_ctx->streams[i]->codecpar) {
+                current_mem += sizeof(AVCodecParameters);
+                current_mem += ctx->fmt_ctx->streams[i]->codecpar->extradata_size;
+            }
+        }
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Input Format Context (Deep): %zu\n", current_mem);
+    }
+
+    // 3. Video Codec (Struct + Extradata)
+    if (ctx->video_ctx) {
+        current_mem = sizeof(AVCodecContext);
+        current_mem += ctx->video_ctx->extradata_size;
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Video Codec Context (+Extradata): %zu\n", current_mem);
+    }
+
+    // 4. Video Frame (Struct + Data Buffers)
+    if (ctx->video_frame) {
+        current_mem = sizeof(AVFrame);
+        // Calculate size of the data buffers we allocated
+        if (ctx->video_frame->linesize[0] > 0) {
+            int v_buf_size = av_image_get_buffer_size(ctx->video_frame->format, 
+                                                      ctx->video_frame->width, 
+                                                      ctx->video_frame->height, 32);
+            if (v_buf_size > 0) current_mem += v_buf_size;
+        }
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Video Frame (Filled): %zu\n", current_mem);
+    }
+
+    // 5. RGB Frame & Buffer
+    if (ctx->rgb_frame) {
+        current_mem = sizeof(AVFrame); // Struct
+        current_mem += ctx->rgb_size;  // The buffer we allocated manually
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "RGB Frame (+Buffer): %zu\n", current_mem);
+    }
+
+    // 6. Audio Codec (Struct + Extradata)
+    if (ctx->audio_ctx) {
+        current_mem = sizeof(AVCodecContext);
+        current_mem += ctx->audio_ctx->extradata_size;
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Audio Codec Context (+Extradata): %zu\n", current_mem);
+    }
+
+    // 7. Audio Frame (Struct + Data Buffers)
+    if (ctx->audio_frame) {
+        current_mem = sizeof(AVFrame);
+        if (ctx->audio_frame->nb_samples > 0) {
+             int a_buf_size = av_samples_get_buffer_size(NULL, 
+                                                         ctx->audio_frame->ch_layout.nb_channels, 
+                                                         ctx->audio_frame->nb_samples, 
+                                                         ctx->audio_frame->format, 0);
+             if (a_buf_size > 0) current_mem += a_buf_size;
+        }
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Audio Frame (Filled): %zu\n", current_mem);
+    }
+
+    // 8. Audio FIFO
+    if (ctx->audio_fifo) {
+        // Struct estimation
+        current_mem = 128;
+        // Data buffer
+        int bytes_per_sample = av_get_bytes_per_sample(ctx->out_sample_fmt);
+        current_mem += (1024 * ctx->out_channels * bytes_per_sample);
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Audio FIFO: %zu\n", current_mem);
+    }
+
+    // 9. Alpha Channel (Codec + Frame)
+    if (ctx->vpx_alpha_channel) {
+        if (ctx->alpha_ctx) {
+            current_mem = sizeof(AVCodecContext);
+            current_mem += ctx->alpha_ctx->extradata_size;
+            total_mem += current_mem;
+            offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Alpha Codec Context: %zu\n", current_mem);
+        }
+        if (ctx->alpha_frame) {
+            current_mem = sizeof(AVFrame);
+            if (ctx->alpha_frame->linesize[0] > 0) {
+                int alpha_buf_size = av_image_get_buffer_size(ctx->alpha_frame->format, 
+                                                              ctx->alpha_frame->width, 
+                                                              ctx->alpha_frame->height, 32);
+                if (alpha_buf_size > 0) current_mem += alpha_buf_size;
+            }
+            total_mem += current_mem;
+            offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Alpha Frame (Filled): %zu\n", current_mem);
+        }
+    }
+
+    // 10. SWS/SWR Contexts (Heuristic estimation as structs are opaque)
+    // We assume a base overhead for context structures. Real internal buffer usage is hidden.
+    if (ctx->sws_ctx) {
+        current_mem = 4096; // Rough estimate for SwsContext struct + minimal tables
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "SwsContext (Est.): %zu\n", current_mem);
+    }
+    if (ctx->swr_ctx) {
+        current_mem = 4096; // Rough estimate for SwrContext
+        total_mem += current_mem;
+        offset += snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "SwrContext (Est.): %zu\n", current_mem);
+    }
+
+    // Total
+    snprintf(profile_msg + offset, sizeof(profile_msg) - offset, "Total Estimated Memory: %zu", total_mem);
+    
+    // Print Profile
+    printe(env, profile_msg);
+    return (jint) total_mem;
+}
+
+JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_estimateCtxMem(JNIEnv *env, jclass clazz, jstring jfilename, jint width, jint height, jlong startUs) {
+    FFmpegVideoLibContext * ptr = (FFmpegVideoLibContext *)(intptr_t)Java_videolib_ffmpeg_FFmpeg_openCtx(env, clazz, jfilename, width, height, startUs);
+    jint total = estimateCtxMem(ptr, env);
+    Java_videolib_ffmpeg_FFmpeg_closeCtx(env, clazz, (jlong)ptr);
+    return total;
 }
