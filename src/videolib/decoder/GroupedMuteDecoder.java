@@ -35,7 +35,7 @@ public class GroupedMuteDecoder extends MuteDecoder {
         // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
-        this.textureBuffer = new RGBATextureBuffer(4);
+        this.textureBuffer = new RGBATextureBuffer(3);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 
