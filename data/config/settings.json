@@ -1,7 +1,7 @@
 {
     "VideoLib" : {
-        "decodersPerGroup" : 10,
-        
+        "decodersPerGroup" : 50,
+
         "video_lib" : { # id in mod_info.json
             "videos" : {
                 "vl_demo" : "data/videos/jabroni.mp4",
