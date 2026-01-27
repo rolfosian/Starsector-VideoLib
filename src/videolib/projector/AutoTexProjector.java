@@ -433,11 +433,12 @@ public class AutoTexProjector implements Opcodes {
             mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitVarInsn(LLOAD, 4);
             mv.visitMethodInsn(
                 INVOKEVIRTUAL,
                 decoderGroupName,
                 "add",
-                "(Ljava/lang/Object;)Z",
+                "(Ljava/lang/Object;J)Z",
                 false
             );
 
@@ -818,12 +819,13 @@ public class AutoTexProjector implements Opcodes {
         }
 
         {
-            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setRunWhilePaused", "()Z", null, null);
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setRunWhilePaused", "(Z)V", null, null);
             mv.visitCode();
 
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "setRunWhilePaused", "Z");
-            mv.visitInsn(IRETURN);
+            mv.visitVarInsn(ILOAD, 1);
+            mv.visitFieldInsn(PUTFIELD, className, "runWhilePaused", "Z");
+            mv.visitInsn(RETURN);
 
             mv.visitMaxs(0, 0);
             mv.visitEnd();
@@ -1141,7 +1143,7 @@ public class AutoTexProjector implements Opcodes {
 //         this.height = height;
 
 //         this.decoder = new GroupedMuteDecoder(this, videoFilePath, width, height, MODE, EOF_MODE);
-//         this.decoderGroup.add(this.decoder);
+//         this.decoderGroup.add(this.decoder, videoStartUs);
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
 //     }
 

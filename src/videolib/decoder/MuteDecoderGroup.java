@@ -82,6 +82,20 @@ public class MuteDecoderGroup extends ArrayList<Decoder> {
         return super.add(e);
     }
 
+    public synchronized boolean add(Decoder e, long startUs) {
+        e.start(startUs);
+
+        VideoFrame f = FFmpeg.readFrameNoSound(e.getFFmpegCtxPtr());
+        if (f != null) {
+            TexBuffer textureBuffer = e.getTextureBuffer();
+            synchronized(textureBuffer) {
+                textureBuffer.add(f);
+            }
+        }
+
+        return super.add(e);
+    }
+
     @Override
     public synchronized boolean remove(Object o) {
         ((Decoder) o).finish();
@@ -145,6 +159,7 @@ public class MuteDecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized void clear() {
+        this.finish();
         super.clear();
     }
 
@@ -165,7 +180,9 @@ public class MuteDecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized Decoder remove(int index) {
-        return super.remove(index);
+        Decoder removed = super.get(index);
+        this.remove(removed);
+        return removed;
     }
 
     @Override
