@@ -27,6 +27,7 @@ import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
 import com.fs.starfarer.api.util.Misc;
 import com.fs.starfarer.campaign.ui.UITable;
+import com.fs.state.AppDriver;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
@@ -37,6 +38,8 @@ import com.fs.starfarer.api.input.InputEventAPI;
 
 import org.lazywizard.console.BaseCommand;
 import org.lazywizard.console.Console;
+
+// import rolflectionlib.ui.UiUtil;
 
 public class VideoLibDemo implements BaseCommand {
     private static final Logger logger = Logger.getLogger(VideoLibDemo.class);
@@ -57,7 +60,6 @@ public class VideoLibDemo implements BaseCommand {
 
     @Override
     public CommandResult runCommand(String args, CommandContext context) {
-        if (context != CommandContext.CAMPAIGN_MAP) return CommandResult.WRONG_CONTEXT;
         List<String> splitArgs = Arrays.asList(args.split(" "));
 
         for (String id : VideoPaths.videoKeys()) {
@@ -66,49 +68,23 @@ public class VideoLibDemo implements BaseCommand {
                 break;
             }
         }
+        if (fileId == null) fileId = "vl_demo";
 
         final Color[] controlsColor = new Color[1];
         final Color[] controlsTextColor = new Color[1];
+        refControlsColor(splitArgs, controlsColor, controlsTextColor);
 
-        if (splitArgs.contains("wc")) { // with controls
-            for (String arg : splitArgs) {
-                if (arg.startsWith("color:")) {
-                    String[] colorArgs = arg.split(":")[1].split(",");
-                    if (colorArgs.length > 3 || colorArgs.length < 3) throw new IllegalArgumentException("Color parameter must be \"color:R,G,B\" format format as integer values");
+        // Video width and height, should be the same as the encoded video file's resolution.
+        // Width and height CAN be variable, but will incur non-negligible rescaling overhead in ffmpeg if not the same as the video's actual resolution, price especially noticeable while seeking
+        // If you want to rescale the video while it is playing, you should have openGL do it by calling videoPlayer.getProjectorPanel().getPosition().setSize(width, height)
+        int[] dimensions = getDimensions(splitArgs, fileId);
+        int videoWidth = dimensions[0];
+        int videoHeight = dimensions[1];
 
-                    for (String colorArg : colorArgs) {
-                        for (char c : colorArg.toCharArray())
-                        if (!Character.isDigit(c)) throw new IllegalArgumentException("Color parameter must be \"color:R,G,B\" format as integer values");
-                    }
-
-                    int red = Integer.parseInt(colorArgs[0]);
-                    int green = Integer.parseInt(colorArgs[1]);
-                    int blue = Integer.parseInt(colorArgs[2]);
-                    
-                    controlsColor[0] = new Color(red, green, blue);
-
-                } else if (arg.startsWith("textcolor:")) {
-                    String[] colorArgs = arg.split(":")[1].split(",");
-                    if (colorArgs.length > 3 || colorArgs.length < 3) throw new IllegalArgumentException("Text Color parameter must be \"textcolor:R,G,B\" format as integer values");
-
-                    for (String colorArg : colorArgs) {
-                        for (char c : colorArg.toCharArray())
-                        if (!Character.isDigit(c)) throw new IllegalArgumentException("Text Color parameter must be \"textcolor:R,G,B\" format as integer values");
-                    }
-
-                    int red = Integer.parseInt(colorArgs[0]);
-                    int green = Integer.parseInt(colorArgs[1]);
-                    int blue = Integer.parseInt(colorArgs[2]);
-                    
-                    controlsTextColor[0] = new Color(red, green, blue);
-
-                }
-                
-            }
-
-            if (controlsTextColor[0] == null) controlsTextColor[0] = Misc.getTextColor();
-            if (controlsColor[0] == null) controlsColor[0] = Misc.getDarkPlayerColor();
-        }
+        // if (context != CommandContext.CAMPAIGN_MAP) {
+        //     showVideoDialog(context, videoWidth, videoHeight);
+        //     return CommandResult.SUCCESS;
+        // }
 
         InteractionDialogPlugin interactionPlugin = new InteractionDialogPlugin() {
             private String currentVideoId;
@@ -117,41 +93,6 @@ public class VideoLibDemo implements BaseCommand {
             public void init(InteractionDialogAPI dialog) {
                 CustomPanelAPI parentPanel;
                 // ***THE MEAT AND POTATOES***
-
-                int argWidth = 0;
-                int argHeight = 0;
-                for (String arg : splitArgs) {
-                    if (arg.startsWith("width:")) {
-                        argWidth = Integer.parseInt(arg.split(":")[1]);
-        
-                    } else if (arg.startsWith("height:")) {
-                        argHeight = Integer.parseInt(arg.split(":")[1]);
-                    }
-                }
-        
-
-                // Video width and height, should be the same as the encoded video file's resolution.
-                // Width and height CAN be variable, but will incur non-negligible rescaling overhead in ffmpeg if not the same as the video's actual resolution, price especially noticeable while seeking
-                // If you want to rescale the video while it is playing, you should have openGL do it by calling videoPlayer.getProjectorPanel().getPosition().setSize(width, height)
-                int videoWidth;
-                int videoHeight;
-
-                if (argWidth != 0 && argHeight != 0) {
-                    videoWidth = argWidth;
-                    videoHeight = argHeight;
-                    if (fileId == null) fileId = "vl_demo";
-
-                } else if (fileId == null) {
-                    videoWidth = 960;
-                    videoHeight = 540;
-                    fileId = "vl_demo";
-
-                } else {
-                    int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.getVideoPath(fileId));
-                    videoWidth = dimensions[0];
-                    videoHeight = dimensions[1];
-                }
-                
                 
                 if (splitArgs.contains("ws")) { // with sound
                     // with controls
@@ -326,4 +267,110 @@ public class VideoLibDemo implements BaseCommand {
         originalParentPanelX = pos.getCenterX() - ((width + 202f) / 2);
         originalParentPanelY = pos.getCenterY() + (height / 2);
     }
+
+    private static int[] getDimensions(List<String> splitArgs, String fileId) {
+        int argWidth = 0;
+        int argHeight = 0;
+        for (String arg : splitArgs) {
+            if (arg.startsWith("width:")) {
+                argWidth = Integer.parseInt(arg.split(":")[1]);
+
+            } else if (arg.startsWith("height:")) {
+                argHeight = Integer.parseInt(arg.split(":")[1]);
+            }
+        }
+
+        int videoWidth;
+        int videoHeight;
+
+        if (argWidth != 0 && argHeight != 0) {
+            videoWidth = argWidth;
+            videoHeight = argHeight;
+
+        } else if (fileId == "vl_demo") {
+            videoWidth = 960;
+            videoHeight = 540;
+
+        } else {
+            int[] dimensions = FFmpeg.getWidthAndHeight(VideoPaths.getVideoPath(fileId));
+            videoWidth = dimensions[0];
+            videoHeight = dimensions[1];
+        }
+
+        return new int[] {videoWidth, videoHeight};
+    }
+
+    private static void refControlsColor(List<String> splitArgs, final Color[] controlsColor, final Color[] controlsTextColor) {
+        if (splitArgs.contains("wc")) { // with controls
+            for (String arg : splitArgs) {
+                if (arg.startsWith("color:")) {
+                    String[] colorArgs = arg.split(":")[1].split(",");
+                    if (colorArgs.length > 3 || colorArgs.length < 3) throw new IllegalArgumentException("Color parameter must be \"color:R,G,B\" format format as integer values");
+
+                    for (String colorArg : colorArgs) {
+                        for (char c : colorArg.toCharArray())
+                        if (!Character.isDigit(c)) throw new IllegalArgumentException("Color parameter must be \"color:R,G,B\" format as integer values");
+                    }
+
+                    int red = Integer.parseInt(colorArgs[0]);
+                    int green = Integer.parseInt(colorArgs[1]);
+                    int blue = Integer.parseInt(colorArgs[2]);
+                    
+                    controlsColor[0] = new Color(red, green, blue);
+
+                } else if (arg.startsWith("textcolor:")) {
+                    String[] colorArgs = arg.split(":")[1].split(",");
+                    if (colorArgs.length > 3 || colorArgs.length < 3) throw new IllegalArgumentException("Text Color parameter must be \"textcolor:R,G,B\" format as integer values");
+
+                    for (String colorArg : colorArgs) {
+                        for (char c : colorArg.toCharArray())
+                        if (!Character.isDigit(c)) throw new IllegalArgumentException("Text Color parameter must be \"textcolor:R,G,B\" format as integer values");
+                    }
+
+                    int red = Integer.parseInt(colorArgs[0]);
+                    int green = Integer.parseInt(colorArgs[1]);
+                    int blue = Integer.parseInt(colorArgs[2]);
+                    
+                    controlsTextColor[0] = new Color(red, green, blue);
+
+                }
+                
+            }
+
+            if (controlsTextColor[0] == null) controlsTextColor[0] = Misc.getTextColor();
+            if (controlsColor[0] == null) controlsColor[0] = Misc.getDarkPlayerColor();
+        }
+    }
+
+    // private static void showVideoDialog(CommandContext ctx, int videoWidth, int videoHeight) {
+    //     UIPanelAPI screenPanel = null;
+    //     switch(ctx) {
+    //         case COMBAT_MISSION:
+    //         case COMBAT_SIMULATION:
+    //         case COMBAT_CAMPAIGN:
+    //             screenPanel = UiUtil.utils.combatUIGetScreenPanel(Global.getCombatEngine().getCombatUI());
+    //             break;
+    //         case MAIN_MENU:
+    //             screenPanel = UiUtil.utils.titleScreenStateGetScreenPanel(AppDriver.getInstance().getCurrentState());
+    //             break;
+    //         case CAMPAIGN_MAP:
+    //         case CAMPAIGN_MARKET:
+    //             screenPanel = UiUtil.utils.campaignUIgetScreenPanel(Global.getSector().getCampaignUI());
+    //     }
+
+    //     Object[] confirmDialogData = UiUtil.showConfirmationDialog(
+    //         null,
+    //         null,
+    //         null,
+    //         videoWidth + 202f,
+    //         videoHeight,
+    //         new UiUtil.DialogDismissedListener() {
+    //             @Override
+    //             public void dialogDismissed(Object dialog, int value) {}
+    //         },
+    //         screenPanel
+    //     );
+
+    //     UIPanelAPI parentPanel = UiUtil.utils.confirmDialogGetInnerPanel(confirmDialogData[3]);
+    // }
 }
