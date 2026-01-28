@@ -60,7 +60,6 @@ if (splitArgs.contains("wc")) {
 - **Cleanup is mandatory**: Projectors spawn decoder threads and manage native buffers. Always call `projector.finish()` when done (NOT `decoder.finish()`, `projector.finish()` will handle that). Not doing so can leak memory, keep threads alive, and fail to restore original textures/specs (especially for `PlanetProjector`). For standard Video UI panels: if `keepAlive=false`, the projector cleans up automatically when removed and stops advancing; if `keepAlive=true`, you must call `finish()` yourself.
 
 ## TODO
-- Redo package semantics
 - Audio for Planet/RingBand/Tex projectors; directional audio for `PlanetProjector` based on viewport
 - Documentation and more examples
 - Polish UI
@@ -69,4 +68,3 @@ if (splitArgs.contains("wc")) {
 ## Notes
 - Each decoded video frame is uploaded to an OpenGL texture via a ring buffer, driven by a worker thread through FFmpeg JNI bindings.
 - A/V desync may occur and audio will probably stutter if the game fps slows to below the video framerate. It probably won't take long for the audio to catch up to the video in case of a/v desync here
-- OpenGL renders upside down to FFmpeg output by default, and we don't have direct access to the draw call for texture projectors, only the panel implementation, so files intended to be used with Planet/Ringband/Sprite/Tex Projectors should be vflipped during preprocessing.
