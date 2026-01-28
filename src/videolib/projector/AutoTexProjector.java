@@ -24,7 +24,7 @@ import videolib.speakers.Speakers;
 
 import videolib.util.TexReflection;
 
-import rolflectionlib.inheritor.Inherit;
+// import rolflectionlib.inheritor.Inherit;
 
 /**
  * Direct subclass of obfuscated Texture class implementing EveryFrameScript and Projector interfaces. Automatically stops and starts itself depending on if it is being rendered or not.
@@ -989,7 +989,7 @@ public class AutoTexProjector implements Opcodes {
 
         cw.visitEnd();
         byte[] classBytes = cw.toByteArray();
-        Inherit.dumpClass(classBytes, "AutoTexProjektor.class");
+        // Inherit.dumpClass(classBytes, "AutoTexProjektor.class");
         // if (true) throw new RuntimeException();
         autoTexClass = cl.define(classBytes, className.replace("/", "."));
 
