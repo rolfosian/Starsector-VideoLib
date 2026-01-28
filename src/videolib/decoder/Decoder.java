@@ -4,6 +4,7 @@ import com.fs.starfarer.api.Global;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
+import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.TexBuffer;
 
 public interface Decoder {
@@ -22,7 +23,9 @@ public interface Decoder {
     public long getCurrentVideoPts();
     public int getCurrentVideoTextureId();
     public int getCurrentVideoTextureId(float deltaTime);
+
     public TexBuffer getTextureBuffer();
+    public AudioFrameBuffer getAudioBuffer();
 
     public int getSampleRate();
     public int getAudioChannels();

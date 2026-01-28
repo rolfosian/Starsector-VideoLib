@@ -1,10 +1,13 @@
-package videolib.decoder;
+package videolib.decoder.grouped;
 
 import videolib.ffmpeg.FFmpeg;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
+
 import videolib.buffers.RGBATextureBuffer;
+import videolib.decoder.MuteDecoder;
+
 import videolib.projector.Projector;
 
 public class GroupedMuteDecoder extends MuteDecoder {
@@ -15,7 +18,7 @@ public class GroupedMuteDecoder extends MuteDecoder {
     @Override
     public void start(long startUs) {
         if (running) return;
-        // print("StartingGroupedMuteDecoder for file", videoFilePath);
+        // print("Starting GroupedMuteDecoder for file", videoFilePath);
         running = true;
 
         ctxPtr = FFmpeg.openCtxNoSound(videoFilePath, width, height, startUs);
@@ -38,19 +41,15 @@ public class GroupedMuteDecoder extends MuteDecoder {
         this.textureBuffer = new RGBATextureBuffer(3);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
-
-        // print("MuteDecoder decoderLoop thread started");
     }
 
     @Override
     public void finish() {
         if (!running) return;
-        // print("StoppingGroupedMuteDecoder decoderLoop thread");
+        // print("Stopping GroupedMuteDecoder decoderLoop thread");
         running = false;
         timeAccumulator = 0f;
         videoFps = 0f;
-
-        // print("JoiningGroupedMuteDecoder decoderLoop thread");
 
         if (ctxPtr != 0) {
             print("Closing FFmpeg ctx");
@@ -63,6 +62,5 @@ public class GroupedMuteDecoder extends MuteDecoder {
             textureBuffer.clear();
             textureBuffer.cleanupTexStorage();
         }
-        // textureBuffer.glDeleteBuffers();
     }
 }

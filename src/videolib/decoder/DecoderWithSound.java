@@ -12,7 +12,6 @@ import videolib.VideoLibModPlugin;
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
 
-import videolib.buffers.TextureBuffer;
 import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.RGBATextureBuffer;
 import videolib.buffers.TexBuffer;
@@ -32,42 +31,42 @@ public class DecoderWithSound implements Decoder {
         logger.info(sb.toString());
     }
 
-    private PlayMode PLAY_MODE;
-    private PlayMode OLD_PLAY_MODE;
-    private EOFMode EOF_MODE;
+    protected PlayMode PLAY_MODE;
+    protected PlayMode OLD_PLAY_MODE;
+    protected EOFMode EOF_MODE;
 
-    private Object seekLock = new Object();
+    protected Object seekLock = new Object();
 
-    private String videoFilePath;
-    private volatile boolean running = false;
-    private Thread videoDecodeThread;
-    private long ctxPtr;
+    protected String videoFilePath;
+    protected volatile boolean running = false;
+    protected Thread videoDecodeThread;
+    protected long ctxPtr;
 
-    private TexBuffer textureBuffer;
-    private AudioFrameBuffer audioBuffer;
+    protected TexBuffer textureBuffer;
+    protected AudioFrameBuffer audioBuffer;
 
-    // private float gameFps = 0f;
-    private float videoFps = 0f;
-    private float spf = 0f;
-    private double videoDurationSeconds = 0;
-    private long videoDurationUs = 0;
+    // protected float gameFps = 0f;
+    protected float videoFps = 0f;
+    protected float spf = 0f;
+    protected double videoDurationSeconds = 0;
+    protected long videoDurationUs = 0;
 
-    private int currentVideoTextureId = 0;
-    private long currentVideoPts = 0;
-    private long currentAudioPts = 0;
-    private long lastRenderedAudioPts = 0;
+    protected int currentVideoTextureId = 0;
+    protected long currentVideoPts = 0;
+    protected long currentAudioPts = 0;
+    protected long lastRenderedAudioPts = 0;
 
     public final Projector videoProjector;
     public Speakers speakers;
-    private int speakersSourceId;
+    protected int speakersSourceId;
 
-    private int width;
-    private int height;
+    protected int width;
+    protected int height;
 
-    private int audioChannels;
-    private int audioSampleRate;
+    protected int audioChannels;
+    protected int audioSampleRate;
 
-    private float timeAccumulator = 0f;
+    protected float timeAccumulator = 0f;
 
     public DecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
         print("Initializing DecoderWithSound for file " + videoFilePath + " using class " + videoProjector.getClass().getName());
@@ -421,6 +420,10 @@ public class DecoderWithSound implements Decoder {
         return this.textureBuffer;
     }
 
+    public AudioFrameBuffer getAudioBuffer() {
+        return this.audioBuffer;
+    }
+
     public float getSpf() {
         return this.spf;
     }
@@ -473,7 +476,6 @@ public class DecoderWithSound implements Decoder {
         } catch(InterruptedException ignored) {}
     }
 
-    @Override
     public String getVideoFilePath() {
         return this.videoFilePath;
     }

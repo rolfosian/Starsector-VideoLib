@@ -10,7 +10,7 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.ModManagerAPI;
 import com.fs.starfarer.api.ModSpecAPI;
 
-import videolib.decoder.MuteDecoderGroup;
+import videolib.decoder.grouped.MuteDecoderGroup;
 import videolib.ffmpeg.FFmpeg;
 import videolib.util.TexReflection;
 
@@ -229,6 +229,14 @@ public class VideoPaths {
             return autoTexOverrideData.getBoolean(prefix + "RunWhilePaused");
         } catch (JSONException ignored) {
             return true;
+        }
+    }
+
+    private static boolean isAudio(JSONObject autoTexOverrideData) {
+        try {
+            return Global.getSettings().isSoundEnabled() ? autoTexOverrideData.getBoolean("playAudio") : false;
+        } catch (JSONException ignored) {
+            return false;
         }
     }
 }

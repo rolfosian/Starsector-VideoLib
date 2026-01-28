@@ -8,7 +8,7 @@ import videolib.projector.Projector;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
-
+import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.RGBATextureBuffer;
 import videolib.buffers.TextureBuffer;
 
@@ -261,7 +261,6 @@ public class MuteDecoder implements Decoder {
             textureBuffer.clear();
             textureBuffer.cleanupTexStorage();
         }
-        // textureBuffer.glDeleteBuffers();
     }
 
     public void stop() {
@@ -305,6 +304,10 @@ public class MuteDecoder implements Decoder {
 
     public TextureBuffer getTextureBuffer() {
         return this.textureBuffer;
+    }
+
+    public AudioFrameBuffer getAudioBuffer() {
+        return null;
     }
 
     public float getSpf() {
