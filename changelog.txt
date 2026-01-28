@@ -39,3 +39,11 @@ Version 0.1.1
 - Fixed a minor AutoTexProjector manual control bug
 - Renamed some FFmpeg JNI bindings to something more appropriate
 - Added an FFmpeg JNI method to (very roughly) estimate passive memory usage of an open FFmpegVideoLibContext struct (i wouldnt trust it tbh)
+
+Version 0.1.1a
+
+- Added a missing (redundant) method for AutoTexProjector that should have been implemented but wasn't
+- Fixed a bug with AutoTexProjector changeVideo method where the startUs parameter was ignored
+- Fixed a bug with AutoTexProjector setRunWhilePaused method where it had an incorrect signature
+- Fixed wrong load op for AutoTexProjector instantiator var6 for the new op that resulted in intermittent JVM hotspot verification failure for the instantiator class
+- Some groundwork for audio support for AutoTexProjector (lol), changed MuteDecoderGroup to inherit from abstract class DecoderGroup, moved related classes to "group" sub-package of decoder package
