@@ -36,7 +36,7 @@ public class AutoTexProjector implements Opcodes {
     public static interface AutoTexProjectorAPI extends EveryFrameScript, Projector {
         public int getCurrentTextureId();
 
-        public void changeVideo(String videoId, int width, int height, long startVideoUs);
+        public void changeVideo(boolean keepOldDecoderAlive, String videoId, int width, int height, long startVideoUs);
 
         public void timeout();
         public void unTimeOut();
@@ -47,6 +47,11 @@ public class AutoTexProjector implements Opcodes {
         public boolean combatRunWhilePaused();
         public void setCombatRunWhilePaused(boolean runWhilePaused); // combat engine
         public void setRunWhilePaused(boolean runWhilePaused); // for campaign layer
+
+        /** For if video was changed and the keepOldDecoderAlive parameter of changeVideo was set to true, automatically re-adds decoder to the decoder group */
+        public void setDecoder(Decoder decoder, boolean keepOldDecoderAlive); 
+
+        public DecoderGroup getDecoderGroup();
     }
 
     public static void print(String msg) {
@@ -350,12 +355,17 @@ public class AutoTexProjector implements Opcodes {
             MethodVisitor mv = cw.visitMethod(
                 ACC_PUBLIC,
                 "changeVideo",
-                "(Ljava/lang/String;IIJ)V",
+                "(ZLjava/lang/String;IIJ)V",
                 null,
                 null
             );
             mv.visitCode();
-        
+
+            Label skipKillDecoderLabel = new Label();
+            
+            mv.visitVarInsn(ILOAD, 1);
+            mv.visitJumpInsn(IFNE, skipKillDecoderLabel);
+
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
             mv.visitVarInsn(ALOAD, 0);
@@ -367,9 +377,12 @@ public class AutoTexProjector implements Opcodes {
                 "(Ljava/lang/Object;)Z",
                 false
             );
+            mv.visitInsn(POP);
+
+            mv.visitLabel(skipKillDecoderLabel);
         
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ALOAD, 1);
+            mv.visitVarInsn(ALOAD, 2);
             mv.visitMethodInsn(
                 INVOKESTATIC,
                 videoPathsName,
@@ -385,11 +398,11 @@ public class AutoTexProjector implements Opcodes {
             );
         
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ILOAD, 2);
+            mv.visitVarInsn(ILOAD, 3);
             mv.visitFieldInsn(PUTFIELD, className, "width", "I");
         
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ILOAD, 3);
+            mv.visitVarInsn(ILOAD, 4);
             mv.visitFieldInsn(PUTFIELD, className, "height", "I");
         
             mv.visitVarInsn(ALOAD, 0);
@@ -433,7 +446,7 @@ public class AutoTexProjector implements Opcodes {
             mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
-            mv.visitVarInsn(LLOAD, 4);
+            mv.visitVarInsn(LLOAD, 5);
             mv.visitMethodInsn(
                 INVOKEVIRTUAL,
                 decoderGroupName,
@@ -581,9 +594,9 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitInsn(DUP);
             mv.visitFieldInsn(GETFIELD, className, "timeoutFrames", "I");
-            mv.visitInsn(DUP_X1);
             mv.visitInsn(ICONST_1);
             mv.visitInsn(IADD);
+            mv.visitInsn(DUP_X1);
             mv.visitFieldInsn(PUTFIELD, className, "timeoutFrames", "I");
             
             mv.visitFieldInsn(GETSTATIC, className, "TIMEOUT_FRAMES", "I");
@@ -606,7 +619,7 @@ public class AutoTexProjector implements Opcodes {
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
             mv.visitVarInsn(FLOAD, 1);
             mv.visitMethodInsn(INVOKEINTERFACE, decoderName, "getCurrentVideoTextureId", "(F)I", true);
-            mv.visitVarInsn(ISTORE, 2);
+            mv.visitInsn(POP);
 
             mv.visitLabel(lReturn);
             mv.visitInsn(RETURN);
@@ -640,6 +653,7 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
             mv.visitMethodInsn(INVOKEVIRTUAL, decoderGroupName, "remove", "(Ljava/lang/Object;)Z", false);
+            mv.visitInsn(POP);
 
             // Global.getSector().removeTransientScript(this);
             mv.visitMethodInsn(INVOKESTATIC, globalName, "getSector", "()Lcom/fs/starfarer/api/campaign/SectorAPI;", false);
@@ -987,6 +1001,74 @@ public class AutoTexProjector implements Opcodes {
             mv.visitEnd();
         }
 
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "setDecoder", "(" + decoderDesc + "Z)V", null, null);
+            mv.visitCode();
+
+            Label skipKillDecoderLabel = new Label();
+            mv.visitVarInsn(ILOAD, 2);
+            mv.visitJumpInsn(IFNE, skipKillDecoderLabel);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(
+                INVOKEVIRTUAL,
+                decoderGroupName,
+                "remove",
+                "(Ljava/lang/Object;)Z",
+                false
+            );
+            mv.visitInsn(POP);
+
+            mv.visitLabel(skipKillDecoderLabel);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitFieldInsn(PUTFIELD, className, "decoder", decoderDesc);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(INVOKEVIRTUAL, decoderGroupName, "add", "(Ljava/lang/Object;)Z", false);
+    
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
+            mv.visitMethodInsn(
+                INVOKEINTERFACE,
+                decoderName,
+                "getCurrentVideoTextureId",
+                "()I",
+                true
+            );
+            mv.visitFieldInsn(
+                PUTFIELD,
+                className,
+                "currentTextureId",
+                "I"
+            );
+
+            mv.visitInsn(RETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "getDecoderGroup", "()" + decoderGroupDesc, null, null);
+            mv.visitCode();
+            
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
+            mv.visitInsn(ARETURN);
+
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
         cw.visitEnd();
         byte[] classBytes = cw.toByteArray();
         // Inherit.dumpClass(classBytes, "AutoTexProjektor.class");
@@ -1145,8 +1227,10 @@ public class AutoTexProjector implements Opcodes {
 //     }
 
 //     @Override
-//     public void changeVideo(String videoId, int width, int height, long videoStartUs) {
-//         this.decoderGroup.remove(this.decoder);
+//     public void changeVideo(boolean keepOldDecoderAlive, String videoId, int width, int height, long videoStartUs) {
+//         if (!keepOldDecoderAlive) {
+//             this.decoderGroup.remove(this.decoder);
+//         }
 
 //         this.videoFilePath = VideoPaths.getVideoPath(videoId);
 //         this.width = width;
@@ -1191,6 +1275,11 @@ public class AutoTexProjector implements Opcodes {
 //         if (!paused) {
 //             int newId = decoder.getCurrentVideoTextureId(dt);
 //         }
+//     }
+
+//     @Override
+//     public DecoderGroup getDecoderGroup() {
+//         return this.decoderGroup;
 //     }
 
 //     @Override
