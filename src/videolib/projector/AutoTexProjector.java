@@ -1354,6 +1354,14 @@ public class AutoTexProjector implements Opcodes {
 //     }
 
 //     @Override
+//     public void setDecoder(Decoder decoder, boolean keepOldDecoderAlive) {
+//         if (!keepOldDecoderAlive) {
+//             this.decoderGroup.remove(this.decoder);
+//         }
+//         this.decoder = decoder;
+//     }
+
+//     @Override
 //     public PlayMode getPlayMode() {
 //         return MODE;
 //     }
