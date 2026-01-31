@@ -74,101 +74,102 @@ public class MuteDecoder implements Decoder {
             if (!textureBuffer.isFull()) {
                 VideoFrame f = FFmpeg.readFrameNoSound(ctxPtr);
 
-                if (f == null) { // EOF / Error
-                    if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
-                        logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(ctxPtr)
-                        + ", interrupting main thread...",
-                        new RuntimeException(FFmpeg.getErrorMessage(ctxPtr)));
-
-                        FFmpeg.closeCtx(ctxPtr);
-                        ctxPtr = 0;
-                        textureBuffer.clear();
-                        VideoLibModPlugin.getMainThread().interrupt();
-                        return;
+                if (f != null) {
+                    synchronized (textureBuffer) {
+                        textureBuffer.add(f);
                     }
+                    continue;
+                }
 
-                    if (this.PLAY_MODE != PlayMode.SEEKING) {
-                        synchronized(seekLock) {
-                            if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
-                                PlayerControlPanel controlPanel = videoProjector.getControlPanel();
+                // EOF or Error past this point
 
-                                if (controlPanel != null) {
-                                    if (!videoProjector.paused()) {
-                                        while (!textureBuffer.isEmpty()) {
-                                            sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
-                                        }
-                                        seekWithoutClearingBuffer(0);
-        
-                                        if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
-                                            videoProjector.pause();
-                                            
-                                            controlPanel.setProgressDisplay(currentVideoPts);
-                                            controlPanel.getPlayButton().setEnabled(true);
-                                            controlPanel.getPauseButton().setEnabled(false);
-                                            controlPanel.getStopButton().setEnabled(true);
-                                        }
+                if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
+                    logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(ctxPtr)
+                    + ", interrupting main thread...",
+                    new RuntimeException(FFmpeg.getErrorMessage(ctxPtr)));
+
+                    FFmpeg.closeCtx(ctxPtr);
+                    ctxPtr = 0;
+                    textureBuffer.clear();
+                    VideoLibModPlugin.getMainThread().interrupt();
+                    return;
+                }
+
+                if (this.PLAY_MODE != PlayMode.SEEKING) {
+                    synchronized(seekLock) {
+                        if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
+                            PlayerControlPanel controlPanel = videoProjector.getControlPanel();
+
+                            if (controlPanel != null) {
+                                if (!videoProjector.paused()) {
+                                    while (!textureBuffer.isEmpty()) {
+                                        sleep(1);
+                                        if (videoProjector.paused()) break;
+                                        if (!videoProjector.isRendering()) break;
+                                    }
+                                    seekWithoutClearingBuffer(0);
     
-                                    } else {
-                                        while (!textureBuffer.isEmpty()) {
-                                            sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
-                                        }
+                                    if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
+                                        videoProjector.pause();
+                                        
                                         controlPanel.setProgressDisplay(currentVideoPts);
                                         controlPanel.getPlayButton().setEnabled(true);
                                         controlPanel.getPauseButton().setEnabled(false);
                                         controlPanel.getStopButton().setEnabled(true);
-                                        
-                                        seekWithoutClearingBuffer(0);
-                                        continue;
                                     }
+
                                 } else {
-                                    switch(this.EOF_MODE) {
-                                        case PLAY_UNTIL_END:
-                                            while (!textureBuffer.isEmpty()) {
-                                                sleep(1);
-                                                if (videoProjector.paused()) break;
-                                                if (!videoProjector.isRendering()) break;
-                                            }
-                                            seekWithoutClearingBuffer(0);
-                                            videoProjector.pause();
-                                            videoProjector.setPlayMode(PlayMode.SEEKING);
-                                            videoProjector.setIsRendering(false);
-                                            break;
-
-                                        case PAUSE:
-                                            while (!textureBuffer.isEmpty()) {
-                                                sleep(1);
-                                                if (videoProjector.paused()) break;
-                                                if (!videoProjector.isRendering()) break;
-                                            }
-                                            seekWithoutClearingBuffer(0);
-                                            videoProjector.pause();
-                                            break;
-
-                                        default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
-                                            sleep(1);
-                                            break;
-
+                                    while (!textureBuffer.isEmpty()) {
+                                        sleep(1);
+                                        if (videoProjector.paused()) break;
+                                        if (!videoProjector.isRendering()) break;
                                     }
+                                    controlPanel.setProgressDisplay(currentVideoPts);
+                                    controlPanel.getPlayButton().setEnabled(true);
+                                    controlPanel.getPauseButton().setEnabled(false);
+                                    controlPanel.getStopButton().setEnabled(true);
+                                    
+                                    seekWithoutClearingBuffer(0);
+                                    continue;
                                 }
                             } else {
-                                seekWithoutClearingBuffer(0);
-                            }
-                            
-                        }
-                        sleep(1);
-                        continue;
-                    }
+                                switch(this.EOF_MODE) {
+                                    case PLAY_UNTIL_END:
+                                        while (!textureBuffer.isEmpty()) {
+                                            sleep(1);
+                                            if (videoProjector.paused()) break;
+                                            if (!videoProjector.isRendering()) break;
+                                        }
+                                        seekWithoutClearingBuffer(0);
+                                        videoProjector.pause();
+                                        videoProjector.setPlayMode(PlayMode.SEEKING);
+                                        videoProjector.setIsRendering(false);
+                                        break;
 
-                } else {
-                    synchronized (textureBuffer) {
-                        textureBuffer.add(f);
+                                    case PAUSE:
+                                        while (!textureBuffer.isEmpty()) {
+                                            sleep(1);
+                                            if (videoProjector.paused()) break;
+                                            if (!videoProjector.isRendering()) break;
+                                        }
+                                        seekWithoutClearingBuffer(0);
+                                        videoProjector.pause();
+                                        break;
+
+                                    default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
+                                        sleep(1);
+                                        break;
+
+                                }
+                            }
+                        } else {
+                            seekWithoutClearingBuffer(0);
+                        }
+                        
                     }
+                    sleep(1);
+                    continue;
                 }
-            
             } else {
                 sleep(1);
             }
