@@ -35,6 +35,7 @@ public class MuteDecoderGroup extends DecoderGroup {
                     }
                     
                     decoder.seekWithoutClearingBuffer(0);
+                    read(decoder, textureBuffer, ctxPtr);
                 }
             }
             

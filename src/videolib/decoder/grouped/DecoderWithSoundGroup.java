@@ -39,6 +39,7 @@ public class DecoderWithSoundGroup extends DecoderGroup {
                     }
                     
                     decoder.seekWithoutClearingBuffer(0);
+                    read(decoder, textureBuffer, ctxPtr);
                 }
             }
             
