@@ -103,26 +103,6 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
     }
 
     @Override
-    public synchronized boolean addAll(Collection<? extends Decoder> c) {
-        return super.addAll(c);
-    }
-
-    @Override
-    public synchronized boolean addAll(int index, Collection<? extends Decoder> c) {
-        return super.addAll(index, c);
-    }
-
-    @Override
-    public synchronized boolean removeAll(Collection<?> c) {
-        return super.removeAll(c);
-    }
-
-    @Override
-    public synchronized boolean retainAll(Collection<?> c) {
-        return super.retainAll(c);
-    }
-
-    @Override
     public synchronized void clear() {
         this.finish();
         super.clear();
@@ -132,17 +112,6 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
     public synchronized Decoder get(int index) {
         return super.get(index);
     }
-
-    @Override
-    public synchronized Decoder set(int index, Decoder element) {
-        return super.set(index, element);
-    }
-
-    @Override
-    public synchronized void add(int index, Decoder element) {
-        super.add(index, element);
-    }
-
     @Override
     public synchronized int indexOf(Object o) {
         return super.indexOf(o);
@@ -166,5 +135,34 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
     @Override
     public synchronized List<Decoder> subList(int fromIndex, int toIndex) {
         return super.subList(fromIndex, toIndex);
+    }
+
+    @Override
+    public synchronized boolean addAll(Collection<? extends Decoder> c) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
+    }
+
+    @Override
+    public synchronized boolean addAll(int index, Collection<? extends Decoder> c) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
+    }
+
+    @Override
+    public synchronized boolean removeAll(Collection<?> c) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
+    }
+
+    @Override
+    public synchronized boolean retainAll(Collection<?> c) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
+    }
+    @Override
+    public synchronized Decoder set(int index, Decoder element) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
+    }
+
+    @Override
+    public synchronized void add(int index, Decoder element) {
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
     }
 }
