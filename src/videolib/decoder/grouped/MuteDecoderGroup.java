@@ -5,7 +5,6 @@ import org.apache.log4j.Logger;
 import videolib.buffers.TexBuffer;
 import videolib.decoder.Decoder;
 import videolib.ffmpeg.FFmpeg;
-import videolib.ffmpeg.VideoFrame;
 
 /**
  * Assumes decoders are EOFMode.LOOP
@@ -22,7 +21,7 @@ public class MuteDecoderGroup extends DecoderGroup {
                 if (!textureBuffer.isFull()) {
                     long ctxPtr = decoder.getFFmpegCtxPtr();
 
-                    if (read(decoder, textureBuffer, ctxPtr)) continue;
+                    if (read(textureBuffer, ctxPtr)) continue;
 
                     if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
                         logger.error(
@@ -35,7 +34,7 @@ public class MuteDecoderGroup extends DecoderGroup {
                     }
                     
                     decoder.seekWithoutClearingBuffer(0);
-                    read(decoder, textureBuffer, ctxPtr);
+                    read(textureBuffer, ctxPtr);
                 }
             }
             
@@ -44,28 +43,15 @@ public class MuteDecoderGroup extends DecoderGroup {
     }
 
     @Override
-    public synchronized boolean add(Decoder decoder) {
+    public boolean add(Decoder decoder) {
         decoder.start(0);
-        read(decoder, decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
+        read(decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
         return super.add(decoder);
     }
 
-    @Override
-    public synchronized boolean add(Decoder decoder, long startUs) {
+    public boolean add(Decoder decoder, long startUs) {
         decoder.start(startUs);
-        read(decoder, decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
+        read(decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
         return super.add(decoder);
-    }
-
-    @Override
-    protected boolean read(Decoder decoder, TexBuffer textureBuffer, long ptr) {
-        VideoFrame f = FFmpeg.readFrameNoSound(ptr);
-        if (f != null) {
-            synchronized(textureBuffer) {
-                textureBuffer.add(f);
-            }
-            return true;
-        }
-        return false;
     }
 }

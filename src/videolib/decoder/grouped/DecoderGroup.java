@@ -2,8 +2,13 @@ package videolib.decoder.grouped;
 
 import java.util.*;
 
+import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.TexBuffer;
 import videolib.decoder.Decoder;
+import videolib.ffmpeg.AudioFrame;
+import videolib.ffmpeg.FFmpeg;
+import videolib.ffmpeg.Frame;
+import videolib.ffmpeg.VideoFrame;
 
 public abstract class DecoderGroup extends ArrayList<Decoder> {
     protected volatile boolean running = false;
@@ -17,18 +22,15 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
     }
 
     protected abstract void decodeLoop();
-    protected abstract boolean read(Decoder decoder, TexBuffer texBuffer, long ptr);
 
     @Override
     public synchronized boolean add(Decoder decoder) {
         return super.add(decoder);
     }
 
-    public abstract boolean add(Decoder decoder, long startUs);
-
     public final synchronized void finish() {
         for (Decoder decoder : new ArrayList<>(this)) {
-                this.remove(decoder);
+            this.remove(decoder);
         }
         running = false;
     }
@@ -56,9 +58,47 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized Decoder remove(int index) {
-        Decoder removed = super.get(index);
-        this.remove(removed);
-        return removed;
+        Decoder decoder = super.get(index);
+        synchronized(decoder) {
+            synchronized(decoder.getTextureBuffer()) {
+                if (decoder.getAudioBuffer() != null) {
+                    synchronized(decoder.getAudioBuffer()) {
+                        decoder.finish();
+                    }
+                } else {
+                    decoder.finish();
+                }
+            }
+        }
+        return super.remove(index);
+    }
+
+    protected final boolean read(TexBuffer textureBuffer, long ptr) {
+        VideoFrame f = FFmpeg.readFrameNoSound(ptr);
+        if (f != null) {
+            synchronized(textureBuffer) {
+                textureBuffer.add(f);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    protected final boolean read(TexBuffer texBuffer, AudioFrameBuffer audioBuffer, long ptr) {
+        Frame f = FFmpeg.read(ptr);
+        if (f != null) {
+            if (f instanceof VideoFrame vf) {
+                synchronized(texBuffer) {
+                    texBuffer.add(vf);
+                }
+            } else {
+                synchronized(audioBuffer) {
+                    audioBuffer.add((AudioFrame)f);
+                }
+            }
+            return true;
+        }
+        return false;
     }
 
     protected static final void sleep(long millis) {

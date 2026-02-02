@@ -3,9 +3,6 @@ package videolib.decoder.grouped;
 import org.apache.log4j.Logger;
 
 import videolib.ffmpeg.FFmpeg;
-import videolib.ffmpeg.Frame;
-import videolib.ffmpeg.VideoFrame;
-import videolib.ffmpeg.AudioFrame;
 
 import videolib.buffers.AudioFrameBuffer;
 import videolib.buffers.TexBuffer;
@@ -24,9 +21,10 @@ public class DecoderWithSoundGroup extends DecoderGroup {
                 TexBuffer textureBuffer = decoder.getTextureBuffer();
 
                 if (!textureBuffer.isFull()) {
+                    AudioFrameBuffer audioBuffer = decoder.getAudioBuffer();
                     long ctxPtr = decoder.getFFmpegCtxPtr();
 
-                    if (read(decoder, textureBuffer, ctxPtr)) continue;
+                    if (read(textureBuffer, audioBuffer, ctxPtr)) continue;
 
                     if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
                         logger.error(
@@ -39,7 +37,7 @@ public class DecoderWithSoundGroup extends DecoderGroup {
                     }
                     
                     decoder.seekWithoutClearingBuffer(0);
-                    read(decoder, textureBuffer, ctxPtr);
+                    read(textureBuffer, audioBuffer, ctxPtr);
                 }
             }
             
@@ -51,34 +49,13 @@ public class DecoderWithSoundGroup extends DecoderGroup {
     @Override
     public boolean add(Decoder decoder) {
         decoder.start(0);
-        read(decoder, decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
+        read(decoder.getTextureBuffer(), decoder.getAudioBuffer(), decoder.getFFmpegCtxPtr());
         return super.add(decoder);
     }
 
-    @Override
     public boolean add(Decoder decoder, long startUs) {
         decoder.start(startUs);
-        read(decoder, decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
+        read(decoder.getTextureBuffer(), decoder.getAudioBuffer(), decoder.getFFmpegCtxPtr());
         return super.add(decoder);
-    }
-
-
-    @Override
-    protected boolean read(Decoder decoder, TexBuffer texBuffer, long ptr) {
-        Frame f = FFmpeg.read(ptr);
-        if (f != null) {
-            if (f instanceof VideoFrame vf) {
-                synchronized(texBuffer) {
-                    texBuffer.add(vf);
-                }
-            } else {
-                AudioFrameBuffer audioFrameBuffer = decoder.getAudioBuffer();
-                synchronized(audioFrameBuffer) {
-                    audioFrameBuffer.add((AudioFrame)f);
-                }
-            }
-            return true;
-        }
-        return false;
     }
 }
