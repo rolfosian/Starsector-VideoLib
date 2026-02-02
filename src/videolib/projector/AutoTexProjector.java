@@ -5,7 +5,6 @@ import java.lang.invoke.MethodType;
 
 import org.apache.log4j.Logger;
 import org.lwjgl.opengl.GL11;
-import org.objectweb.asm.*;
 
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
@@ -18,7 +17,7 @@ import videolib.VideoPaths;
 import videolib.decoder.Decoder;
 import videolib.decoder.grouped.DecoderGroup;
 import videolib.decoder.grouped.GroupedMuteDecoder;
-
+import videolib.org.objectweb.asm.*;
 import videolib.playerui.PlayerControlPanel;
 import videolib.speakers.Speakers;
 
