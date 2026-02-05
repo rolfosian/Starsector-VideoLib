@@ -27,19 +27,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 package videolib.org.objectweb.asm;
 
-import videolib.org.objectweb.asm.AnnotationVisitor;
-import videolib.org.objectweb.asm.Attribute;
-import videolib.org.objectweb.asm.ClassVisitor;
-import videolib.org.objectweb.asm.Constants;
-import videolib.org.objectweb.asm.FieldVisitor;
-import videolib.org.objectweb.asm.MethodVisitor;
-import videolib.org.objectweb.asm.ModuleVisitor;
-import videolib.org.objectweb.asm.Opcodes;
-import videolib.org.objectweb.asm.RecordComponentVisitor;
-import videolib.org.objectweb.asm.Type;
-import videolib.org.objectweb.asm.TypePath;
-import videolib.org.objectweb.asm.TypeReference;
-
 /**
  * A visitor to visit a Java class. The methods of this class must be called in the following order:
  * {@code visit} [ {@code visitSource} ] [ {@code visitModule} ][ {@code visitNestHost} ][ {@code
