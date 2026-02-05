@@ -1358,6 +1358,7 @@ public class AutoTexProjector implements Opcodes {
 //             this.decoderGroup.remove(this.decoder);
 //         }
 //         this.decoder = decoder;
+//         this.currentTextureId = decoder.getCurrentVideoTextureId();
 //     }
 
 //     @Override
