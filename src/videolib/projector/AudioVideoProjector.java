@@ -93,7 +93,7 @@ public class AudioVideoProjector extends VideoProjector {
             public void advance(float arg0) {
                 checkAdvancing ^= 1;
 
-                if (!(checkAdvancing == advancingValue)) { // as soon as this becomes misaligned with the value that is flipped in projector's advance then we finish and clean up
+                if (checkAdvancing != advancingValue) { // as soon as this becomes misaligned with the value that is flipped in projector's advance then we finish and clean up
                     finish();
                     isDone = true;
                     Global.getSector().removeScript(this);

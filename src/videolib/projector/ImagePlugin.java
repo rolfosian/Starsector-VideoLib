@@ -61,7 +61,7 @@ public class ImagePlugin implements CustomUIPanelPlugin {
             public void advance(float arg0) {
                 checkAdvancing ^= 1;
 
-                if (!(advancingValue == checkAdvancing)) {
+                if (advancingValue != checkAdvancing) {
                     GL11.glDeleteTextures(textureId);
                     FFmpeg.closeImage(ptr);
                     isDone = true;

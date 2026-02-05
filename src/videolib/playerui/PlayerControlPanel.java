@@ -777,7 +777,7 @@ public class PlayerControlPanel {
                 
                 seekAccumulator++;
                 if (seekAccumulator >= SEEK_APPLY_THRESHOLD) {
-                    if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
+                    if (this.oldSeekTarget != this.pendingSeekTarget) {
                         this.seek();
                         projector.setCurrentTextureId(decoder.getCurrentVideoTextureId());
                     }
@@ -785,7 +785,7 @@ public class PlayerControlPanel {
         
             } else {
                 if (this.pendingSeekTarget >= 0 && seekAccumulator >= SEEK_APPLY_THRESHOLD) {
-                    if (!(this.oldSeekTarget == this.pendingSeekTarget)) {
+                    if (this.oldSeekTarget != this.pendingSeekTarget) {
                         projector.setEOFMode(EOFMode.PAUSE);
                         decoder.setPlayMode(PlayMode.SEEKING);
                         decoder.seek(this.pendingSeekTarget);
@@ -861,7 +861,7 @@ public class PlayerControlPanel {
                     if (this.seeking && this.isAdvanced && event.isMouseUpEvent()) {
                         this.seeking = false;
 
-                        if (!(seekX == mouseX)) {
+                        if (seekX != mouseX) {
 
                             this.pendingSeekTarget = getSeekPositionFromX(mouseX);
                         
@@ -1021,7 +1021,7 @@ public class PlayerControlPanel {
         @Override
         public void advance(float deltaTime) {
             if (this.pendingVolume >= 0 && volumeAccumulator >= VOLUME_APPLY_THRESHOLD) {
-                if (!(this.oldVolume == this.pendingVolume)) {
+                if (this.oldVolume != this.pendingVolume) {
                     speakers.setVolume(this.pendingVolume);
                     this.oldVolume = this.pendingVolume;
                 }
@@ -1096,7 +1096,7 @@ public class PlayerControlPanel {
                     }
 
                     if (this.dragging && event.isMouseUpEvent()) {
-                        if (!(dragX == mouseX)) {
+                        if (dragX != mouseX) {
                             float relativeX = mouseX - this.volumePanelLeftBound;
                             float clampedX = Math.max(0f, Math.min(relativeX, this.volumePanelWidth));
                             double fraction = clampedX / this.volumePanelWidth;

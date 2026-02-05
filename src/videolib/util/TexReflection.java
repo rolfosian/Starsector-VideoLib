@@ -399,7 +399,7 @@ public class TexReflection {
 
             for (Class<?> cls : getAllObfClasses("fs.common_obf.jar")) {
                 Object[] fields = cls.getDeclaredFields();
-                if (!(fields.length == 4)) continue;
+                if (fields.length != 4) continue;
     
                 boolean booleanMatch = false;
                 boolean mapMatch = false;
