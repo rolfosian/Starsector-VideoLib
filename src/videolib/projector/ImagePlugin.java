@@ -149,16 +149,16 @@ public class ImagePlugin implements CustomUIPanelPlugin {
         GL11.glColor4f(1f, 1f, 1f, alphaMult);
     
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glTexCoord2f(0f, 1f);
+        GL11.glTexCoord2f(0f, 0f);
         GL11.glVertex2f(x, y);
     
-        GL11.glTexCoord2f(1f, 1f);
+        GL11.glTexCoord2f(1f, 0f);
         GL11.glVertex2f(x + width, y);
     
-        GL11.glTexCoord2f(1f, 0f);
+        GL11.glTexCoord2f(1f, 1f);
         GL11.glVertex2f(x + width, y + height);
     
-        GL11.glTexCoord2f(0f, 0f);
+        GL11.glTexCoord2f(0f, 1f);
         GL11.glVertex2f(x, y + height);
         GL11.glEnd();
     

@@ -95,6 +95,27 @@ JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_fileExists(JNIEnv *env, j
     return test ? JNI_TRUE : JNI_FALSE;
 }
 
+static void vflip_inplace(AVFrame *frame) {
+    if (!frame) return;
+    
+    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
+    
+    int chroma_shift = desc ? desc->log2_chroma_h : 1; // Default to 1 (like YUV420) if unknown
+
+    for (int i = 0; i < 4; i++) {
+        if (!frame->data[i]) break;
+
+        int plane_h = frame->height;
+
+        if (i == 1 || i == 2) {
+            plane_h = AV_CEIL_RSHIFT(frame->height, chroma_shift);
+        }
+
+        frame->data[i] += (frame->linesize[i] * (plane_h - 1));
+        frame->linesize[i] *= -1;
+    }
+}
+
 // for jpeg, png, webp, gif
 typedef struct {
     AVFrame *rgb_frame;
@@ -226,6 +247,7 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openImage(JNIEnv *env, jclas
         if (pkt->stream_index == video_stream_index) {
             if (avcodec_send_packet(codec_ctx, pkt) >= 0) {
                 if (avcodec_receive_frame(codec_ctx, decoded) >= 0) {
+                    vflip_inplace(decoded);
                     sws_scale(sws_ctx,
                               (const uint8_t * const *)decoded->data,
                               decoded->linesize,
@@ -513,26 +535,6 @@ JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isRGBA(JNIEnv *env, jclas
     }
     
     return ctx->rgb_type == 1 ? JNI_TRUE : JNI_FALSE;
-}
-
-static void vflip_inplace(AVFrame *frame) {
-    if (!frame) return;
-    
-    const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(frame->format);
-    int chroma_shift = desc ? desc->log2_chroma_h : 1; // Default to 1 (like YUV420) if unknown
-
-    for (int i = 0; i < 4; i++) {
-        if (!frame->data[i]) break;
-
-        int plane_h = frame->height;
-
-        if (i == 1 || i == 2) {
-            plane_h = AV_CEIL_RSHIFT(frame->height, chroma_shift);
-        }
-
-        frame->data[i] += (frame->linesize[i] * (plane_h - 1));
-        frame->linesize[i] *= -1;
-    }
 }
 
 // vpx alpha channel is in side data, we need to extract it to then merge and then finally convert to rgba to put in buffer
@@ -948,7 +950,6 @@ JNIEXPORT jlong JNICALL Java_videolib_ffmpeg_FFmpeg_openCtxNoSound(JNIEnv *env, 
         if (!ctx->alpha_sws_ctx) {
             printe(env, "openCtxNoSound: failed to create scaler context for vpx alpha channel");
             
-
             av_frame_free(&frame);
             av_frame_free(&rgb_frame);
             av_frame_free(&ctx->alpha_frame);
