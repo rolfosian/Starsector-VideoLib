@@ -10,10 +10,6 @@ $video = $args[0]
 $image = $args[1]
 $output = "output_final.webm"
 
-$video = $args[0]
-$image = $args[1]
-$output = "output_final.webm"
-
 $frameCount = & ffprobe -v error -select_streams v:0 -show_entries stream=nb_frames -of default=noprint_wrappers=1:nokey=1 "$video"
 $fps = & ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 "$video"
 
