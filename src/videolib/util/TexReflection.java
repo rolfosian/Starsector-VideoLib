@@ -218,8 +218,11 @@ public class TexReflection {
     public static final Class<?> texClass;
     public static final String texObjectBindMethodName;
     public static MethodHandle texClassCtorHandle;
+
     public static VarHandle texObjectIdVarHandle;
     public static VarHandle texObjectGLBindVarHandle;
+    public static VarHandle texObjectSourceWidthHandle;
+    public static VarHandle texObjectSourceHeightHandle;
 
     /** This is the repository map for the gl texture id wrapper objects that the PlanetSpec class (and also pretty much everything else it appears) pulls from. Each planet projector will add its own to this temporarily while it is active. */
     public static Map<String, Object> texObjectMap;
@@ -422,12 +425,25 @@ public class TexReflection {
 
                     } else if (fieldType.equals(TextureLoader.class)) {
                         textureLoaderMatch = true;
-                    } 
+                    }
                 }
     
                 if (booleanMatch && mapMatch && loggerMatch && textureLoaderMatch) {
                     setFieldAccessibleHandle.invoke(mapField, true);
                     texObjectMap = (Map<String, Object>) getFieldHandle.invoke(mapField, null);
+                    
+                    Object tex = texObjectMap.get("graphics/ships/onslaught/onslaught_base.png");
+                    for (VarHandle handle : texClassVarHandles) {
+                        if (handle.varType().equals(int.class)) {
+                            int value = (int) handle.get(tex);
+                            if (value == 288) {
+                                texObjectSourceWidthHandle = handle;
+                            } else if (value == 384) {
+                                texObjectSourceHeightHandle = handle;
+                            }
+                        }
+                    }
+                    
                     break;
                 }
             }
@@ -488,6 +504,22 @@ public class TexReflection {
     public static void setTexObjId(Object texObj, int id) {
         try {
             texObjectIdVarHandle.set(texObj, id);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static int getTexObjSourceWidth(Object texObj) {
+        try {
+            return (int) texObjectSourceWidthHandle.get(texObj);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static int getTexObjSourceHeight(Object texObj) {
+        try {
+            return (int) texObjectSourceHeightHandle.get(texObj);
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
@@ -601,6 +633,73 @@ public class TexReflection {
     public static void transplantTexFields(Object original, Object destination) {
         for (VarHandle handle : texClassVarHandles) handle.set(destination, handle.get(original));
     }
+
+    // public static void test() {
+    //     for (String tid : texObjectMap.keySet()) {
+    //         if (tid.startsWith("graphics/ships") || tid.startsWith("graphics/portrait")) {
+    //             com.fs.graphics.Object texObj = (com.fs.graphics.Object) texObjectMap.get(tid);
+    //             int id = getTexObjId(texObj);
+
+    //             GL11.glBindTexture(GL11.GL_TEXTURE_2D, id);
+    //             int width  = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+    //             int height = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+
+    //             long ptr = FFmpeg.openImage(VideoPaths.getImagePath("vl_jpeg"), texObj.Object(), texObj.Ô00000());
+    //             ByteBuffer buffer = FFmpeg.getImageBuffer(ptr);
+        
+    //             GL11.glTexSubImage2D(
+    //                 GL11.GL_TEXTURE_2D,
+    //                 0,
+    //                 0,
+    //                 0,
+    //                 width,
+    //                 height,
+    //                 GL11.GL_RGBA,
+    //                 GL11.GL_UNSIGNED_BYTE,
+    //                 transparentPadToPowerOfTwo(buffer, texObj.Object(), texObj.Ô00000())
+    //             );
+    //         }
+    //     }
+    // }
+
+    // private static ByteBuffer transparentPadToPowerOfTwo(ByteBuffer src, int width, int height) {
+    //     int newWidth = nextPowerOfTwo(width);
+    //     int newHeight = nextPowerOfTwo(height);
+
+    //     if (width == newWidth && height == newHeight) {
+    //         return src;
+    //     }
+ 
+    //     ByteBuffer dst = ByteBuffer.allocate(newWidth * newHeight * 4);
+    //     dst.position(0);
+ 
+    //     for (int y = 0; y < newHeight; y++) {
+    //         for (int x = 0; x < newWidth; x++) {
+    //             int dstIndex = (y * newWidth + x) * 4;
+ 
+    //             if (x < width && y < height) {
+    //                 int srcIndex = (y * width + x) * 4;
+    //                 dst.put(dstIndex + 0, src.get(srcIndex + 0));
+    //                 dst.put(dstIndex + 1, src.get(srcIndex + 1));
+    //                 dst.put(dstIndex + 2, src.get(srcIndex + 2));
+    //                 dst.put(dstIndex + 3, src.get(srcIndex + 3));
+    //             } else {
+    //                 dst.put(dstIndex + 0, (byte)0);
+    //                 dst.put(dstIndex + 1, (byte)0);
+    //                 dst.put(dstIndex + 2, (byte)0);
+    //                 dst.put(dstIndex + 3, (byte)0);
+    //             }
+    //         }
+    //     }
+ 
+    //     return dst;
+    // }
+ 
+    // private static int nextPowerOfTwo(int value) {
+    //     int result = 1;
+    //     while (result < value) result <<= 1;
+    //     return result;
+    // }
 
     public static void init() {}
 }

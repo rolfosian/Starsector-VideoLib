@@ -3,6 +3,7 @@ package videolib;
 import java.util.*;
 
 import org.json.JSONObject;
+import org.lwjgl.opengl.GL11;
 import org.json.JSONException;
 import org.apache.log4j.Logger;
 
@@ -19,6 +20,17 @@ import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
 
 @SuppressWarnings("unchecked")
 public class VideoPaths {
+    public static final Logger logger = Global.getLogger(VideoPaths.class);
+    public static void print(Object... args) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < args.length; i++) {
+            sb.append(args[i] instanceof String ? (String) args[i] : String.valueOf(args[i]));
+            if (i < args.length - 1) sb.append(' ');
+        }
+        logger.info(sb.toString());
+    }
+
+
     private static int DECODERS_PER_GROUP;
 
     public static boolean populated = false;
@@ -38,7 +50,6 @@ public class VideoPaths {
 
     protected static void populate() {
         if (populated) return;
-        Logger logger = Logger.getLogger(VideoPaths.class);
         List<String> videoKeyz = new ArrayList<>();
         List<String> imageKeyz = new ArrayList<>();
 
@@ -49,6 +60,7 @@ public class VideoPaths {
             ModManagerAPI modManager = Global.getSettings().getModManager();
             JSONObject settings = Global.getSettings().getJSONObject("VideoLib");
             DECODERS_PER_GROUP = settings.getInt("decodersPerGroup");
+            settings.remove("decodersPerGroup");
             
             Iterator<String> modIds = settings.keys();
             while (modIds.hasNext()) {
@@ -63,7 +75,7 @@ public class VideoPaths {
                 String modPath = modSpec.getPath();
                 JSONObject pathData = settings.getJSONObject(modId);
 
-                JSONObject videoFilePaths = getJSONObject(modId, pathData, "videos", logger);
+                JSONObject videoFilePaths = getJSONObject(modId, pathData, "videos");
                 if (videoFilePaths != null) {
                     Iterator<String> fileIds = videoFilePaths.keys();
 
@@ -85,7 +97,7 @@ public class VideoPaths {
                     }
                 }
 
-                JSONObject imageFilePaths = getJSONObject(modId, pathData, "images", logger);
+                JSONObject imageFilePaths = getJSONObject(modId, pathData, "images");
                 if (imageFilePaths != null) {
                     Iterator<String> fileIds = imageFilePaths.keys();
 
@@ -107,23 +119,64 @@ public class VideoPaths {
                     }
                 }
                 
-                JSONObject textureOverrides = getJSONObject(modId, pathData, "autoTexProjectorOverrides", logger);
+                JSONObject textureOverrides = getJSONObject(modId, pathData, "autoTexProjectorOverrides");
                 if (textureOverrides != null) {
                     Iterator<String> texturePaths = textureOverrides.keys();
 
                     while (texturePaths.hasNext()) {
                         String texturePath = texturePaths.next();
-                        JSONObject overrideData = textureOverrides.getJSONObject(texturePath);
-    
+                        
+                        JSONObject overrideData = textureOverrides.getJSONObject(texturePath);    
                         String videoId = overrideData.getString("videoId");
-                        int width = overrideData.getInt("width");
-                        int height = overrideData.getInt("height");
-                        boolean campaignRunWhilePaused = isRunWhilePaused(overrideData, "campaign");
-                        boolean combatRunWhilePaused = isRunWhilePaused(overrideData, "combat");
-    
+
                         if (!TexReflection.texObjectMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException(texturePath + " not found in Starsector texture repository for video override: " + videoId);
                         }
+                        Object original = TexReflection.texObjectMap.get(texturePath);
+
+                        boolean campaignRunWhilePaused = isRunWhilePaused(overrideData, "campaign");
+                        boolean combatRunWhilePaused = isRunWhilePaused(overrideData, "combat");
+                        boolean isOverWriteInVram = isOverWriteInVram(overrideData);
+                        boolean useOriginalTexDimensions;
+
+                        if (isOverWriteInVram) useOriginalTexDimensions = true;
+                        else useOriginalTexDimensions = isUseOriginalTexDimensions(overrideData);
+
+                        int width;
+                        int height;
+
+                        int texId;
+                        int texWidth;
+                        int texHeight;
+
+                        if (isOverWriteInVram) {
+                            texId = TexReflection.getTexObjId(original);
+
+                            GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
+                            texWidth = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+                            texHeight = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+                            GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
+
+                            width = texWidth;
+                            height = texHeight;
+
+                        } else if (useOriginalTexDimensions) {
+                            texId = 0;
+
+                            width = TexReflection.getTexObjSourceWidth(original);
+                            height = TexReflection.getTexObjSourceHeight(original);
+
+                            texWidth = width;
+                            texHeight = height;
+
+                        } else {
+                            texId = 0;
+                            width = getWidth(overrideData, original);
+                            height = getHeight(overrideData, original);
+                            texWidth = width;
+                            texHeight = height;
+                        }
+
                         if (autoTexMap.containsKey(texturePath)) {
                             throw new IllegalArgumentException("video override already found for texture " + texturePath);
                         }
@@ -133,12 +186,23 @@ public class VideoPaths {
                             muteDecoderGroups.add(currMuteDecoderGroup);
                         }
 
-                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(currMuteDecoderGroup, videoId, width, height, campaignRunWhilePaused, combatRunWhilePaused);
-                        Object original = TexReflection.texObjectMap.get(texturePath);
-                        ours.setOriginalTexture(texturePath, original);
+                        AutoTexProjectorAPI ours = AutoTexProjector.instantiator.instantiate(
+                            currMuteDecoderGroup,
+                            videoId,
+                            width,
+                            height,
+                            texId,
+                            texWidth,
+                            texHeight,
+                            campaignRunWhilePaused,
+                            combatRunWhilePaused,
+                            isOverWriteInVram
+                        );
 
+                        ours.setOriginalTexture(texturePath, original);
                         TexReflection.transplantTexFields(original, ours);
-                        TexReflection.setTexObjId(ours, ours.getCurrentTextureId());
+
+                        if (!isOverWriteInVram) TexReflection.setTexObjId(ours, ours.getCurrentTextureId());
 
                         TexReflection.texObjectMap.put(texturePath, ours);
                         autoTexMap.put(texturePath, ours);
@@ -157,7 +221,6 @@ public class VideoPaths {
         imageKeys = imageKeyz.toArray(arr);
 
         logger.info("Total MuteDecoder groups: " + String.valueOf(muteDecoderGroups.size()) + " | " + "Max Decoders per group: " + String.valueOf(DECODERS_PER_GROUP));
-        // logger.info("Total estimated indefinite AutoTexOverride VideoLibFFmpegContext usage (Excluding AVCodecContext): " + String.valueOf(totalAutoTexOverrideMem / 1024) + "KB");
         populated = true;
     }
 
@@ -215,7 +278,7 @@ public class VideoPaths {
         return videoKeys;
     }
 
-    private static JSONObject getJSONObject(String modId, JSONObject toGetFrom, String key, Logger logger) {
+    private static JSONObject getJSONObject(String modId, JSONObject toGetFrom, String key) {
         try {
             return toGetFrom.getJSONObject(key);
         } catch (JSONException e) {
@@ -237,6 +300,38 @@ public class VideoPaths {
             return Global.getSettings().isSoundEnabled() ? autoTexOverrideData.getBoolean("playAudio") : false;
         } catch (JSONException ignored) {
             return false;
+        }
+    }
+
+    private static boolean isOverWriteInVram(JSONObject autoTexOverrideData) {
+        try {
+            return autoTexOverrideData.getBoolean("overwriteInVram");
+        } catch (JSONException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isUseOriginalTexDimensions(JSONObject autoTexOverrideData) {
+        try {
+            return autoTexOverrideData.getBoolean("isUseOriginalTexDimensions");
+        } catch (JSONException ignored) {
+            return false;
+        }
+    }
+    
+    private static int getWidth(JSONObject autoTexOverrideData, Object original) {
+        try {
+            return autoTexOverrideData.getInt("width");
+        } catch (JSONException ignored) {
+            return TexReflection.getTexObjSourceWidth(original);
+        }
+    }
+
+    private static int getHeight(JSONObject autoTexOverrideData, Object original) {
+        try {
+            return autoTexOverrideData.getInt("height");
+        } catch (JSONException ignored) {
+            return TexReflection.getTexObjSourceHeight(original);
         }
     }
 }
