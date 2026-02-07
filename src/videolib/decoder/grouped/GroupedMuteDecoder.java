@@ -11,8 +11,25 @@ import videolib.decoder.MuteDecoder;
 import videolib.projector.Projector;
 
 public class GroupedMuteDecoder extends MuteDecoder {
-    public GroupedMuteDecoder(Projector videoProjector, String videoFilePath, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        super(videoProjector, videoFilePath, width, height, startingPlayMode, startingEOFMode);
+    private int texWidth;
+    private int texHeight;
+    private boolean doCleanup;
+
+    public GroupedMuteDecoder(
+        Projector videoProjector,
+        String videoFilePath,
+        int width,
+        int height,
+        int textureId,
+        int texWidth,
+        int texHeight,
+        PlayMode startingPlayMode,
+        EOFMode startingEOFmode
+    ) {
+        super(videoProjector, videoFilePath, width, height, startingPlayMode, startingEOFmode);
+        this.currentVideoTextureId = textureId;
+        this.texWidth = texWidth;
+        this.texHeight = texHeight;
     }
 
     @Override
@@ -34,12 +51,14 @@ public class GroupedMuteDecoder extends MuteDecoder {
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
-
-        // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
-        // print("isRGBA=", isRGBA);
-        // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
+        if (this.currentVideoTextureId != 0) {
+            this.textureBuffer = new RGBATextureBuffer(3, currentVideoTextureId, texWidth, texHeight);
+            this.doCleanup = false;
+            return;
+        }
+        this.doCleanup = true;
         this.textureBuffer = new RGBATextureBuffer(3);
-        this.textureBuffer.initTexStorage(width, height);
+        this.textureBuffer.initTexStorage(texWidth, texHeight);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
     }
 
@@ -60,7 +79,9 @@ public class GroupedMuteDecoder extends MuteDecoder {
         // print("Clearing Texture/Video Buffer");
         synchronized(textureBuffer) {
             textureBuffer.clear();
-            textureBuffer.cleanupTexStorage();
+            if (doCleanup) {
+                textureBuffer.cleanupTexStorage();
+            }
         }
     }
 }

@@ -1,10 +1,16 @@
 package videolib.buffers;
 
 import java.nio.ByteBuffer;
-
 import org.lwjgl.opengl.GL11;
 
 public class RGBATextureBuffer extends TextureBuffer {
+    public RGBATextureBuffer(int capacity, int textureId, int width, int height) {
+        super(capacity);
+
+        this.textureId = textureId;
+        this.width = width;
+        this.height = height;
+    }
 
     public RGBATextureBuffer(int capacity) {
         super(capacity);
@@ -41,6 +47,7 @@ public class RGBATextureBuffer extends TextureBuffer {
     @Override
     protected void updateTexture(ByteBuffer frameBuffer) {
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+
         GL11.glTexSubImage2D(
             GL11.GL_TEXTURE_2D,
             0,
@@ -52,7 +59,7 @@ public class RGBATextureBuffer extends TextureBuffer {
             GL11.GL_UNSIGNED_BYTE,
             frameBuffer
         );
-    
+        
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
     }
 }

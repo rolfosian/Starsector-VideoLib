@@ -11,8 +11,9 @@ import videolib.buffers.RGBATextureBuffer;
 import videolib.projector.Projector;
 
 public class GroupedDecoderWithSound extends DecoderWithSound {
-    public GroupedDecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode) {
-        super(videoProjector, videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
+    public GroupedDecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, int textureId, float volume, PlayMode startingPlayMode, EOFMode startingEOFmode) {
+        super(videoProjector, videoFilePath, width, height, volume, startingPlayMode, startingEOFmode);
+        this.currentVideoTextureId = textureId;
     }
     
     public void start(long startUs) {
@@ -37,6 +38,10 @@ public class GroupedDecoderWithSound extends DecoderWithSound {
         // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
+        if (this.currentVideoTextureId != 0) {
+            this.textureBuffer = new RGBATextureBuffer(30, currentVideoTextureId, width, height);
+            return;
+        }
         this.textureBuffer = new RGBATextureBuffer(30);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
