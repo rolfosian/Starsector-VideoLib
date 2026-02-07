@@ -8,7 +8,8 @@
                 "vl_ufos" : "data/videos/ufos.mp4",
                 "vl_ufos_t" : "data/videos/ufos_transparent.webm",
                 "vl_mop" : "data/videos/fred-fred-mopping.gif",
-                "vl_brule" : "data/videos/brule.gif"
+                "vl_brule" : "data/videos/brule.gif",
+                "vl_spaceslaught" : "data/videos/spaceslaught.webm"
             },
 
             "images" : {
@@ -17,13 +18,31 @@
             },
 
             "autoTexProjectorOverrides" : { # example: defined in graphics/portraits in mod folder
-                "graphics/portraits/vl_portrait_example.png" : { 
+                "graphics/portraits/vl_portrait_example.png" : {
+                    # if "isUseOriginalTexDimensions" is specified to be true then these are ignored. Defaults to the texture source size if one or the other is not set
                     "width" : 128,
                     "height" : 128,
+
+                    # Both of these default to true if not set
                     "campaignRunWhilePaused" : true, # EveryFrameScript.runWhilePaused() return value, if false then frames won't update for this override when campaign layer is paused
                     "combatRunWhilePaused" : true, # AutoTexProjectorAPI.combatRunWhilePaused() impl return value, if false then frames won't update for this override when combat layer is paused
-                    "videoId" : "vl_brule"
-                }
+                    "videoId" : "vl_brule",
+
+                    # Defaults to false if not set
+                    # if true then "isUseOriginalTexDimensions" is also automatically true
+                    # IMPORTANT: if true, video dimensions MUST be the same as the target's source image, and use the game's texture semantics, such that it has an alpha channel and is padded to the next power-of-two with transparent pixels, with the video itself being in the BL corner of the greater padded video.
+                    # if the video and the target source image both already have power-of-two dimensions, then it doesn't require preprocessing.
+                    # See spaceslaught.webm and mask_video.ps1/mask_video.sh for an example
+                    "overwriteInVram" : true,
+
+                    "isUseOriginalTexDimensions" : true # Defaults to false if not set
+                },
+                #"graphics/ships/onslaught/onslaught_base.png" : {
+                #    "campaignRunWhilePaused" : true, # EveryFrameScript.runWhilePaused() return value, if false then frames won't update for this override when campaign layer is paused
+                #    "combatRunWhilePaused" : true, # AutoTexProjectorAPI.combatRunWhilePaused() impl return value, if false then frames won't update for this override when combat layer is paused
+                #    "videoId" : "vl_spaceslaught",
+                #    "overwriteInVram" : true
+                #}
             }
         }
     },
