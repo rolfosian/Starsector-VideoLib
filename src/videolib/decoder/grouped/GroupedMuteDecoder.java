@@ -11,8 +11,6 @@ import videolib.decoder.MuteDecoder;
 import videolib.projector.Projector;
 
 public class GroupedMuteDecoder extends MuteDecoder {
-    private int texWidth;
-    private int texHeight;
     private boolean doCleanup;
 
     public GroupedMuteDecoder(
@@ -21,15 +19,11 @@ public class GroupedMuteDecoder extends MuteDecoder {
         int width,
         int height,
         int textureId,
-        int texWidth,
-        int texHeight,
         PlayMode startingPlayMode,
         EOFMode startingEOFmode
     ) {
         super(videoProjector, videoFilePath, width, height, startingPlayMode, startingEOFmode);
         this.currentVideoTextureId = textureId;
-        this.texWidth = texWidth;
-        this.texHeight = texHeight;
     }
 
     @Override
@@ -52,13 +46,13 @@ public class GroupedMuteDecoder extends MuteDecoder {
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
         if (this.currentVideoTextureId != 0) {
-            this.textureBuffer = new RGBATextureBuffer(3, currentVideoTextureId, texWidth, texHeight);
+            this.textureBuffer = new RGBATextureBuffer(3, currentVideoTextureId, width, height);
             this.doCleanup = false;
             return;
         }
         this.doCleanup = true;
         this.textureBuffer = new RGBATextureBuffer(3);
-        this.textureBuffer.initTexStorage(texWidth, texHeight);
+        this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
     }
 

@@ -137,44 +137,24 @@ public class VideoPaths {
                         boolean campaignRunWhilePaused = isRunWhilePaused(overrideData, "campaign");
                         boolean combatRunWhilePaused = isRunWhilePaused(overrideData, "combat");
                         boolean isOverWriteInVram = isOverWriteInVram(overrideData);
-                        boolean useOriginalTexDimensions;
-
-                        if (isOverWriteInVram) useOriginalTexDimensions = true;
-                        else useOriginalTexDimensions = isUseOriginalTexDimensions(overrideData);
 
                         int width;
                         int height;
 
                         int texId;
-                        int texWidth;
-                        int texHeight;
 
                         if (isOverWriteInVram) {
                             texId = TexReflection.getTexObjId(original);
 
                             GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
-                            texWidth = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
-                            texHeight = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
+                            width = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_WIDTH);
+                            height = GL11.glGetTexLevelParameteri(GL11.GL_TEXTURE_2D, 0, GL11.GL_TEXTURE_HEIGHT);
                             GL11.glBindTexture(GL11.GL_TEXTURE_2D, 0);
-
-                            width = texWidth;
-                            height = texHeight;
-
-                        } else if (useOriginalTexDimensions) {
-                            texId = 0;
-
-                            width = TexReflection.getTexObjSourceWidth(original);
-                            height = TexReflection.getTexObjSourceHeight(original);
-
-                            texWidth = width;
-                            texHeight = height;
 
                         } else {
                             texId = 0;
                             width = getWidth(overrideData, original);
                             height = getHeight(overrideData, original);
-                            texWidth = width;
-                            texHeight = height;
                         }
 
                         if (autoTexMap.containsKey(texturePath)) {
@@ -192,8 +172,6 @@ public class VideoPaths {
                             width,
                             height,
                             texId,
-                            texWidth,
-                            texHeight,
                             campaignRunWhilePaused,
                             combatRunWhilePaused,
                             isOverWriteInVram
@@ -306,14 +284,6 @@ public class VideoPaths {
     private static boolean isOverWriteInVram(JSONObject autoTexOverrideData) {
         try {
             return autoTexOverrideData.getBoolean("overwriteInVram");
-        } catch (JSONException ignored) {
-            return false;
-        }
-    }
-
-    private static boolean isUseOriginalTexDimensions(JSONObject autoTexOverrideData) {
-        try {
-            return autoTexOverrideData.getBoolean("isUseOriginalTexDimensions");
         } catch (JSONException ignored) {
             return false;
         }

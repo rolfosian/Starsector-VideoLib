@@ -35,9 +35,7 @@ public class AutoTexProjector implements Opcodes {
             String videoId,
             int width,
             int height,
-            int textureId, 
-            int texWidth, 
-            int texHeight,
+            int textureId,
             boolean runWhilePaused,
             boolean combatRunWhilePaused,
             boolean isOverwriteInVram
@@ -146,15 +144,13 @@ public class AutoTexProjector implements Opcodes {
         cw.visitField(ACC_PRIVATE, "originalTexture", "Ljava/lang/Object;", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "originalTexturePath", "Ljava/lang/String;", null, null).visitEnd();
         cw.visitField(ACC_PRIVATE, "originalTextureId", "I", null, null).visitEnd();
-        cw.visitField(ACC_PRIVATE, "texWidth", "I", null, null);
-        cw.visitField(ACC_PRIVATE, "texHeight", "I", null, null);
         cw.visitField(ACC_PRIVATE | ACC_FINAL, "isOverwriteInVram", "Z", null, null).visitEnd();
     
         /* constructor */
         MethodVisitor ctor = cw.visitMethod(
             ACC_PUBLIC,
             "<init>",
-            "(" + decoderGroupDesc + "Ljava/lang/String;IIIIIZZZ)V",
+            "(" + decoderGroupDesc + "Ljava/lang/String;IIIZZZ)V",
             null,
             null
         );
@@ -190,22 +186,14 @@ public class AutoTexProjector implements Opcodes {
         
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitVarInsn(ILOAD, 6);
-        ctor.visitFieldInsn(PUTFIELD, className, "texWidth", "I");
-
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitVarInsn(ILOAD, 7);
-        ctor.visitFieldInsn(PUTFIELD, className, "texHeight", "I");
-
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitVarInsn(ILOAD, 8);
         ctor.visitFieldInsn(PUTFIELD, className, "runWhilePaused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitVarInsn(ILOAD, 9);
+        ctor.visitVarInsn(ILOAD, 7);
         ctor.visitFieldInsn(PUTFIELD, className, "combatRunWhilePaused", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitVarInsn(ILOAD, 10);
+        ctor.visitVarInsn(ILOAD, 8);
         ctor.visitFieldInsn(PUTFIELD, className, "isOverwriteInVram", "Z");
 
         ctor.visitVarInsn(ALOAD, 0);
@@ -274,10 +262,6 @@ public class AutoTexProjector implements Opcodes {
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
         ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitFieldInsn(GETFIELD, className, "texWidth", "I");
-        ctor.visitVarInsn(ALOAD, 0);
-        ctor.visitFieldInsn(GETFIELD, className, "texHeight", "I");
-        ctor.visitVarInsn(ALOAD, 0);
         ctor.visitFieldInsn(GETFIELD, className, "MODE", playModeDesc);
         ctor.visitVarInsn(ALOAD, 0);
         ctor.visitFieldInsn(GETFIELD, className, "EOF_MODE", eofModeDesc);
@@ -289,7 +273,7 @@ public class AutoTexProjector implements Opcodes {
             "(" +
                 "Lvideolib/projector/Projector;" +
                 "Ljava/lang/String;" +
-                "IIIII" +
+                "III" +
                 playModeDesc +
                 eofModeDesc +
             ")V",
@@ -471,10 +455,6 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "currentTextureId", "I");
             mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "texWidth", "I");
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitFieldInsn(GETFIELD, className, "texHeight", "I");
-            mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "MODE", playModeDesc);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "EOF_MODE", eofModeDesc);
@@ -486,7 +466,7 @@ public class AutoTexProjector implements Opcodes {
                 "("
                     + "Lvideolib/projector/Projector;"
                     + "Ljava/lang/String;"
-                    + "IIIII"
+                    + "III"
                     + playModeDesc
                     + eofModeDesc
                     + ")V",
@@ -1255,7 +1235,7 @@ public class AutoTexProjector implements Opcodes {
             MethodVisitor mv = cw.visitMethod(
                 ACC_PUBLIC,
                 "instantiate",
-                "(" + decoderGroupDesc + "Ljava/lang/String;IIIIIZZZ)" + Type.getDescriptor(AutoTexProjectorAPI.class),
+                "(" + decoderGroupDesc + "Ljava/lang/String;IIIZZZ)" + Type.getDescriptor(AutoTexProjectorAPI.class),
                 null,
                 null
             );
@@ -1273,14 +1253,12 @@ public class AutoTexProjector implements Opcodes {
             mv.visitVarInsn(ILOAD, 6);
             mv.visitVarInsn(ILOAD, 7);
             mv.visitVarInsn(ILOAD, 8);
-            mv.visitVarInsn(ILOAD, 9);
-            mv.visitVarInsn(ILOAD, 10);
             
             mv.visitMethodInsn(
                 INVOKESPECIAL,
                 autoTexClassName,
                 "<init>",
-                "(" + decoderGroupDesc + "Ljava/lang/String;IIIIIZZZ)V",
+                "(" + decoderGroupDesc + "Ljava/lang/String;IIIZZZ)V",
                 false
             );
             
@@ -1349,8 +1327,6 @@ public class AutoTexProjector implements Opcodes {
 //         int width,
 //         int height,
 //         int textureId,
-//         int texWidth,
-//         int texHeight,
 //         boolean runWhilePaused,
 //         boolean combatRunWhilePaused
 //         boolean isOverwriteInVram
@@ -1362,8 +1338,6 @@ public class AutoTexProjector implements Opcodes {
 //         this.height = height;
 
 //         this.currentTextureId = textureId;
-//         this.texWidth = texWidth;
-//         this.texHeight = texHeight;
 
 //         this.MODE = PlayMode.PLAYING;
 //         this.EOF_MODE = EOFMode.LOOP;
@@ -1377,7 +1351,7 @@ public class AutoTexProjector implements Opcodes {
 //         this.timeoutFrames = 0;
 
 //         this.decoderGroup = decoderGroup;
-//         this.decoder = new GroupedMuteDecoder(decoderGroup, this, videoFilePath, width, height, MODE, EOF_MODE);
+//         this.decoder = new GroupedMuteDecoder(this.decoderGroup, this, this.videoFilePath, this.width, this.height, this.currentTextureId, this.MODE, this.EOF_MODE);
 //         this.decoderGroup.add(this.decoder);
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
 //         this.isOverwriteInVram = isOverwriteInVram;

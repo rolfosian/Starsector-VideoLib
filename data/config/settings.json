@@ -34,15 +34,13 @@
                     # if the video and the target source image both already have power-of-two dimensions, then it doesn't require preprocessing.
                     # See spaceslaught.webm and mask_video.ps1/mask_video.sh for an example
                     "overwriteInVram" : true,
-
-                    "isUseOriginalTexDimensions" : true # Defaults to false if not set
                 },
-                #"graphics/ships/onslaught/onslaught_base.png" : {
-                #    "campaignRunWhilePaused" : true, # EveryFrameScript.runWhilePaused() return value, if false then frames won't update for this override when campaign layer is paused
-                #    "combatRunWhilePaused" : true, # AutoTexProjectorAPI.combatRunWhilePaused() impl return value, if false then frames won't update for this override when combat layer is paused
-                #    "videoId" : "vl_spaceslaught",
-                #    "overwriteInVram" : true
-                #}
+                "graphics/ships/onslaught/onslaught_base.png" : {
+                    "campaignRunWhilePaused" : true, # EveryFrameScript.runWhilePaused() return value, if false then frames won't update for this override when campaign layer is paused
+                    "combatRunWhilePaused" : true, # AutoTexProjectorAPI.combatRunWhilePaused() impl return value, if false then frames won't update for this override when combat layer is paused
+                    "videoId" : "vl_spaceslaught",
+                    "overwriteInVram" : true
+                }
             }
         }
     },
