@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import com.fs.starfarer.api.BaseModPlugin;
 import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 
 import videolib.ffmpeg.FFmpeg;
@@ -39,6 +40,15 @@ public class VideoLibModPlugin extends BaseModPlugin {
         VideoUtils.init();
         AutoTexProjector.init();
         VideoPaths.populate();
+
+        SettingsAPI settings = Global.getSettings();
+        try {
+            settings.loadTexture("graphics/starscape/star.png");
+            settings.loadTexture("graphics/fx/slipstream3.png");
+            settings.loadTexture("graphics/billboards/vl_lens_platform.png");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
         mainThread = Thread.currentThread();
     }

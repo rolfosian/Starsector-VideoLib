@@ -493,6 +493,14 @@ public class TexReflection {
         }
     }
 
+    public static int getTexObjId(String path) {
+        try {
+            return (int) texObjectIdVarHandle.get(texObjectMap.get(path));
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static int getTexObjId(Object texObj) {
         try {
             return (int) texObjectIdVarHandle.get(texObj);
