@@ -180,6 +180,11 @@ public class MuteDecoder implements Decoder {
         // print("MuteDecoder decodeLoop ended");
     }
 
+    @Override
+    public boolean isRunning() {
+        return this.running;
+    }
+
     public int getCurrentVideoTextureId(float deltaTime) {
         timeAccumulator += deltaTime;
 
@@ -198,6 +203,15 @@ public class MuteDecoder implements Decoder {
 
         synchronized(textureBuffer) {
             currentVideoPts = textureBuffer.update();
+        }
+        return currentVideoTextureId;
+    }
+
+    public int getCurrentVideoTextureIdDoNotUpdatePts() {
+        while (textureBuffer.isEmpty()) sleep(1); 
+
+        synchronized(textureBuffer) {
+            textureBuffer.update();
         }
         return currentVideoTextureId;
     }
@@ -226,7 +240,7 @@ public class MuteDecoder implements Decoder {
         // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
-        this.textureBuffer = new RGBATextureBuffer(2);
+        this.textureBuffer = new RGBATextureBuffer(3);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 

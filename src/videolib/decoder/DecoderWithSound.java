@@ -250,6 +250,11 @@ public class DecoderWithSound implements Decoder {
         // print("DecoderWithSound decodeLoop ended");
     }
 
+    @Override
+    public boolean isRunning() {
+        return this.running;
+    }
+
     public int getCurrentVideoTextureId(float deltaTime) {
         // gameFps = 1 / deltaTime;
         timeAccumulator += deltaTime;
@@ -278,6 +283,15 @@ public class DecoderWithSound implements Decoder {
 
         synchronized(textureBuffer) {
             currentVideoPts = textureBuffer.update();
+        }
+        return currentVideoTextureId;
+    }
+
+    public int getCurrentVideoTextureIdDoNotUpdatePts() {
+        while (textureBuffer.isEmpty()) sleep(1); 
+
+        synchronized(textureBuffer) {
+            textureBuffer.update();
         }
         return currentVideoTextureId;
     }

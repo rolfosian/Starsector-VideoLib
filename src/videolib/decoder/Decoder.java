@@ -1,7 +1,5 @@
 package videolib.decoder;
 
-import com.fs.starfarer.api.Global;
-
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
 import videolib.buffers.AudioFrameBuffer;
@@ -12,6 +10,7 @@ public interface Decoder {
     public int getErrorStatus();
     public void seek(long targetUs);
     public void seekWithoutClearingBuffer(long targetUs);
+    public boolean isRunning();
     
     public double getDurationSeconds();
     public long getDurationUs();
@@ -22,6 +21,7 @@ public interface Decoder {
     public void setVideoFilePath(String path);
     public long getCurrentVideoPts();
     public int getCurrentVideoTextureId();
+    public int getCurrentVideoTextureIdDoNotUpdatePts();
     public int getCurrentVideoTextureId(float deltaTime);
 
     public TexBuffer getTextureBuffer();
