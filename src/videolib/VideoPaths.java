@@ -36,12 +36,14 @@ public class VideoPaths {
     public static boolean populated = false;
 
     private static Map<String, String> videoMap = new HashMap<>();
+    private static Map<String, String> reverseVideoMap = new HashMap<>();
     private static String[] videoKeys;
 
     private static Map<String, String> imageMap = new HashMap<>();
     private static String[] imageKeys;
 
     private static Map<String, AutoTexProjectorAPI> autoTexMap = new HashMap<>();
+    private static List<AutoTexProjectorAPI> autoTexWithCampaignSpeedup = new ArrayList<>();
 
     private static List<AutoTexProjectorAPI> allAutoTexOverrides = new ArrayList<>();
     private static List<AutoTexProjectorAPI> runWhilePausedCombatAutoTexOverrides = new ArrayList<>();
@@ -91,6 +93,7 @@ public class VideoPaths {
                         if (!FFmpeg.fileExists(absolutePath)) throw new IllegalArgumentException("404 file not found: " + absolutePath);
     
                         videoMap.put(fileId, absolutePath);
+                        reverseVideoMap.put(absolutePath, fileId);
                         videoKeyz.add(fileId);
     
                         logger.info("Resolved absolute path for video file id " + fileId + " at " + modPath + "/" + relativePath);
@@ -137,6 +140,7 @@ public class VideoPaths {
                         boolean campaignRunWhilePaused = isRunWhilePaused(overrideData, "campaign");
                         boolean combatRunWhilePaused = isRunWhilePaused(overrideData, "combat");
                         boolean isOverWriteInVram = isOverWriteInVram(overrideData);
+                        boolean useCampaignSpeedup = useCampaignSpeedup(overrideData);
 
                         int width;
                         int height;
@@ -174,8 +178,10 @@ public class VideoPaths {
                             texId,
                             campaignRunWhilePaused,
                             combatRunWhilePaused,
-                            isOverWriteInVram
+                            isOverWriteInVram,
+                            useCampaignSpeedup
                         );
+                        if (useCampaignSpeedup) autoTexWithCampaignSpeedup.add(ours);
 
                         ours.setOriginalTexture(texturePath, original);
                         TexReflection.transplantTexFields(original, ours);
@@ -208,10 +214,18 @@ public class VideoPaths {
         return result;
     }
 
+    public static String getVideoId(String path) {
+        return reverseVideoMap.get(path);
+    }
+
     public static String getImagePath(String key) {
         String result = imageMap.get(key);
         if (result == null) throw new RuntimeException("VideoLib attempted to resolve absolute path for image file id " + key + ", but returned null");
         return result;
+    }
+
+    public static List<AutoTexProjectorAPI> getAutoTexProjectorsWithCampaignSpeedup() {
+        return new ArrayList<>(autoTexWithCampaignSpeedup);
     }
 
     public static AutoTexProjectorAPI getAutoTexProjectorOverride(String texturePath) {
@@ -220,6 +234,7 @@ public class VideoPaths {
 
     public static void removeAutoTexOverride(String texturePath, AutoTexProjectorAPI autoTex) {
         autoTexMap.remove(texturePath);
+        autoTexWithCampaignSpeedup.remove(autoTex);
         allAutoTexOverrides.remove(autoTex);
         if (autoTex.combatRunWhilePaused()) 
             runWhilePausedCombatAutoTexOverrides.remove(autoTex);
@@ -270,6 +285,14 @@ public class VideoPaths {
             return autoTexOverrideData.getBoolean(prefix + "RunWhilePaused");
         } catch (JSONException ignored) {
             return true;
+        }
+    }
+
+    private static boolean useCampaignSpeedup(JSONObject autoTexOverrideData) {
+        try {
+            return autoTexOverrideData.getBoolean("useCampaignSpeedup");
+        } catch (JSONException ignored) {
+            return false;
         }
     }
 

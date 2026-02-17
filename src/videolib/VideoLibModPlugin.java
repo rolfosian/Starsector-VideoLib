@@ -10,6 +10,8 @@ import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
 
+import videolib.decoder.grouped.DeltaTimeDelegator;
+import videolib.entities.CampaignBillboard;
 import videolib.ffmpeg.FFmpeg;
 
 import videolib.planetlistener.PlanetProjectorListener;
@@ -40,12 +42,12 @@ public class VideoLibModPlugin extends BaseModPlugin {
         VideoUtils.init();
         AutoTexProjector.init();
         VideoPaths.populate();
+        CampaignBillboard.initStatic();
 
         SettingsAPI settings = Global.getSettings();
         try {
             settings.loadTexture("graphics/starscape/star.png");
-            settings.loadTexture("graphics/fx/slipstream3.png");
-            settings.loadTexture("graphics/billboards/vl_lens_platform.png");
+            settings.loadTexture("graphics/billboards/vl_lens_platform1.png");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -124,10 +126,16 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     @Override
     public void onGameLoad(boolean newGame) {
+        Global.getSector().addTransientScript(VideoLibEveryFrame.getInstance());
+        Global.getSector().addTransientListener(VideoLibCampaignListener.getInstance());
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
 
         for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides(false)) {
             projector.timeout();
+        }
+
+        for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexProjectorsWithCampaignSpeedup())  {
+            ((DeltaTimeDelegator)projector.getDecoder()).setCampaign();
         }
 
         if (newGame) return;

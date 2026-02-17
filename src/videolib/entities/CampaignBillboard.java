@@ -29,7 +29,6 @@ import com.fs.starfarer.api.campaign.InteractionDialogAPI;
 import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.campaign.OrbitAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
-import com.fs.starfarer.api.campaign.SectorAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.api.campaign.econ.MarketAPI;
@@ -51,7 +50,9 @@ import videolib.VideoPaths;
 import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
 import videolib.util.TexReflection;
 
-public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable {
+import static videolib.VideoLibEveryFrame.phaseDelta;
+
+public final class CampaignBillboard implements CustomCampaignEntityAPI, Serializable {
     private static final Logger logger = Logger.getLogger(CampaignBillboard.class);
     public static void print(Object... args) {
         StringBuilder sb = new StringBuilder();
@@ -63,26 +64,33 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
     }
 
     private static final VarHandle customCampaignEntitySpriteVarHandle;
+    private static final VarHandle customCampaignEntityPluginVarHandle;
+
     private static final VarHandle[] spriteVarHandles;
-    private static final VarHandle spriteAlphaMultHandle;
     private static final MethodHandle readResolveHandle;
 
+    public static void initStatic() {}
     static {
         MethodHandles.Lookup lookup = MethodHandles.lookup();
         try {
             MethodHandles.Lookup privateLookup = MethodHandles.privateLookupIn(CustomCampaignEntity.class, lookup);
 
             readResolveHandle = privateLookup.findVirtual(CustomCampaignEntity.class, "readResolve", MethodType.methodType(Object.class));
+
             customCampaignEntitySpriteVarHandle = privateLookup.findVarHandle(
                 CustomCampaignEntity.class,
                 "sprite", 
                 Sprite.class
             );
+            customCampaignEntityPluginVarHandle = privateLookup.findVarHandle(
+                CustomCampaignEntity.class,
+                "plugin", 
+                CustomCampaignEntityPlugin.class
+            );
 
             privateLookup = MethodHandles.privateLookupIn(Sprite.class, lookup);
+            
             List<VarHandle> handles = new ArrayList<>();
-            VarHandle alphaMultHandle = null;
-
             for (Object field : Sprite.class.getDeclaredFields()) {
                 String name = TexReflection.getFieldName(field);
                 Class<?> type = TexReflection.getFieldType(field);
@@ -92,26 +100,48 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
                     type
                 );
                 handles.add(handle);
-                if (name.equals("alphaMult")) alphaMultHandle = handle;
-            }
-            spriteAlphaMultHandle = alphaMultHandle;
+            };
             spriteVarHandles = handles.toArray(new VarHandle[0]);
-            // settings.loadTexture("graphics/billboards/truss.png");
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
+    
+    public static interface BillboardDialogDelegate {
+        public void execute(InteractionDialogAPI dialog, CampaignBillboard billboard);
+    }
+
+    public static abstract class BillboardTargeter implements Serializable {
+        public abstract SectorEntityToken target(CampaignBillboard billboard);
+        
+        public Object readResolve() {
+            return this;
+        }
+    }
+
+    public static abstract class BillboardFacingDelegate {
+        protected SectorEntityToken currentTarget;
+        protected BillboardTargeter targeter;
+
+        public abstract float getAngle(CampaignBillboard billboard);
+
+        public final void setTargeter(BillboardTargeter targeter) {
+            this.targeter = targeter;
+        }
+    }
+
     private transient AutoTexProjectorAPI texProjector;
-    private EveryFrameScript pausedAdvanceScript;
+    private transient BillboardSprite ourSprite;
 
     private final CampaignBillboard self = this;
-    private CustomCampaignEntity entity;
     private final BaseLocation location;
+    private final CustomCampaignEntity entity;
 
-    private transient BillboardSprite ourSprite;
+    private BillboardDialogDelegate interactionDialogDelegate;
+    private BillboardFacingDelegate angleDelegate;
+
     private float alphaMult;
-    private float phaseStep;
     private long pts;
 
     public CampaignBillboard(
@@ -122,7 +152,19 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
         String factionId,
         float alphaMult
     ) {
-        this(location, id, name, type, factionId, -1.0f, -1.0f, null, alphaMult);
+        this(location, id, name, type, factionId, alphaMult, null);
+    }
+
+    public CampaignBillboard(
+        BaseLocation location,
+        String id,
+        String name,
+        String type,
+        String factionId,
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate
+    ) {
+        this(location, id, name, type, factionId, -1.0f, -1.0f, null, alphaMult, angleDelegate, null);
     }
 
     public CampaignBillboard(
@@ -133,9 +175,11 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
         String factionId,
         float spriteWidth,
         float spriteHeight,
-        float alphaMult
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate,
+        BillboardDialogDelegate interactionDialogDelegate
     ) {
-        this(location, id, name, type, factionId, spriteWidth, spriteHeight, null, alphaMult);
+        this(location, id, name, type, factionId, spriteWidth, spriteHeight, null, alphaMult, angleDelegate, interactionDialogDelegate);
     }
 
     public CampaignBillboard(BaseLocation location,
@@ -146,32 +190,67 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
         float spriteWidth,
         float spriteHeight,
         Object params,
-        float alphaMult
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate,
+        BillboardDialogDelegate interactionDialogDelegate
     ) { 
         this.entity = new CustomCampaignEntity(id, name, type, factionId, 25f, spriteWidth, spriteHeight, location.getLightSource(), params);
+        this.angleDelegate = angleDelegate != null ? angleDelegate : new BillboardFacingDelegate() {
+            @Override
+            public float getAngle(CampaignBillboard billboard) {
+                return billboard.getBillboardEntity().getFacing() - 90f;
+            }
+        };
+        this.interactionDialogDelegate = interactionDialogDelegate;
         this.alphaMult = alphaMult;
         this.location = location;
         this.init();
-        location.addObject(this.entity);
         location.addObject(this);
+        location.addObject(this.entity);
     }
 
     public CustomCampaignEntityAPI getBillboardEntity() {
         return this.entity;
     }
 
+    public BillboardDialogDelegate getInteractionDialogDelegate() {
+        return this.interactionDialogDelegate;
+    }
+
+    public void setInteractionDialogDelegate(BillboardDialogDelegate interactionDialogDelegate) {
+        this.interactionDialogDelegate = interactionDialogDelegate;
+    }
+
+    public Sprite getSprite() {
+        return entity.getSprite();
+    }
+    
+    public AutoTexProjectorAPI getTexProjector() {
+        return this.texProjector;
+    }
+
+    public BillboardFacingDelegate getAngleDelegate() {
+        return this.angleDelegate;
+    }
+
+    public void setAngleDelegate(BillboardFacingDelegate angleDelegate) {
+        this.angleDelegate = angleDelegate;
+    }
+
     public void remove() {
         this.location.removeEntity(entity);
         this.location.removeObject(this);
-        Global.getSector().removeScript(pausedAdvanceScript);
+    }
+
+    public float getSpritePhase() {
+        return this.ourSprite.getPhase();
     }
 
     private class BillboardSprite extends Sprite {
-        private final Sprite structureMid = new Sprite("graphics/billboards/vl_lens_platform.png");
-        private final SpriteAPI vFrameSprite = Global.getSettings().getSprite(entity.getSpec().getSpriteName());
+        private final Sprite structureMid = new Sprite("graphics/billboards/vl_lens_platform1.png");
+        private final SpriteAPI vFrameSprite = Global.getSettings().getSprite(entity.getCustomEntitySpec().getSpriteName());
 
         private float phase = 0.0f;
-        private float speedupMult = Global.getSettings().getFloat("campaignSpeedupMult");
 
         private int noiseTexId = TexReflection.getTexObjId("graphics/fx/noise.png");
         private int lensTexId = TexReflection.getTexObjId("graphics/starscape/star.png");
@@ -194,48 +273,68 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             this.noiseBlue = (byte) color.getBlue();
         }
 
-        private float lensWidth = structureMid.getWidth() / 2;
-        private float lensHeight = structureMid.getHeight() / 2;
+        private float lensWidth = structureMid.getWidth() / 2.75f;
+        private float lensHeight = structureMid.getHeight() / 2.75f;
+        private float sideLensWidth = lensWidth / 1.5f;
+        private float sideLensHeight = lensHeight / 1.5f;
+        private float sideLensOffset = structureMid.getWidth() / 2 - 13f;
 
+        private float lensSpin = 0f;
+        private float lensAngle = 1f;
         private float lensIntensity = 0.8f;
-        private float noiseAlpha = 0.25f;
+        private float noiseAlpha = 0.5f;
 
         private float realLensIntensity = 0.8f;
-        private float realNoiseAlpha = 0.25f;
+        private float realNoiseAlpha = 0.4f;
         private float realVframeAlpha = self.alphaMult;
 
-        public void advancePhase() {
+        public void advancePhase(float facing) {
             if (Global.getSector().isPaused()) return;
-            phaseStep = 0.166667f;
-            phase = Global.getSector().getCampaignUI().isFastForward() ? phase + (phaseStep * speedupMult) : phase + phaseStep;
-
-            if (phase > 1000.0f) {
-                phase -= 1000.0f;
+        
+            this.phase += phaseDelta;
+            if (this.phase > 1000.0f) {
+                this.phase -= 1000.0f;
             }
+        
+            this.lensSpin += phaseDelta * 5f;
+            if (this.lensSpin >= 360f) {
+                this.lensSpin -= 360f;
+            }
+        
+            this.lensAngle = facing + this.lensSpin;
+            if (this.lensAngle >= 360f) {
+                this.lensAngle -= 360f;
+            }
+        }
+
+        public float getPhase() {
+            return this.phase;
         }
 
         @Override
         public void setAlphaMult(float realAlpha) {
             float brightness = entity.getSensorFader().getBrightness() * entity.getSensorContactFader().getBrightness();
             float real = realAlpha * brightness;
+            this.structureMid.setAlphaMult(real);
 
-            float minFade = 0.5f; 
-            float frequency = 0.5f; 
-            float sineWave = (float) Math.sin(phase * frequency);
+            float minFade = 0.925f; 
+            float frequency = 2f; 
+            float sineWave = (float) Math.sin(this.phase * frequency);
             float normalizedPulse = (sineWave + 1f) / 2f;
             float pulseMult = minFade + ((1f - minFade) * normalizedPulse);
 
-            realNoiseAlpha = noiseAlpha * real * pulseMult;
-            realLensIntensity = lensIntensity * real * pulseMult;
-            structureMid.setAlphaMult(real);
-            
-            realVframeAlpha = self.alphaMult * pulseMult * brightness;
+            this.realNoiseAlpha = this.noiseAlpha * real * pulseMult;
+            this.realVframeAlpha = self.alphaMult * real * pulseMult * brightness;
+
+            minFade = 0.75f;
+            this.realLensIntensity = this.lensIntensity * real * minFade + ((1f - minFade) * normalizedPulse);
         }
         
         @Override
         public void renderAtCenter(float x, float y) {
-            this.advancePhase();
-            float facing = entity.getFacing() - 90f;
+            float facing = angleDelegate.getAngle(self);
+            this.advancePhase(facing);
+
             renderStructure(x, y, facing);
             renderVframePseudo3DSkewed(x, y, 25f, facing, 1.0f);
         }
@@ -246,7 +345,7 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             float dynamicHeight = height * perspectiveFactor;
             float offset = shear * dynamicHeight;
 
-            renderHoloNoise(x, y, dist, facingAngle, 5f, offset);
+            renderHoloNoise(x, y, dist, facingAngle, 45f, offset);
 
             vFrameSprite.bindTexture();
             GL11.glPushMatrix();
@@ -311,7 +410,10 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, noiseTexId);
             GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+
+            GL11.glEnable(GL11.GL_POLYGON_SMOOTH);
+            GL11.glHint(GL11.GL_POLYGON_SMOOTH_HINT, GL11.GL_NICEST);
         
             GL11.glColor4ub(
                 noiseRed,
@@ -338,28 +440,79 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             float flickerIntensity = 0.1f;
             float uOffset = (float) Math.sin(this.phase * 20.0f) * flickerIntensity;
             float vOffset = (float) Math.cos(this.phase * 30.0f) * flickerIntensity;
+
+            byte innerA = (byte)(realNoiseAlpha * 255);  // interior alpha
+            byte outerA = 0;                              // feather edge alpha
         
             GL11.glBegin(GL11.GL_QUADS);
             
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sL, sY);
-            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dTLx, dY_top);
-            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dTRx, dY_top);
-            GL11.glTexCoord2f(1.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sR, sY);
-        
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sL, sY);
-            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dBLx, dY_bot);
-            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dTLx, dY_top);
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sL, sY);
-        
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sR, sY);
-            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dTRx, dY_top);
-            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dBRx, dY_bot);
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sR, sY);
+            // Top quad
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sL, sY);
 
-            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sL, sY);
-            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dBLx, dY_bot);
-            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);   GL11.glVertex2f(dBRx, dY_bot);
-            GL11.glTexCoord2f(1.0f + uOffset, 0.0f + vOffset);   GL11.glVertex2f(sR, sY);
+            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dTLx, dY_top);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dTRx, dY_top);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sR, sY);
+
+            // Left triangle
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sL, sY);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dBLx, dY_bot);
+
+            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dTLx, dY_top);
+
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sL, sY);
+
+            // Right triangle
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sR, sY);
+
+            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dTRx, dY_top);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dBRx, dY_bot);
+
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sR, sY);
+
+            // Bottom quad
+            GL11.glTexCoord2f(0.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sL, sY);
+
+            GL11.glTexCoord2f(0.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dBLx, dY_bot);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 1.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, outerA);
+            GL11.glVertex2f(dBRx, dY_bot);
+
+            GL11.glTexCoord2f(1.0f + uOffset, 0.0f + vOffset);
+            GL11.glColor4ub(noiseRed, noiseGreen, noiseBlue, innerA);
+            GL11.glVertex2f(sR, sY);
         
             GL11.glEnd();
         
@@ -371,14 +524,30 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             structureMid.setAngle(angle);
             structureMid.setNormalBlend();
             structureMid.renderAtCenter(x, y);
-
-            renderLens(x, y, angle);
-            renderLens(x, y, angle - 45f);
+        
+            float angle2 = lensAngle - 45f;
+        
+            float rad = (float) Math.toRadians(angle);
+            float cos = (float) Math.cos(rad);
+            float sin = (float) Math.sin(rad);
+        
+            renderLens(x, y, lensWidth, lensHeight, lensAngle);
+            renderLens(x, y, lensWidth, lensHeight, angle2);
+        
+            float leftOffsetX = -sideLensOffset * cos;
+            float leftOffsetY = -sideLensOffset * sin;
+        
+            float rightOffsetX = sideLensOffset * cos;
+            float rightOffsetY = sideLensOffset * sin;
+        
+            renderLens(x + leftOffsetX, y + leftOffsetY, sideLensWidth, sideLensHeight, lensAngle);
+            renderLens(x + leftOffsetX, y + leftOffsetY, sideLensWidth, sideLensHeight, angle2);
+        
+            renderLens(x + rightOffsetX, y + rightOffsetY, sideLensWidth, sideLensHeight, lensAngle);
+            renderLens(x + rightOffsetX, y + rightOffsetY, sideLensWidth, sideLensHeight, angle2);
         }
 
-        private void renderLens(float x, float y, float angle) {
-            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT);
-            
+        private void renderLens(float x, float y, float width, float height, float angle) {
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, lensTexId);
             GL11.glEnable(GL11.GL_BLEND);
@@ -394,20 +563,19 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
         
             GL11.glBegin(GL11.GL_QUADS);
                 GL11.glTexCoord2f(0, 0);
-                GL11.glVertex2f(-lensWidth / 2, -lensHeight / 2);
+                GL11.glVertex2f(-width / 2, -height / 2);
         
                 GL11.glTexCoord2f(1, 0);
-                GL11.glVertex2f(lensWidth / 2, -lensHeight / 2);
+                GL11.glVertex2f(width / 2, -height / 2);
         
                 GL11.glTexCoord2f(1, 1);
-                GL11.glVertex2f(lensWidth / 2, lensHeight / 2);
+                GL11.glVertex2f(width / 2, height / 2);
         
                 GL11.glTexCoord2f(0, 1);
-                GL11.glVertex2f(-lensWidth / 2, lensHeight / 2);
+                GL11.glVertex2f(-width / 2, height / 2);
             GL11.glEnd();
         
             GL11.glPopMatrix();
-            GL11.glPopAttrib();
         }
 
         public void setNoiseColor(Color noiseColor) {
@@ -433,16 +601,14 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
 
     private void init() {
         this.ourSprite = new BillboardSprite();
-
         transplantSpriteFields(entity.getSprite(), ourSprite);
         customCampaignEntitySpriteVarHandle.set(entity, ourSprite);
 
-        this.texProjector = VideoPaths.getAutoTexProjectorOverride(entity.getSpec().getSpriteName());
-        Global.getSector().removeScript(pausedAdvanceScript);
-        if (this.texProjector != null && !this.texProjector.runWhilePaused()) {
-            this.pausedAdvanceScript = new CampaignBillBoardPausedScript();
-            Global.getSector().addScript(this.pausedAdvanceScript);
-        }
+        CampaignBillboardPlugin plugin = new CampaignBillboardPlugin(this);
+        plugin.init(entity, null);
+        customCampaignEntityPluginVarHandle.set(this.entity, plugin);
+
+        this.texProjector = VideoPaths.getAutoTexProjectorOverride(entity.getCustomEntitySpec().getSpriteName());
     }
 
     protected Object readResolve() {
@@ -452,19 +618,13 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             throw new RuntimeException(e);
         }
 
-        this.ourSprite = new BillboardSprite();
-
-        transplantSpriteFields(entity.getSprite(), ourSprite);
-        customCampaignEntitySpriteVarHandle.set(entity, ourSprite);
-
-        this.texProjector = VideoPaths.getAutoTexProjectorOverride(entity.getSpec().getSpriteName());
-        Global.getSector().removeScript(pausedAdvanceScript);
+        this.init();
 
         if (this.texProjector != null && !this.texProjector.runWhilePaused()) {
-            this.texProjector.getDecoder().seek(this.pts);
-            this.texProjector.getDecoder().getCurrentVideoTextureId();
-            this.pausedAdvanceScript = new CampaignBillBoardPausedScript();
-            Global.getSector().addScript(this.pausedAdvanceScript);
+            if (this.pts != 0 && this.pts != this.texProjector.getDecoder().getCurrentVideoPts()) {
+                this.texProjector.getDecoder().seek(this.pts);
+                this.texProjector.getDecoder().getCurrentVideoTextureIdDoNotUpdatePts();
+            }
         }
         return this;
     }
@@ -489,56 +649,53 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
             null,
             null,
             "vl_billboard_example",
-            "tritachyon",
+            "pirates",
             200f,
             92f,
-            0.6f
+            0.6f,
+            new RotationalTargeter(new BillboardTargeter() {
+                @Override
+                public SectorEntityToken target(CampaignBillboard billboard) {
+                    return RotationalTargeter.getNearestFleet(billboard);
+                }
+            }),
+            null
         );
-        testBoard.setAlphaMult(0);
+        // testBoard.setAlphaMult(0);
 
         if (location instanceof StarSystemAPI system) {
-            PlanetAPI closestPlanet = null;
+            PlanetAPI[] closestPlanet = new PlanetAPI[] {null};
             float closestDistance = Float.MAX_VALUE;
             for (PlanetAPI planet : system.getPlanets()) {
                 float dist = distanceBetween(planet.getLocation(), playerLoc);
                 if (dist < closestDistance) {
-                    closestPlanet = planet;
+                    closestPlanet[0] = planet;
                     closestDistance = dist;
                 }
             }
-            Vector2f planetLoc = closestPlanet.getLocation();
+            PlanetAPI closest = closestPlanet[0];
+            Vector2f planetLoc = closest.getLocation();
 
-            float dx = playerLoc.x - planetLoc.x;
-            float dy = playerLoc.y - planetLoc.y;
-            float angle = (float) Math.toDegrees(Math.atan2(dy, dx));
-    
-            testBoard.getBillboardEntity().setCircularOrbit(closestPlanet, angle, distanceBetween(playerLoc, closestPlanet.getLocation()), 20f);
+            // testBoard.getAngleDelegate().setTargeter(
+            //     new BillboardTargeter() {
+            //         @Override
+            //         public SectorEntityToken target(CampaignBillboard billboard) {
+            //             return closest;
+            //         }
+            //     }
+            // );
+
+            float angle = angleBetween(playerLoc, planetLoc);
+            testBoard.setCircularOrbit(closest, angle, distanceBetween(playerLoc, closest.getLocation()), 20f);
             return;
         }
-        testBoard.getBillboardEntity().setLocation(playerLoc.x, playerLoc.y);
+        testBoard.setLocation(playerLoc.x, playerLoc.y);
     }
 
-    private class CampaignBillBoardPausedScript implements EveryFrameScript {
-        @Override
-        public void advance(float dt) {
-            SectorAPI sector = Global.getSector();
-            if (sector.getPlayerFleet().getContainingLocation() == self.location && sector.isPaused()) {
-                InteractionDialogAPI dialog = sector.getCampaignUI().getCurrentInteractionDialog();
-                if (dialog != null && dialog.getInteractionTarget() == self.entity) {
-                    self.texProjector.advance(dt);
-                }
-            }
-        }
-
-        @Override
-        public boolean isDone() {
-            return false;
-        }
-
-        @Override
-        public boolean runWhilePaused() {
-            return true;
-        }
+    public static float angleBetween(Vector2f loc1, Vector2f loc2) {
+        float dx = loc1.x - loc2.x;
+        float dy = loc1.y - loc2.y;
+        return (float) Math.toDegrees(Math.atan2(dy, dx));
     }
 
     public static float distanceBetween(Vector2f pos1, Vector2f pos2) {
@@ -1068,6 +1225,7 @@ public class CampaignBillboard implements CustomCampaignEntityAPI, Serializable 
     @Override
     public void setCircularOrbitAngle(float arg0) {
         entity.setCircularOrbitAngle(arg0);
+
     }
 
     @Override

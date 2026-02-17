@@ -1,11 +1,15 @@
 package videolib;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
+import com.fs.starfarer.campaign.BaseLocation;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
-
+import videolib.entities.CampaignBillboard;
+import videolib.entities.CampaignBillboard.BillboardFacingDelegate;
+import videolib.entities.CampaignBillboard.BillboardDialogDelegate;
 import videolib.playerui.AudioVideoPlayer;
 import videolib.playerui.MuteVideoPlayer;
 import videolib.playerui.PlayerControlPanel;
@@ -311,5 +315,59 @@ public class VideoPlayerFactory {
         CustomPanelAPI panel = Global.getSettings().createCustom(width, height, imagePlugin);
 
         return new ImagePanel(panel, imagePlugin);
+    }
+
+    public static CampaignBillboard addCampaignBillboard(
+        LocationAPI location,
+        String id,
+        String name,
+        String type,
+        String factionId,
+        float alphaMult
+    ) {
+        return new CampaignBillboard((BaseLocation)location, id, name, type, factionId, alphaMult);
+    }
+
+    public static CampaignBillboard addCampaignBillboard(
+        LocationAPI location,
+        String id,
+        String name,
+        String type,
+        String factionId,
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate
+    ) {
+        return new CampaignBillboard((BaseLocation)location, id, name, type, factionId, alphaMult, angleDelegate);
+    }
+
+    public static CampaignBillboard addCampaignBillboard(
+        LocationAPI location,
+        String id,
+        String name,
+        String type,
+        String factionId,
+        float spriteWidth,
+        float spriteHeight,
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate,
+        BillboardDialogDelegate interactionDialogDelegate
+    ) {
+        return new CampaignBillboard((BaseLocation)location, id, name, type, factionId, spriteWidth, spriteHeight, alphaMult, angleDelegate, interactionDialogDelegate);
+    }
+
+    public static CampaignBillboard addCampaignBillboard(
+        LocationAPI location,
+        String id,
+        String name,
+        String type,
+        String factionId,
+        float spriteWidth,
+        float spriteHeight,
+        Object params,
+        float alphaMult,
+        BillboardFacingDelegate angleDelegate,
+        BillboardDialogDelegate interactionDialogDelegate
+    ) {
+        return new CampaignBillboard((BaseLocation)location, id, name, type, factionId, spriteWidth, spriteHeight, params, alphaMult, angleDelegate, interactionDialogDelegate);
     }
 }
