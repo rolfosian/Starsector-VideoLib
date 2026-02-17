@@ -2,10 +2,13 @@ package videolib.projector;
 
 import java.util.List;
 
+import com.fs.starfarer.api.EveryFrameScript;
+import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.campaign.CustomUIPanelPlugin;
 import com.fs.starfarer.api.input.InputEventAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
+import com.fs.starfarer.api.ui.UIPanelAPI;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
@@ -13,9 +16,47 @@ import videolib.buffers.TexBuffer;
 import videolib.decoder.Decoder;
 import videolib.playerui.PlayerControlPanel;
 import videolib.speakers.Speakers;
+import static videolib.util.UiUtil.utils;
 
 public abstract class VideoProjector implements CustomUIPanelPlugin, Projector {
-    public void init(PositionAPI panelPos, CustomPanelAPI panel) {}
+    protected CustomPanelAPI panel;
+    protected boolean keepAlive;
+    private UIPanelAPI topAncestor;
+    private EveryFrameScript cleanupScript;
+
+    public void init(PositionAPI panelPos, CustomPanelAPI panel) {
+        if (this.cleanupScript != null) {
+            Global.getSector().removeTransientScript(cleanupScript);
+        }
+
+        if (!keepAlive) {
+            this.topAncestor = utils.findTopAncestor(panel);
+
+            this.cleanupScript = new EveryFrameScript() {
+                private boolean isDone = false;
+                
+                @Override
+                public void advance(float arg0) {
+                    if (topAncestor != utils.findTopAncestor(panel)) {
+                        finish();
+                        isDone = true;
+                        Global.getSector().removeTransientScript(this);
+                    }
+                }
+
+                @Override
+                public boolean isDone() {
+                    return isDone;
+                }
+    
+                @Override
+                public boolean runWhilePaused() {
+                    return true;
+                }
+            };
+            Global.getSector().addTransientScript(cleanupScript);
+        }
+    }
 
     public abstract void play();
     public abstract void pause();

@@ -153,6 +153,27 @@ public class TexReflection {
 
     }
 
+    public static Object getMethod(String methodName, Class<?> cls) {
+        for (Object method : cls.getMethods()) {
+            try {
+                if (((String)getMethodNameHandle.invoke(method)).equals(methodName)) {
+                    return method;
+                }
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
+    }
+
+    public static Class<?> getReturnType(Object method) {
+        try {
+            return (Class<?>) getReturnTypeHandle.invoke(method);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Object getPrivateVariable(Object field, Object instanceToGetFrom) {
         try {
             setFieldAccessibleHandle.invoke(field, true);
@@ -641,6 +662,8 @@ public class TexReflection {
     public static void transplantTexFields(Object original, Object destination) {
         for (VarHandle handle : texClassVarHandles) handle.set(destination, handle.get(original));
     }
+
+
 
     // public static void test() {
     //     for (String tid : texObjectMap.keySet()) {

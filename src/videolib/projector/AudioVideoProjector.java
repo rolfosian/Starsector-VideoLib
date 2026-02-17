@@ -42,7 +42,6 @@ public class AudioVideoProjector extends VideoProjector {
     private EOFMode EOF_MODE;
     private EOFMode OLD_EOF_MODE;
 
-    private CustomPanelAPI panel;
     private DecoderWithSound decoder;
     private TexBuffer textureBuffer;
     private Speakers speakers;
@@ -56,9 +55,6 @@ public class AudioVideoProjector extends VideoProjector {
     private float x = 0f;
     private float y = 0f;
 
-    public int advancingValue = 0;
-    private int checkAdvancing = 0;
-
     private boolean clickToPause = false;
     private float leftBound;
     private float rightBound;
@@ -66,6 +62,10 @@ public class AudioVideoProjector extends VideoProjector {
     private float bottomBound;
 
     public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+        this(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, 0);
+    }
+
+    public AudioVideoProjector(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, long startUs) {
         this.videoFilePath = VideoPaths.getVideoPath(videoId);
         this.MODE = startingPlayMode;
         this.OLD_MODE = startingPlayMode;
@@ -76,7 +76,7 @@ public class AudioVideoProjector extends VideoProjector {
         this.height = height;
 
         this.decoder = new DecoderWithSound(this, videoFilePath, width, height, volume, startingPlayMode, startingEOFMode);
-        this.decoder.start(0);
+        this.decoder.start(startUs);
         this.textureBuffer = decoder.getTextureBuffer();
 
         this.speakers = new VideoProjectorSpeakers(this, decoder, decoder.getAudioFrameBuffer(), volume); 
@@ -84,32 +84,7 @@ public class AudioVideoProjector extends VideoProjector {
         this.speakers.start();
 
         if (startingPlayMode == PlayMode.PAUSED) this.speakers.pause();
-
-        if (!keepAlive)
-        Global.getSector().addScript(new EveryFrameScript() {
-            private boolean isDone = false;
-
-            @Override
-            public void advance(float arg0) {
-                checkAdvancing ^= 1;
-
-                if (checkAdvancing != advancingValue) { // as soon as this becomes misaligned with the value that is flipped in projector's advance then we finish and clean up
-                    finish();
-                    isDone = true;
-                    Global.getSector().removeScript(this);
-                }
-            }
-
-            @Override
-            public boolean isDone() {
-                return isDone;
-            }
-
-            @Override
-            public boolean runWhilePaused() {
-                return true;
-            }
-        });
+        this.keepAlive = keepAlive;
     }
 
     public void init(PositionAPI panelPos, CustomPanelAPI panel) {
@@ -130,6 +105,8 @@ public class AudioVideoProjector extends VideoProjector {
             this.paused = true;
         }
         this.currentTextureId = decoder.getCurrentVideoTextureId();
+
+        super.init(null, panel);
     }
 
     private boolean isInBounds(float mouseX, float mouseY) {            
@@ -184,7 +161,6 @@ public class AudioVideoProjector extends VideoProjector {
     @Override
     public void advance(float amount) {
     	// advance is called by game once per frame
-        advancingValue ^= 1;
         if (paused) {
             if (MODE == PlayMode.SEEKING) {
                 currentTextureId = decoder.getCurrentVideoTextureId();

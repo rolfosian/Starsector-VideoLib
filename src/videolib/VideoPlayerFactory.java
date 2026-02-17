@@ -52,7 +52,23 @@ public class VideoPlayerFactory {
      * @return a {@link MuteVideoPlayerWithControls} wrapping the projector and controls
      */
     public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, 0);
+    }
+
+    /**
+     * Creates a mute-only video player with a built-in control panel.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param startUs           starting timestamp in microseconds
+     * @return a {@link MuteVideoPlayerWithControls} wrapping the projector and controls
+     */
+    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, long startUs) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
@@ -79,7 +95,25 @@ public class VideoPlayerFactory {
      * @return a {@link MuteVideoPlayerWithControls} with custom-styled controls
      */
     public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, textColor, bgButtonColor, 0);
+    }
+
+    /**
+     * Creates a mute-only video player with a built-in control panel and custom UI colors.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param textColor         color of control text/icons
+     * @param bgButtonColor     background color for control buttons
+     * @param startUs           starting timestamp in microseconds
+     * @return a {@link MuteVideoPlayerWithControls} with custom-styled controls
+     */
+    public static VideoPlayer createMutePlayerWithControls(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor, long startUs) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         int controlsHeight = 70;
@@ -101,10 +135,27 @@ public class VideoPlayerFactory {
      * @param startingPlayMode  initial playback mode
      * @param startingEOFMode   behavior when the video reaches end-of-file
      * @param keepAlive         whether to keep resources alive when not visible
+
      * @return a {@link MuteVideoPlayer} embedding the projector
      */
     public static VideoPlayer createMutePlayer(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        return createMutePlayer(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, 0);
+    }
+
+    /**
+     * Creates a mute-only video player without on-screen controls.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param startUs           starting timestamp in microseconds
+     * @return a {@link MuteVideoPlayer} embedding the projector
+     */
+    public static VideoPlayer createMutePlayer(String videoId, int width, int height, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, long startUs) {
+        VideoProjector projectorPlugin = new MuteVideoProjector(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         
         return new MuteVideoPlayer(projectorPanel, projectorPlugin);
@@ -122,10 +173,27 @@ public class VideoPlayerFactory {
      * @param keepAlive         whether to keep resources alive when not visible
      * @return an {@link AudioVideoPlayer} or a {@link MuteVideoPlayer} if sound is disabled
      */
-    public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        if (!Global.getSettings().isSoundEnabled()) return createMutePlayer(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
+            return createAudioVideoPlayer(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, 0);
+        }
+
+    /**
+     * Creates an audio-enabled video player without on-screen controls. Falls back to mute variant if sound is disabled.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param volume            initial playback volume in range [0, 1] - normalized to game sound volume
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param startUs           starting timestamp in microseconds
+     * @return an {@link AudioVideoPlayer} or a {@link MuteVideoPlayer} if sound is disabled
+     */
+    public static VideoPlayer createAudioVideoPlayer(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, long startUs) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayer(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, startUs);
         
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
 
         return new AudioVideoPlayer(projectorPanel, projectorPlugin);
@@ -144,9 +212,26 @@ public class VideoPlayerFactory {
      * @return an {@link AudioVideoPlayerWithControls} or mute variant if sound is disabled
      */
     public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive) {
-        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive);
+        return createAudioVideoPlayerWithControls(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, 0);
+    }
 
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
+    /**
+     * Creates an audio-enabled video player with a built-in control panel. Falls back to mute controls if sound is disabled.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param volume            initial playback volume in range [0, 1] - normalized to game sound volume
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param startUs           starting timestamp in microseconds
+     * @return an {@link AudioVideoPlayerWithControls} or mute variant if sound is disabled
+     */
+    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, long startUs) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, startUs);
+
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         Speakers speakers = projectorPlugin.getSpeakers();
 
@@ -176,9 +261,29 @@ public class VideoPlayerFactory {
      * @return an {@link AudioVideoPlayerWithControls} or mute variant if sound is disabled
      */
     public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor) {
-        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, textColor, bgButtonColor);
+        return createAudioVideoPlayerWithControls(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, textColor, bgButtonColor, 0);
+    }
 
-        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive);
+    /**
+     * Creates an audio-enabled video player with a built-in control panel and custom UI colors.
+     * Falls back to a mute variant with custom controls if sound is disabled.
+     *
+     * @param videoId           id of the video asset defined in settings.json
+     * @param width             panel width in pixels
+     * @param height            panel height in pixels
+     * @param volume            initial playback volume in range [0, 1] - normalized to game sound volume
+     * @param startingPlayMode  initial playback mode
+     * @param startingEOFMode   behavior when the video reaches end-of-file
+     * @param keepAlive         whether to keep resources alive when not visible
+     * @param textColor         color of control text/icons
+     * @param bgButtonColor     background color for control buttons
+     * @param startUs           starting timestamp in microseconds
+     * @return an {@link AudioVideoPlayerWithControls} or mute variant if sound is disabled
+     */
+    public static VideoPlayer createAudioVideoPlayerWithControls(String videoId, int width, int height, float volume, PlayMode startingPlayMode, EOFMode startingEOFMode, boolean keepAlive, Color textColor, Color bgButtonColor, long startUs) {
+        if (!Global.getSettings().isSoundEnabled()) return createMutePlayerWithControls(videoId, width, height, startingPlayMode, startingEOFMode, keepAlive, textColor, bgButtonColor, startUs);
+
+        VideoProjector projectorPlugin = new AudioVideoProjector(videoId, width, height, volume, startingPlayMode, startingEOFMode, keepAlive, startUs);
         CustomPanelAPI projectorPanel = Global.getSettings().createCustom(width, height, projectorPlugin);
         Speakers speakers = projectorPlugin.getSpeakers();
 
