@@ -11,8 +11,6 @@ import com.fs.starfarer.api.input.InputEventAPI;
 import videolib.decoder.grouped.DeltaTimeDelegator;
 import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
 
-import static videolib.VideoLibModPlugin.print;
-
 public class VideoLibCombatPlugin extends BaseEveryFrameCombatPlugin {
     @Override
     public void init(CombatEngineAPI engine) {

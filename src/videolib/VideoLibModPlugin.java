@@ -127,8 +127,11 @@ public class VideoLibModPlugin extends BaseModPlugin {
     @Override
     public void onGameLoad(boolean newGame) {
         Global.getSector().addTransientScript(VideoLibEveryFrame.getInstance());
-        Global.getSector().addTransientListener(VideoLibCampaignListener.getInstance());
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
+
+        VideoLibCampaignListener campaignListener = new VideoLibCampaignListener();
+        Global.getSector().addTransientListener(campaignListener);
+        Global.getSector().getListenerManager().addListener(campaignListener, true);
 
         for (AutoTexProjectorAPI projector : VideoPaths.getAutoTexOverrides(false)) {
             projector.timeout();

@@ -1,18 +1,47 @@
 package videolib;
 
+import org.lwjgl.input.Keyboard;
+
 import com.fs.graphics.Sprite;
+
 import com.fs.starfarer.api.Global;
+
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
+import com.fs.starfarer.api.campaign.BattleAPI;
+import com.fs.starfarer.api.campaign.CampaignEventListener;
+import com.fs.starfarer.api.campaign.CampaignFleetAPI;
+import com.fs.starfarer.api.campaign.CargoAPI;
+import com.fs.starfarer.api.campaign.CustomCampaignEntityAPI;
+import com.fs.starfarer.api.campaign.FactionAPI;
+import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
+import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
+import com.fs.starfarer.api.campaign.PlayerMarketTransaction;
+import com.fs.starfarer.api.campaign.SectorEntityToken;
+import com.fs.starfarer.api.campaign.TextPanelAPI;
+import com.fs.starfarer.api.campaign.SectorEntityToken.VisibilityLevel;
+import com.fs.starfarer.api.campaign.ai.ModularFleetAIAPI;
+import com.fs.starfarer.api.campaign.econ.MarketAPI;
+import com.fs.starfarer.api.campaign.listeners.ObjectiveEventListener;
+
+import com.fs.starfarer.api.characters.AbilityPlugin;
+import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
+
+import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
+import com.fs.starfarer.api.impl.campaign.ids.Factions;
+import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.Objectives;
+
 import com.fs.starfarer.api.input.InputEventAPI;
+import com.fs.starfarer.api.ui.ButtonAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
 import com.fs.starfarer.api.ui.LabelAPI;
 import com.fs.starfarer.api.ui.PositionAPI;
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
+import com.fs.starfarer.api.util.Misc;
 
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
@@ -22,26 +51,61 @@ import videolib.entities.CampaignBillboardPlugin;
 import videolib.ffmpeg.FFmpeg;
 import videolib.playerui.VideoPlayer;
 import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
+import videolib.util.TexReflection;
 
 import static videolib.util.UiUtil.utils;
 import static videolib.VideoLibModPlugin.print;
 
-import java.util.List;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.util.*;
 
-import org.lwjgl.input.Keyboard;
+class Objs extends Objectives {
+    public Objs(InteractionDialogAPI dialog, OptionPanelAPI optionPanel, TextPanelAPI textPanel, SectorEntityToken entity) {
+        super(entity);
+        this.dialog = dialog;
+        this.options = optionPanel;
+        this.text = textPanel;
+    }
+}
 
-public class VideoLibCampaignListener extends BaseCampaignEventListener {
-    private VideoLibCampaignListener() {
-        super(false);
+public class VideoLibCampaignListener extends BaseCampaignEventListener implements ObjectiveEventListener {
+
+    private static final VarHandle[] ruleBasedInteractionDialogPluginImplVarHandles;
+
+    static {
+        try {
+            List<VarHandle> handles = new ArrayList<>();
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            MethodHandles.Lookup privateLookup = MethodHandles.privateLookupIn(RuleBasedInteractionDialogPluginImpl.class, lookup);
+
+            for (Object field : RuleBasedInteractionDialogPluginImpl.class.getDeclaredFields()) {
+                int mods = TexReflection.getFieldModifiers(field);
+                if (TexReflection.isStatic(mods) || TexReflection.isFinal(mods)) continue;
+
+                handles.add(
+                    privateLookup.findVarHandle(
+                        RuleBasedInteractionDialogPluginImpl.class,
+                        TexReflection.getFieldName(field),
+                        TexReflection.getFieldType(field)
+                    )
+                );
+            }
+
+            ruleBasedInteractionDialogPluginImplVarHandles = handles.toArray(new VarHandle[0]);
+
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
-    private static VideoLibCampaignListener instance;
+    public static void transplant(RuleBasedInteractionDialogPluginImpl original, RuleBasedInteractionDialogPluginImpl destination) {
+        for (VarHandle handle : ruleBasedInteractionDialogPluginImplVarHandles) handle.set(destination, handle.get(original));
+    }
 
-    public static VideoLibCampaignListener getInstance() {
-        if (instance != null) {
-            Global.getSector().removeListener(instance);
-        }
-        return instance = new VideoLibCampaignListener();
+    public VideoLibCampaignListener() {
+        super(false);
     }
 
     @Override
@@ -61,11 +125,190 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener {
                 return;
             }
 
+            if (billboard.isContested()) {
+                handleHome(dialog, billboard, true);
+
+                RuleBasedInteractionDialogPluginImpl ours = new RuleBasedInteractionDialogPluginImpl() {
+                    @Override
+                    public void optionSelected(String text, Object optionData) {
+                        OptionPanelAPI optionPanel = dialog.getOptionPanel();
+                        TextPanelAPI textPanel = dialog.getTextPanel();
+
+                        switch(String.valueOf(optionData)) {
+                            case "TAKE_CONTROL":
+                                textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
+
+                                textPanel.addPara("Taking control of the " + billboard.getName() + " billboard will grant your in-system fleets and colonies the \"benefits\" it provides.");
+                                textPanel.addPara(billboard.getFaction().getDisplayNameWithArticle() + " will certainly regard such a takeover of \"vital\" infrastructure as an act of war.");
+
+                                optionPanel.clearOptions();
+                                optionPanel.addOption("Proceed", "TAKE_CONTROL_CONFIRM");
+                                optionPanel.addOption("Never mind", "BACK_HOME");
+                                break;
+
+                            case "TAKE_CONTROL_CONFIRM":
+                                textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
+
+                                new Objs(dialog, optionPanel, textPanel, dialog.getInteractionTarget()).control(Factions.PLAYER);
+                                textPanel.addPara("Your crews quickly complete a physical takeover of the structure, removing automated safeguards and installing black-box transmitters tuning its output frequency to your transponder codes.");
+                                handleHome(dialog, billboard, false);
+                                break;
+
+                            case "BACK_HOME":
+                                textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
+                                handleHome(dialog, billboard, false);
+                                break;
+
+                            case "leave":
+                                dialog.dismiss();
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                };
+                transplant((RuleBasedInteractionDialogPluginImpl)dialog.getPlugin(), ours);
+                dialog.setPlugin(ours);
+                return;
+            }
+
             AutoTexProjectorAPI projector = billboard.getTexProjector();
             if (projector != null) {
-                showVideoCenter(dialog, billboard);
+                // showVideoCenter(dialog, billboard);
             }
         }
+    }
+
+    private static void handleHome(InteractionDialogAPI dialog, CampaignBillboard billboard, boolean fresh) {
+        String factionId = billboard.getFaction().getId();
+        String factionDisplayName = billboard.getFaction().getDisplayName();
+        String billboardName = billboard.getName();
+
+        OptionPanelAPI optionPanel = dialog.getOptionPanel();
+        optionPanel.clearOptions();
+
+        if (!factionId.equals(Factions.PLAYER)) {
+            optionPanel.addOption("Take control of the " + billboardName , "TAKE_CONTROL");
+            optionPanel.addOption("Leave", "leave");
+            optionPanel.setShortcut("leave", Keyboard.KEY_ESCAPE, false, false, false, false);
+            
+            if (fresh) {
+                dialog.getTextPanel().clear();
+                dialog.getTextPanel().addPara("The " + billboardName + " is under %s control.", billboard.getFaction().getBaseUIColor(), factionDisplayName);
+
+                if (isFactionFleetNearbyAndAware(factionId)) {
+                    dialog.getTextPanel().addPara("A nearby " + factionDisplayName + " fleet is tracking your movements, making interfering with the " + billboardName + " impossible.");
+                    for (UIComponentAPI child : utils.getChildrenNonCopy(optionPanel)) {
+                        if (child instanceof ButtonAPI button) {
+                            if (!button.getText().contains("Leave [Esc]")) button.setEnabled(false);
+                        }
+                    }
+                } else if (isHostileFleetNearbyAndAware()) {
+                    dialog.getTextPanel().addPara("A nearby hostile fleet is tracking your movements, making interfering with the " + billboardName + " impossible.");
+                    for (UIComponentAPI child : utils.getChildrenNonCopy(optionPanel)) {
+                        if (child instanceof ButtonAPI button) {
+                            if (!button.getText().contains("Leave [Esc]")) button.setEnabled(false);
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        if (fresh) {
+            dialog.getTextPanel().clear();
+            dialog.getTextPanel().addPara("The " + billboardName + " billboard is under %s control.", billboard.getFaction().getBaseUIColor(), factionDisplayName);
+        }
+
+        optionPanel.addOption("Leave", "leave");
+        optionPanel.setShortcut("leave", Keyboard.KEY_ESCAPE, false, false, false, false);
+
+        return;
+    }
+
+    @Override
+    public void reportObjectiveChangedHands(SectorEntityToken entity, FactionAPI from, FactionAPI to) {
+        if (entity.getCustomPlugin() instanceof CampaignBillboardPlugin plugin) {
+            CampaignBillboard billboard = plugin.getBillboard();
+            billboard.setFaction(to.getId());
+        }
+    }
+
+    @Override
+    public void reportObjectiveDestroyed(SectorEntityToken entity, SectorEntityToken stableLocation, FactionAPI to) {
+        // if (entity.getCustomPlugin() instanceof CampaignBillboardPlugin plugin) {
+        //     stableLocation.getContainingLocation().removeEntity(stableLocation);
+        // }
+    }
+
+    private static boolean isHostileFleetNearbyAndAware() {
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        for (CampaignFleetAPI fleet : playerFleet.getContainingLocation().getFleets()) {
+            if (fleet.getAI() == null) continue; // dormant Remnant fleets
+            if (fleet.getFaction().isPlayerFaction()) continue;
+            if (fleet.isStationMode()) continue;
+            
+            if (!fleet.isHostileTo(playerFleet)) continue;
+            if (fleet.getBattle() != null) continue;
+            
+            if (Misc.isInsignificant(fleet)) {
+                continue;
+            }
+            
+            VisibilityLevel level = playerFleet.getVisibilityLevelTo(fleet);
+
+            if (level == VisibilityLevel.NONE) continue;
+            
+            if (fleet.getFleetData().getMembersListCopy().isEmpty()) continue;
+            
+            float dist = Misc.getDistance(playerFleet.getLocation(), fleet.getLocation());
+            if (dist > 1500f) continue;
+
+            if (fleet.getAI() instanceof ModularFleetAIAPI) {
+                ModularFleetAIAPI ai = (ModularFleetAIAPI) fleet.getAI();
+                if (ai.getTacticalModule() != null && 
+                        (ai.getTacticalModule().isFleeing() || ai.getTacticalModule().isMaintainingContact() ||
+                                ai.getTacticalModule().isStandingDown())) {
+                    continue;
+                }
+            }
+            
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isFactionFleetNearbyAndAware(String factionId) {
+        CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
+        for (CampaignFleetAPI fleet : playerFleet.getContainingLocation().getFleets()) {
+            if (fleet.getFaction().isPlayerFaction()) continue;
+            
+            if (!fleet.getFaction().getId().equals(factionId)) continue;
+            if (fleet.getBattle() != null) continue;
+            if (fleet.isStationMode()) continue;
+            
+            
+            VisibilityLevel level = playerFleet.getVisibilityLevelTo(fleet);
+            if (level == VisibilityLevel.NONE) continue;
+            
+            if (fleet.getFleetData().getMembersListCopy().isEmpty()) continue;
+            
+            float dist = Misc.getDistance(playerFleet.getLocation(), fleet.getLocation());
+            if (dist > 750f) continue;
+
+            if (fleet.getAI() instanceof ModularFleetAIAPI) {
+                ModularFleetAIAPI ai = (ModularFleetAIAPI) fleet.getAI();
+                if (ai.getTacticalModule() != null && 
+                        (ai.getTacticalModule().isFleeing() || ai.getTacticalModule().isMaintainingContact() ||
+                                ai.getTacticalModule().isStandingDown())) {
+                    continue;
+                }
+            }
+            
+            return true;
+        }
+
+        return false;
     }
 
     public static void showVideoCenter(InteractionDialogAPI dialog, CampaignBillboard billboard) {
