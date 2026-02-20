@@ -111,6 +111,27 @@ public class TexReflection {
         }
     }
 
+    public static Object getFieldByInterface(Class<?> targetInterface, Class<?> classToGetFrom) {
+        for (Object field : classToGetFrom.getDeclaredFields()) {
+            if (targetInterface.isAssignableFrom(getFieldType(field))) return field;
+        }
+        return null;
+    }
+
+    public static Object getFieldByType(Class<?> targetType, Class<?> classToGetFrom) {
+        for (Object field : classToGetFrom.getDeclaredFields()) {
+            if (getFieldType(field).equals(targetType)) return field;
+        }
+        return null;
+    }
+    
+    public static Object getFieldByName(String name, Class<?> cls) {
+        for (Object field : cls.getDeclaredFields()) {
+            if (getFieldName(field).equals(name)) return field;
+        }
+        return null;
+    }
+
     public static Class<?> getFieldType(Object field) {
         try {
             return (Class<?>) getFieldTypeHandle.invoke(field);
@@ -193,6 +214,10 @@ public class TexReflection {
 
     public static boolean isPublic(int modifiers) {
         return (modifiers & 1) != 0;
+    }
+
+    public static boolean isFinal(int modifiers) {
+        return (modifiers & 16) != 0;
     }
 
     public static String getTexBindMethodName() {
@@ -662,8 +687,6 @@ public class TexReflection {
     public static void transplantTexFields(Object original, Object destination) {
         for (VarHandle handle : texClassVarHandles) handle.set(destination, handle.get(original));
     }
-
-
 
     // public static void test() {
     //     for (String tid : texObjectMap.keySet()) {
