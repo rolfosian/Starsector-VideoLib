@@ -11,26 +11,28 @@ import videolib.buffers.RGBATextureBuffer;
 import videolib.projector.Projector;
 
 public class GroupedDecoderWithSound extends DecoderWithSound {
+    private boolean doCleanup;
+
     public GroupedDecoderWithSound(Projector videoProjector, String videoFilePath, int width, int height, int textureId, float volume, PlayMode startingPlayMode, EOFMode startingEOFmode) {
         super(videoProjector, videoFilePath, width, height, volume, startingPlayMode, startingEOFmode);
         this.currentVideoTextureId = textureId;
     }
     
     public void start(long startUs) {
-        if (running) return;
+        if (this.running) return;
         // print("Starting GroupedDecoderWithSound for file", videoFilePath);
-        running = true;
+        this.running = true;
 
-        ctxPtr = FFmpeg.openCtx(videoFilePath, width, height, startUs);
+        this.ctxPtr = FFmpeg.openCtx(this.videoFilePath, this.width, this.height, startUs);
         // print("Opened FFmpeg ctx, ptr =", ctxPtr);
 
-        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
+        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + this.videoFilePath);
 
-        videoDurationSeconds = FFmpeg.getDurationSeconds(ctxPtr);
-        videoDurationUs = FFmpeg.getDurationUs(ctxPtr);
+        this.videoDurationSeconds = FFmpeg.getDurationSeconds(this.ctxPtr);
+        this.videoDurationUs = FFmpeg.getDurationUs(this.ctxPtr);
 
-        videoFps = FFmpeg.getVideoFps(ctxPtr);
-        spf = 1 / videoFps;
+        this.videoFps = FFmpeg.getVideoFps(this.ctxPtr);
+        this.spf = 1 / this.videoFps;
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
@@ -40,15 +42,17 @@ public class GroupedDecoderWithSound extends DecoderWithSound {
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
         if (this.currentVideoTextureId != 0) {
             this.textureBuffer = new RGBATextureBuffer(30, currentVideoTextureId, width, height);
+            this.doCleanup = false;
             return;
         }
+        this.doCleanup = true;
         this.textureBuffer = new RGBATextureBuffer(30);
-        this.textureBuffer.initTexStorage(width, height);
+        this.textureBuffer.initTexStorage(this.width, this.height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
-        audioChannels = FFmpeg.getAudioChannels(ctxPtr);
-        audioSampleRate = FFmpeg.getAudioSampleRate(ctxPtr);
+        this.audioChannels = FFmpeg.getAudioChannels(this.ctxPtr);
+        this.audioSampleRate = FFmpeg.getAudioSampleRate(this.ctxPtr);
         // print("Audio Channels=", audioChannels);
         // print("Audio Sample Rate=", audioSampleRate);
 
@@ -58,27 +62,30 @@ public class GroupedDecoderWithSound extends DecoderWithSound {
 
     public void finish() {
         // print("Stopping GroupedDecoderWithSound thread");
-        running = false;
-        timeAccumulator = 0f;
-        videoFps = 0f;
+        this.running = false;
+        this.timeAccumulator = 0f;
+        this.videoFps = 0f;
 
         // print("Joining GroupedDecoderWithSound thread");
 
-        if (ctxPtr != 0) {
+        if (this.ctxPtr != 0) {
             // print("Closing FFmpeg ctx");
-            FFmpeg.closeCtx(ctxPtr);
-            ctxPtr = 0;
+            FFmpeg.closeCtx(this.ctxPtr);
+            this.ctxPtr = 0;
         }
 
         // print("Clearing Texture/Video Buffer");
-        synchronized(textureBuffer) {
-            textureBuffer.clear();
-            textureBuffer.cleanupTexStorage();
+        synchronized(this.textureBuffer) {
+            this.textureBuffer.clear();
+            if (this.doCleanup) {
+                this.textureBuffer.cleanupTexStorage();
+                this.currentVideoTextureId = 0;
+            }
         }
-        synchronized(audioBuffer) {
-            audioBuffer.clear();
+        synchronized(this.audioBuffer) {
+            this.audioBuffer.clear();
         }
 
-        speakers.finish();
+        this.speakers.finish();
     }
 }

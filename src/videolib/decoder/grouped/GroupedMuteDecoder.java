@@ -28,25 +28,25 @@ public class GroupedMuteDecoder extends MuteDecoder {
 
     @Override
     public void start(long startUs) {
-        if (running) return;
+        if (this.running) return;
         // print("Starting GroupedMuteDecoder for file", videoFilePath);
-        running = true;
-
-        ctxPtr = FFmpeg.openCtxNoSound(videoFilePath, width, height, startUs);
+        this.running = true;
+        
+        this.ctxPtr = FFmpeg.openCtxNoSound(this.videoFilePath, this.width, this.height, startUs);
         // print("Opened FFmpeg ctx, ptr =", ctxPtr);
 
-        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
+        if (this.ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
 
-        videoDurationSeconds = FFmpeg.getDurationSeconds(ctxPtr);
-        videoDurationUs = FFmpeg.getDurationUs(ctxPtr);
+        this.videoDurationSeconds = FFmpeg.getDurationSeconds(this.ctxPtr);
+        this.videoDurationUs = FFmpeg.getDurationUs(this.ctxPtr);
 
-        videoFps = FFmpeg.getVideoFps(ctxPtr);
-        spf = 1 / videoFps;
+        this.videoFps = FFmpeg.getVideoFps(this.ctxPtr);
+        this.spf = 1 / this.videoFps;
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
         if (this.currentVideoTextureId != 0) {
-            this.textureBuffer = new RGBATextureBuffer(3, currentVideoTextureId, width, height);
+            this.textureBuffer = new RGBATextureBuffer(3, this.currentVideoTextureId, this.width, this.height);
             this.doCleanup = false;
             return;
         }
@@ -58,23 +58,24 @@ public class GroupedMuteDecoder extends MuteDecoder {
 
     @Override
     public void finish() {
-        if (!running) return;
+        if (!this.running) return;
         // print("Stopping GroupedMuteDecoder decoderLoop thread");
-        running = false;
-        timeAccumulator = 0f;
-        videoFps = 0f;
+        this.running = false;
+        this.timeAccumulator = 0f;
+        this.videoFps = 0f;
 
-        if (ctxPtr != 0) {
+        if (this.ctxPtr != 0) {
             print("Closing FFmpeg ctx");
-            FFmpeg.closeCtx(ctxPtr);
-            ctxPtr = 0;
+            FFmpeg.closeCtx(this.ctxPtr);
+            this.ctxPtr = 0;
         }
 
         // print("Clearing Texture/Video Buffer");
-        synchronized(textureBuffer) {
-            textureBuffer.clear();
-            if (doCleanup) {
-                textureBuffer.cleanupTexStorage();
+        synchronized(this.textureBuffer) {
+            this.textureBuffer.clear();
+            if (this.doCleanup) {
+                this.textureBuffer.cleanupTexStorage();
+                this.currentVideoTextureId = 0;
             }
         }
     }

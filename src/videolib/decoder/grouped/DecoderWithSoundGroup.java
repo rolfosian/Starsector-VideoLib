@@ -16,7 +16,7 @@ public class DecoderWithSoundGroup extends DecoderGroup {
 
     @Override
     protected void decodeLoop() {
-        while (running) {
+        while (this.running) {
             for (Decoder decoder : getTmpDecoderList()) {
                 TexBuffer textureBuffer = decoder.getTextureBuffer();
 

@@ -71,8 +71,8 @@ public class MuteDecoder implements Decoder {
         // print("MuteDecoder decodeLoop started");
         // try {
         while (running) {
-            if (!textureBuffer.isFull()) {
-                VideoFrame f = FFmpeg.readFrameNoSound(ctxPtr);
+            if (!this.textureBuffer.isFull()) {
+                VideoFrame f = FFmpeg.readFrameNoSound(this.ctxPtr);
 
                 if (f != null) {
                     synchronized (textureBuffer) {
@@ -83,12 +83,12 @@ public class MuteDecoder implements Decoder {
 
                 // EOF or Error past this point
 
-                if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
-                    logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(ctxPtr)
+                if (FFmpeg.getErrorStatus(this.ctxPtr) != FFmpeg.AVERROR_EOF) {
+                    logger.error("FFmpeg error for file " + this.videoFilePath + ": " + FFmpeg.getErrorMessage(this.ctxPtr)
                     + ", interrupting main thread...",
-                    new RuntimeException(FFmpeg.getErrorMessage(ctxPtr)));
+                    new RuntimeException(FFmpeg.getErrorMessage(this.ctxPtr)));
 
-                    FFmpeg.closeCtx(ctxPtr);
+                    FFmpeg.closeCtx(this.ctxPtr);
                     ctxPtr = 0;
                     textureBuffer.clear();
                     VideoLibModPlugin.getMainThread().interrupt();
@@ -98,19 +98,19 @@ public class MuteDecoder implements Decoder {
                 if (this.PLAY_MODE != PlayMode.SEEKING) {
                     synchronized(seekLock) {
                         if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
-                            PlayerControlPanel controlPanel = videoProjector.getControlPanel();
+                            PlayerControlPanel controlPanel = this.videoProjector.getControlPanel();
 
                             if (controlPanel != null) {
-                                if (!videoProjector.paused()) {
-                                    while (!textureBuffer.isEmpty()) {
+                                if (!this.videoProjector.paused()) {
+                                    while (!this.textureBuffer.isEmpty()) {
                                         sleep(1);
-                                        if (videoProjector.paused()) break;
-                                        if (!videoProjector.isRendering()) break;
+                                        if (this.videoProjector.paused()) break;
+                                        if (!this.videoProjector.isRendering()) break;
                                     }
                                     seekWithoutClearingBuffer(0);
     
-                                    if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
-                                        videoProjector.pause();
+                                    if (this.videoProjector.getPlayMode() != PlayMode.SEEKING) {
+                                        this.videoProjector.pause();
                                         
                                         controlPanel.setProgressDisplay(currentVideoPts);
                                         controlPanel.getPlayButton().setEnabled(true);
@@ -119,41 +119,41 @@ public class MuteDecoder implements Decoder {
                                     }
 
                                 } else {
-                                    while (!textureBuffer.isEmpty()) {
+                                    while (!this.textureBuffer.isEmpty()) {
                                         sleep(1);
-                                        if (videoProjector.paused()) break;
-                                        if (!videoProjector.isRendering()) break;
+                                        if (this.videoProjector.paused()) break;
+                                        if (!this.videoProjector.isRendering()) break;
                                     }
                                     controlPanel.setProgressDisplay(currentVideoPts);
                                     controlPanel.getPlayButton().setEnabled(true);
                                     controlPanel.getPauseButton().setEnabled(false);
                                     controlPanel.getStopButton().setEnabled(true);
                                     
-                                    seekWithoutClearingBuffer(0);
+                                    this.seekWithoutClearingBuffer(0);
                                     continue;
                                 }
                             } else {
                                 switch(this.EOF_MODE) {
                                     case PLAY_UNTIL_END:
-                                        while (!textureBuffer.isEmpty()) {
+                                        while (!this.textureBuffer.isEmpty()) {
                                             sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
+                                            if (this.videoProjector.paused()) break;
+                                            if (!this.videoProjector.isRendering()) break;
                                         }
-                                        seekWithoutClearingBuffer(0);
-                                        videoProjector.pause();
-                                        videoProjector.setPlayMode(PlayMode.SEEKING);
-                                        videoProjector.setIsRendering(false);
+                                        this.seekWithoutClearingBuffer(0);
+                                        this.videoProjector.pause();
+                                        this.videoProjector.setPlayMode(PlayMode.SEEKING);
+                                        this.videoProjector.setIsRendering(false);
                                         break;
 
                                     case PAUSE:
-                                        while (!textureBuffer.isEmpty()) {
+                                        while (!this.textureBuffer.isEmpty()) {
                                             sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
+                                            if (this.videoProjector.paused()) break;
+                                            if (!this.videoProjector.isRendering()) break;
                                         }
-                                        seekWithoutClearingBuffer(0);
-                                        videoProjector.pause();
+                                        this.seekWithoutClearingBuffer(0);
+                                        this.videoProjector.pause();
                                         break;
 
                                     default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
@@ -163,7 +163,7 @@ public class MuteDecoder implements Decoder {
                                 }
                             }
                         } else {
-                            seekWithoutClearingBuffer(0);
+                            this.seekWithoutClearingBuffer(0);
                         }
                         
                     }
@@ -186,66 +186,66 @@ public class MuteDecoder implements Decoder {
     }
 
     public int getCurrentVideoTextureId(float deltaTime) {
-        timeAccumulator += deltaTime;
+        this.timeAccumulator += deltaTime;
 
-        synchronized(textureBuffer) {
-            while (timeAccumulator >= spf) {
-                timeAccumulator -= spf;
+        synchronized(this.textureBuffer) {
+            while (this.timeAccumulator >= spf) {
+                this.timeAccumulator -= spf;
                 
-                currentVideoPts = textureBuffer.update();
+                this.currentVideoPts = this.textureBuffer.update();
             }
         }
-        return currentVideoTextureId;
+        return this.currentVideoTextureId;
     }
 
     public int getCurrentVideoTextureId() {
-        while (textureBuffer.isEmpty()) sleep(1); 
+        while (this.textureBuffer.isEmpty()) sleep(1); 
 
-        synchronized(textureBuffer) {
-            currentVideoPts = textureBuffer.update();
+        synchronized(this.textureBuffer) {
+            this.currentVideoPts = this.textureBuffer.update();
         }
-        return currentVideoTextureId;
+        return this.currentVideoTextureId;
     }
 
     public int getCurrentVideoTextureIdDoNotUpdatePts() {
-        while (textureBuffer.isEmpty()) sleep(1); 
+        while (this.textureBuffer.isEmpty()) sleep(1); 
 
-        synchronized(textureBuffer) {
-            textureBuffer.update();
+        synchronized(this.textureBuffer) {
+            this.textureBuffer.update();
         }
-        return currentVideoTextureId;
+        return this.currentVideoTextureId;
     }
 
-    public float getVideoFps() { return videoFps; }
+    public float getVideoFps() { return this.videoFps; }
 
     public void start(long startUs) {
-        if (running) return;
-        // print("Starting MuteDecoder for file", videoFilePath);
-        running = true;
+        if (this.running) return;
+        // print("Starting MuteDecoder for file", this.videoFilePath);
+        this.running = true;
 
-        ctxPtr = FFmpeg.openCtxNoSound(videoFilePath, width, height, startUs);
+        this.ctxPtr = FFmpeg.openCtxNoSound(this.videoFilePath, this.width, this.height, startUs);
         // print("Opened FFmpeg ctx, ptr =", ctxPtr);
 
-        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
+        if (this.ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + this.videoFilePath);
 
-        videoDurationSeconds = FFmpeg.getDurationSeconds(ctxPtr);
-        videoDurationUs = FFmpeg.getDurationUs(ctxPtr);
+        this.videoDurationSeconds = FFmpeg.getDurationSeconds(this.ctxPtr);
+        this.videoDurationUs = FFmpeg.getDurationUs(this.ctxPtr);
 
-        videoFps = FFmpeg.getVideoFps(ctxPtr);
-        spf = 1 / videoFps;
+        this.videoFps = FFmpeg.getVideoFps(this.ctxPtr);
+        this.spf = 1 / this.videoFps;
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
 
-        // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
+        // boolean isRGBA = FFmpeg.isRGBA(this.ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(10) : new TextureBuffer(10);
         this.textureBuffer = new RGBATextureBuffer(3);
         this.textureBuffer.initTexStorage(width, height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
 
-        decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
-        decodeThread.start();
+        this.decodeThread = new Thread(this::decodeLoop, "MuteDecoder");
+        this.decodeThread.start();
         // print("MuteDecoder decoderLoop thread started");
 
         while(textureBuffer.isEmpty()) sleep(1);
@@ -254,58 +254,58 @@ public class MuteDecoder implements Decoder {
 
     public void finish() {
         // print("Stopping MuteDecoder decoderLoop thread");
-        running = false;
-        timeAccumulator = 0f;
-        videoFps = 0f;
+        this.running = false;
+        this.timeAccumulator = 0f;
+        this.videoFps = 0f;
 
         // print("Joining MuteDecoder decoderLoop thread");
         try {
-            decodeThread.join();
+            this.decodeThread.join();
         } catch(InterruptedException e) {
             throw new RuntimeException(e);
         }
 
-        if (ctxPtr != 0) {
+        if (this.ctxPtr != 0) {
             print("Closing FFmpeg ctx");
-            FFmpeg.closeCtx(ctxPtr);
-            ctxPtr = 0;
+            FFmpeg.closeCtx(this.ctxPtr);
+            this.ctxPtr = 0;
         }
 
         // print("Clearing Texture/Video Buffer");
-        synchronized(textureBuffer) {
-            textureBuffer.clear();
-            textureBuffer.cleanupTexStorage();
+        synchronized(this.textureBuffer) {
+            this.textureBuffer.clear();
+            this.textureBuffer.cleanupTexStorage();
         }
     }
 
     public void stop() {
-        PLAY_MODE = PlayMode.STOPPED;
-        timeAccumulator = 0f;
-        seek(0);
+        this.PLAY_MODE = PlayMode.STOPPED;
+        this.timeAccumulator = 0f;
+        this.seek(0);
     }
 
     public void restart(long startUs) {
-        finish();
-        start(startUs);
+        this.finish();
+        this.start(startUs);
     }
 
     public void seek(long targetUs) {
-        synchronized(seekLock) {
+        synchronized(this.seekLock) {
             // print("Seeking to", targetUs, "µs");
 
-            FFmpeg.seek(ctxPtr, targetUs);
+            FFmpeg.seek(this.ctxPtr, targetUs);
     
-            synchronized(textureBuffer) {
-                textureBuffer.clear();
+            synchronized(this.textureBuffer) {
+                this.textureBuffer.clear();
             }
             this.currentVideoPts = targetUs;
         }
     }
 
     public void seekWithoutClearingBuffer(long targetUs) {
-        synchronized(seekLock) {
+        synchronized(this.seekLock) {
             // print("Seeking to", targetUs, "µs");
-            FFmpeg.seek(ctxPtr, targetUs);
+            FFmpeg.seek(this.ctxPtr, targetUs);
         }
     }
 
@@ -360,7 +360,7 @@ public class MuteDecoder implements Decoder {
     }
 
     public int getErrorStatus() {
-        return FFmpeg.getErrorStatus(ctxPtr);
+        return FFmpeg.getErrorStatus(this.ctxPtr);
     }
 
     public void setVideoFilePath(String path) {

@@ -16,9 +16,9 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     public DecoderGroup() {
         super();
-        decodeThread = new Thread(this::decodeLoop, "DecoderGroup");
-        running = true;
-        decodeThread.start();
+        this.decodeThread = new Thread(this::decodeLoop, "DecoderGroup");
+        this.running = true;
+        this.decodeThread.start();
     }
 
     protected abstract void decodeLoop();
@@ -32,7 +32,7 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
         for (Decoder decoder : new ArrayList<>(this)) {
             this.remove(decoder);
         }
-        running = false;
+        this.running = false;
     }
 
     protected synchronized final List<Decoder> getTmpDecoderList() {

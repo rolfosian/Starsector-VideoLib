@@ -85,18 +85,18 @@ public class DecoderWithSound implements Decoder {
 
     private void decodeLoop() {
         // print("DecoderWithSound decodeLoop started");
-        while (running) {
-            if (!textureBuffer.isFull() && !audioBuffer.isFull()) {
-                Frame f = FFmpeg.read(ctxPtr);
+        while (this.running) {
+            if (!this.textureBuffer.isFull() && !this.audioBuffer.isFull()) {
+                Frame f = FFmpeg.read(this.ctxPtr);
 
                 if (f != null) {
                     if (f instanceof VideoFrame vf) {
-                        synchronized (textureBuffer) {
-                            textureBuffer.add(vf);
+                        synchronized (this.textureBuffer) {
+                            this.textureBuffer.add(vf);
                         }
                     } else {
-                        synchronized(audioBuffer) {
-                            audioBuffer.add((AudioFrame)f);
+                        synchronized(this.audioBuffer) {
+                            this.audioBuffer.add((AudioFrame)f);
                         }
                     }
                     continue;
@@ -104,15 +104,15 @@ public class DecoderWithSound implements Decoder {
 
                 // EOF or Error past this point
 
-                if (FFmpeg.getErrorStatus(ctxPtr) != FFmpeg.AVERROR_EOF) {
-                    logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(ctxPtr)
+                if (FFmpeg.getErrorStatus(this.ctxPtr) != FFmpeg.AVERROR_EOF) {
+                    logger.error("FFmpeg error for file " + videoFilePath + ": " + FFmpeg.getErrorMessage(this.ctxPtr)
                     + ", interrupting main thread...",
-                    new RuntimeException(FFmpeg.getErrorMessage(ctxPtr)));
+                    new RuntimeException(FFmpeg.getErrorMessage(this.ctxPtr)));
 
-                    FFmpeg.closeCtx(ctxPtr);
-                    ctxPtr = 0;
+                    FFmpeg.closeCtx(this.ctxPtr);
+                    this.ctxPtr = 0;
                     textureBuffer.clear();
-                    audioBuffer.clear();
+                    this.audioBuffer.clear();
 
                     VideoLibModPlugin.getMainThread().interrupt();
                     return;
@@ -121,23 +121,23 @@ public class DecoderWithSound implements Decoder {
                 if (this.PLAY_MODE != PlayMode.SEEKING) {
                     synchronized(seekLock) {
                         if (this.EOF_MODE == EOFMode.PAUSE || this.EOF_MODE == EOFMode.PLAY_UNTIL_END) {
-                            PlayerControlPanel controlPanel = videoProjector.getControlPanel();
+                            PlayerControlPanel controlPanel = this.videoProjector.getControlPanel();
 
                             if (controlPanel != null) {
-                                if (!videoProjector.paused()) {
-                                    while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
+                                if (!this.videoProjector.paused()) {
+                                    while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty()) {
                                         sleep(1);
-                                        if (videoProjector.paused()) break;
-                                        if (!videoProjector.isRendering()) break;
+                                        if (this.videoProjector.paused()) break;
+                                        if (!this.videoProjector.isRendering()) break;
                                     }
-                                    videoProjector.pause();
-                                    speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
-                                    speakers.pause();
+                                    this.videoProjector.pause();
+                                    this.speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                    this.speakers.pause();
                                     seekWithoutClearingBuffer(0);
     
                                     if (videoProjector.getPlayMode() != PlayMode.SEEKING) {
                                         
-                                        controlPanel.setProgressDisplay(currentVideoPts);
+                                        controlPanel.setProgressDisplay(this.currentVideoPts);
                                         controlPanel.getPlayButton().setEnabled(true);
                                         controlPanel.getPauseButton().setEnabled(false);
                                         controlPanel.getStopButton().setEnabled(true);
@@ -145,17 +145,17 @@ public class DecoderWithSound implements Decoder {
                                     continue;
 
                                 } else {
-                                    while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty()) {
+                                    while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty()) {
                                         sleep(1);
-                                        if (videoProjector.paused()) break;
-                                        if (!videoProjector.isRendering()) break;
+                                        if (this.videoProjector.paused()) break;
+                                        if (!this.videoProjector.isRendering()) break;
                                     }
-                                    videoProjector.pause();
-                                    speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
-                                    speakers.pause();
+                                    this.videoProjector.pause();
+                                    this.speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                    this.speakers.pause();
                                     seekWithoutClearingBuffer(0);
 
-                                    controlPanel.setProgressDisplay(currentVideoPts);
+                                    controlPanel.setProgressDisplay(this.currentVideoPts);
                                     controlPanel.getPlayButton().setEnabled(true);
                                     controlPanel.getPauseButton().setEnabled(false);
                                     controlPanel.getStopButton().setEnabled(true);
@@ -165,30 +165,30 @@ public class DecoderWithSound implements Decoder {
                             } else {
                                 switch(this.EOF_MODE) {
                                     case PLAY_UNTIL_END:
-                                        while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                                        while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty() && AL10.alGetSourcei(this.speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                             sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
+                                            if (this.videoProjector.paused()) break;
+                                            if (!this.videoProjector.isRendering()) break;
                                         }
                                         seekWithoutClearingBuffer(0);
-                                        videoProjector.pause();
-                                        speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
-                                        speakers.pause();
+                                        this.videoProjector.pause();
+                                        this.speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                        this.speakers.pause();
 
-                                        videoProjector.setPlayMode(PlayMode.SEEKING);
-                                        videoProjector.setIsRendering(false);
+                                        this.videoProjector.setPlayMode(PlayMode.SEEKING);
+                                        this.videoProjector.setIsRendering(false);
                                         break;
 
                                     case PAUSE:
-                                        while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                                        while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty() && AL10.alGetSourcei(this.speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                             sleep(1);
-                                            if (videoProjector.paused()) break;
-                                            if (!videoProjector.isRendering()) break;
+                                            if (this.videoProjector.paused()) break;
+                                            if (!this.videoProjector.isRendering()) break;
                                         }
-                                        seekWithoutClearingBuffer(0);
-                                        videoProjector.pause();
-                                        speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
-                                        speakers.pause();
+                                        this.seekWithoutClearingBuffer(0);
+                                        this.videoProjector.pause();
+                                        this.speakers.restart(); // HOLY FUCKIBG BANDAID WHY DOES THIS WORK TO CURB A/V DESYNC BUT NOT SIMPLY STOP()
+                                        this.speakers.pause();
                                         break;
 
                                     default: // TODO: impl FINISH case to cleanup; we cant do it from this thread because we need the gl context to delete the textures i believe
@@ -198,14 +198,14 @@ public class DecoderWithSound implements Decoder {
                                 }
                             }
                         } else {
-                            while (AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                            while (AL10.alGetSourcei(this.speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                 sleep(1);
-                                if (videoProjector.paused()) break;
-                                if (!videoProjector.isRendering()) break;
+                                if (this.videoProjector.paused()) break;
+                                if (!this.videoProjector.isRendering()) break;
                             } 
-                            speakers.stop();
-                            speakers.play();
-                            seekWithoutClearingBuffer(0);
+                            this.speakers.stop();
+                            this.speakers.play();
+                            this.seekWithoutClearingBuffer(0);
                             continue;
                         }
                     }
@@ -215,29 +215,29 @@ public class DecoderWithSound implements Decoder {
                 } else {
                     switch(this.EOF_MODE) {
                         case PAUSE:
-                            seekWithoutClearingBuffer(videoDurationUs);
-                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                            seekWithoutClearingBuffer(this.videoDurationUs);
+                            while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty() && AL10.alGetSourcei(this.speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                 sleep(1);
-                                if (!videoProjector.isRendering()) break;
+                                if (!this.videoProjector.isRendering()) break;
                             }
-                            videoProjector.pause();
-                            speakers.restart();
-                            speakers.pause();
+                            this.videoProjector.pause();
+                            this.speakers.restart();
+                            this.speakers.pause();
                             break;
 
                         case PLAY_UNTIL_END:
-                            seekWithoutClearingBuffer(0);
-                            while (!textureBuffer.isEmpty() && !audioBuffer.isEmpty() && AL10.alGetSourcei(speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
+                            this.seekWithoutClearingBuffer(0);
+                            while (!this.textureBuffer.isEmpty() && !this.audioBuffer.isEmpty() && AL10.alGetSourcei(this.speakersSourceId, AL10.AL_SOURCE_STATE) == AL10.AL_PLAYING) {
                                 sleep(1);
-                                if (!videoProjector.isRendering()) break;
+                                if (!this.videoProjector.isRendering()) break;
                             }
-                            videoProjector.pause();
-                            speakers.restart();
-                            speakers.pause();
+                            this.videoProjector.pause();
+                            this.speakers.restart();
+                            this.speakers.pause();
                             break;
                             
                         case LOOP:
-                            seekWithoutClearingBuffer(0);
+                            this.seekWithoutClearingBuffer(0);
                             continue;
                         default:
                             break;
@@ -299,40 +299,40 @@ public class DecoderWithSound implements Decoder {
     public float getVideoFps() { return videoFps; }
 
     public void start(long startUs) {
-        if (running) return;
+        if (this.running) return;
         // print("Starting DecoderWithSound for file", videoFilePath);
-        running = true;
+        this.running = true;
 
-        ctxPtr = FFmpeg.openCtx(videoFilePath, width, height, startUs);
-        // print("Opened FFmpeg ctx, ptr =", ctxPtr);
+        this.ctxPtr = FFmpeg.openCtx(this.videoFilePath, this.width, this.height, startUs);
+        // print("Opened FFmpeg ctx, ptr =", this.ctxPtr);
 
-        if (ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + videoFilePath);
+        if (this.ctxPtr == 0) throw new RuntimeException("Failed to initiate FFmpeg ctx context for " + this.videoFilePath);
 
-        videoDurationSeconds = FFmpeg.getDurationSeconds(ctxPtr);
-        videoDurationUs = FFmpeg.getDurationUs(ctxPtr);
+        this.videoDurationSeconds = FFmpeg.getDurationSeconds(this.ctxPtr);
+        this.videoDurationUs = FFmpeg.getDurationUs(this.ctxPtr);
 
-        videoFps = FFmpeg.getVideoFps(ctxPtr);
-        spf = 1 / videoFps;
+        this.videoFps = FFmpeg.getVideoFps(this.ctxPtr);
+        this.spf = 1 / this.videoFps;
         // print("Video Framerate =", videoFps);
         // print("Video Duration=", videoDurationSeconds);
         // print("Video DurationUs=", videoDurationUs);
 
-        // boolean isRGBA = FFmpeg.isRGBA(ctxPtr);
+        // boolean isRGBA = FFmpeg.isRGBA(this.ctxPtr);
         // print("isRGBA=", isRGBA);
         // this.textureBuffer = isRGBA ? new RGBATextureBuffer(30) : new TextureBuffer(30);
         this.textureBuffer = new RGBATextureBuffer(30);
-        this.textureBuffer.initTexStorage(width, height);
+        this.textureBuffer.initTexStorage(this.width, this.height);
         this.currentVideoTextureId = this.textureBuffer.getTextureId();
         // this.textureBuffer = isRGBA ? new RGBATextureBufferList() : new TextureBufferList();
 
-        audioChannels = FFmpeg.getAudioChannels(ctxPtr);
-        audioSampleRate = FFmpeg.getAudioSampleRate(ctxPtr);
+        this.audioChannels = FFmpeg.getAudioChannels(this.ctxPtr);
+        this.audioSampleRate = FFmpeg.getAudioSampleRate(this.ctxPtr);
         // print("Audio Channels=", audioChannels);
         // print("Audio Sample Rate=", audioSampleRate);
 
-        videoDecodeThread = new Thread(this::decodeLoop, "DecoderWithSound-decodeLoop");
-        videoDecodeThread.start();
-        while(!textureBuffer.isFull() && !audioBuffer.isFull()) sleep(1);
+        this.videoDecodeThread = new Thread(this::decodeLoop, "DecoderWithSound-decodeLoop");
+        this.videoDecodeThread.start();
+        while(!this.textureBuffer.isFull() && !this.audioBuffer.isFull()) sleep(1);
 
         // print("DecoderWithSound decoderLoop thread started");
         return;
@@ -340,36 +340,36 @@ public class DecoderWithSound implements Decoder {
 
     public void finish() {
         print("Stopping DecoderWithSound thread");
-        running = false;
-        timeAccumulator = 0f;
-        videoFps = 0f;
+        this.running = false;
+        this.timeAccumulator = 0f;
+        this.videoFps = 0f;
 
         // print("Joining DecoderWithSound thread");
         try {
-            videoDecodeThread.join();
+            this.videoDecodeThread.join();
         } catch(InterruptedException e) {
             throw new RuntimeException(e);
         }
 
-        if (ctxPtr != 0) {
+        if (this.ctxPtr != 0) {
             // print("Closing FFmpeg ctx");
-            FFmpeg.closeCtx(ctxPtr);
-            ctxPtr = 0;
+            FFmpeg.closeCtx(this.ctxPtr);
+            this.ctxPtr = 0;
         }
 
         // print("Clearing Texture/Video Buffer");
-        synchronized(textureBuffer) {
-            textureBuffer.clear();
-            textureBuffer.cleanupTexStorage();
+        synchronized(this.textureBuffer) {
+            this.textureBuffer.clear();
+            this.textureBuffer.cleanupTexStorage();
         }
-        synchronized(audioBuffer) {
-            audioBuffer.clear();
+        synchronized(this.audioBuffer) {
+            this.audioBuffer.clear();
         }
     }
 
     public void stop() {
-        PLAY_MODE = PlayMode.STOPPED;
-        timeAccumulator = 0f;
+        this.PLAY_MODE = PlayMode.STOPPED;
+        this.timeAccumulator = 0f;
         seek(0);
     }
 
@@ -379,19 +379,19 @@ public class DecoderWithSound implements Decoder {
     }
 
     public void seek(long targetUs) {
-        synchronized(seekLock) {
+        synchronized(this.seekLock) {
             // print("Seeking to", targetUs, "µs");
 
-            FFmpeg.seek(ctxPtr, targetUs);
+            FFmpeg.seek(this.ctxPtr, targetUs);
     
-            synchronized(textureBuffer) {
-                textureBuffer.clear();
+            synchronized(this.textureBuffer) {
+                this.textureBuffer.clear();
             }
-            synchronized(audioBuffer) {
-                audioBuffer.clear();
+            synchronized(this.audioBuffer) {
+                this.audioBuffer.clear();
             }
-            speakers.stop();
-            speakers.notifySeek(targetUs);
+            this.speakers.stop();
+            this.speakers.notifySeek(targetUs);
 
             this.currentVideoPts = targetUs;
         }
@@ -475,7 +475,7 @@ public class DecoderWithSound implements Decoder {
     }
 
     public int getErrorStatus() {
-        return FFmpeg.getErrorStatus(ctxPtr);
+        return FFmpeg.getErrorStatus(this.ctxPtr);
     }
 
     public void setVideoFilePath(String path) {
