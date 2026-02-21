@@ -126,7 +126,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     @Override
     public void onGameLoad(boolean newGame) {
-        Global.getSector().addTransientScript(VideoLibEveryFrame.getInstance());
+        Global.getSector().addTransientScript(new VideoLibEveryFrame());
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
 
         VideoLibCampaignListener campaignListener = new VideoLibCampaignListener();
