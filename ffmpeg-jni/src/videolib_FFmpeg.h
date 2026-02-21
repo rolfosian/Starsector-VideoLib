@@ -192,14 +192,6 @@ JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_isRGBA
 JNIEXPORT jboolean JNICALL Java_videolib_ffmpeg_FFmpeg_fileExists
   (JNIEnv *, jclass, jstring);
 
-/*
- * Class:     videolib_ffmpeg_FFmpeg
- * Method:    estimateCtxMem
- * Signature: (Ljava/lang/String;IIJ)V
- */
-JNIEXPORT jint JNICALL Java_videolib_ffmpeg_FFmpeg_estimateCtxMem
-  (JNIEnv *, jclass, jstring, jint, jint, jlong);
-
 #ifdef __cplusplus
 }
 #endif

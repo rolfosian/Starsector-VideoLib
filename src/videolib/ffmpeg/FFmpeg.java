@@ -54,8 +54,6 @@ public class FFmpeg {
     public static final int AVERROR_HTTP_OTHER_4XX     = -1482175736;
     public static final int AVERROR_HTTP_SERVER_ERROR  = -1482175992;
 
-    public static native int estimateCtxMem(String fileName, int width, int height);
-
     public static boolean hasError(long ptr) {
         return getErrorStatus(ptr) != 0;
     }
