@@ -32,6 +32,7 @@ import com.fs.starfarer.api.combat.EngagementResultAPI;
 
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
+import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.Objectives;
 
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -115,6 +116,44 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         }
     }
 
+    Map<String, String> factionCrests = new HashMap<>();
+    {
+        for (FactionAPI faction : Global.getSector().getAllFactions()) {
+            factionCrests.put(faction.getId(), faction.getCrest());
+        }
+    }
+    @Override // account for faction crest change
+    public void reportEconomyTick(int iterIndex) {
+        for (FactionAPI faction : Global.getSector().getAllFactions()) {
+            String oldCrest = factionCrests.get(faction.getId());
+            if (oldCrest == null || !oldCrest.equals(faction.getCrest())) {
+                String id = faction.getId();
+                String newCrest = faction.getCrest();
+                factionCrests.put(id, newCrest);
+
+                for (SectorEntityToken entity : Global.getSector().getCustomEntitiesWithTag("CONTESTED_BILLBOARD")) {
+                    CampaignBillboard billboard = (CampaignBillboard) entity;
+                    String billboardOldCrest = billboard.getFactionSpriteNameMap().get(id);
+
+                    if (billboard.isContested() && (billboardOldCrest == null || billboardOldCrest.equals(oldCrest))) {
+                        ((CampaignBillboardPlugin)billboard.getCustomPlugin()).getFactionSpriteMap().put(id, newCrest);
+                        billboard.getFactionSpriteNameMap().put(id, newCrest);
+
+                        if (billboard.getCurrSpriteName().equals(oldCrest)) {
+                            billboard.setCurrSpriteName(oldCrest);
+                            billboard.setVFrameSprite(Global.getSettings().getSprite(newCrest));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static final String BACK_HOME = "VL_BACK_HOME";
+    private static final String LEAVE = "VL_LEAVE";
+    private static final String TAKE_CONTROL = "VL_TAKE_CONTROL";
+    private static final String TAKE_CONTROL_CONFIRM = "VL_TAKE_CONTROL_CONFIRM";
+
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
         if (dialog.getInteractionTarget() != null && dialog.getInteractionTarget().getCustomPlugin() instanceof CampaignBillboardPlugin plugin) {
@@ -135,18 +174,18 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
                         TextPanelAPI textPanel = dialog.getTextPanel();
 
                         switch(String.valueOf(optionData)) {
-                            case "TAKE_CONTROL":
+                            case TAKE_CONTROL:
                                 textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
 
                                 textPanel.addPara("Taking control of the " + billboard.getName() + " billboard will grant your in-system fleets and colonies the \"benefits\" it provides.");
                                 textPanel.addPara(billboard.getFaction().getDisplayNameWithArticle() + " will certainly regard such a takeover of \"vital\" infrastructure as an act of war.");
 
                                 optionPanel.clearOptions();
-                                optionPanel.addOption("Proceed", "TAKE_CONTROL_CONFIRM");
-                                optionPanel.addOption("Never mind", "BACK_HOME");
+                                optionPanel.addOption("Proceed", TAKE_CONTROL_CONFIRM);
+                                optionPanel.addOption("Never mind", BACK_HOME);
                                 break;
 
-                            case "TAKE_CONTROL_CONFIRM":
+                            case TAKE_CONTROL_CONFIRM:
                                 textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
 
                                 new Objs(dialog, optionPanel, textPanel, dialog.getInteractionTarget()).control(Factions.PLAYER);
@@ -154,15 +193,17 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
                                 handleHome(dialog, billboard, false);
                                 break;
 
-                            case "BACK_HOME":
+                            case BACK_HOME:
                                 textPanel.addPara(text, Global.getSector().getPlayerFaction().getBrightUIColor());
                                 handleHome(dialog, billboard, false);
                                 break;
 
-                            case "leave":
+                            case LEAVE:
                                 dialog.dismiss();
                                 break;
+
                             default:
+                                super.optionSelected(text, optionData);
                                 break;
                         }
                     }
@@ -179,7 +220,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         }
     }
 
-    private static void handleHome(InteractionDialogAPI dialog, CampaignBillboard billboard, boolean fresh) {
+    public static void handleHome(InteractionDialogAPI dialog, CampaignBillboard billboard, boolean fresh) {
         String factionId = billboard.getFaction().getId();
         String factionDisplayName = billboard.getFaction().getDisplayName();
         String billboardName = billboard.getName();
@@ -188,9 +229,9 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         optionPanel.clearOptions();
 
         if (!factionId.equals(Factions.PLAYER)) {
-            optionPanel.addOption("Take control of the " + billboardName , "TAKE_CONTROL");
-            optionPanel.addOption("Leave", "leave");
-            optionPanel.setShortcut("leave", Keyboard.KEY_ESCAPE, false, false, false, false);
+            optionPanel.addOption("Take control of the " + billboardName , TAKE_CONTROL);
+            optionPanel.addOption("Leave", LEAVE);
+            optionPanel.setShortcut(LEAVE, Keyboard.KEY_ESCAPE, false, false, false, false);
             
             if (fresh) {
                 dialog.getTextPanel().clear();
@@ -220,8 +261,8 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
             dialog.getTextPanel().addPara("The " + billboardName + " billboard is under %s control.", billboard.getFaction().getBaseUIColor(), factionDisplayName);
         }
 
-        optionPanel.addOption("Leave", "leave");
-        optionPanel.setShortcut("leave", Keyboard.KEY_ESCAPE, false, false, false, false);
+        optionPanel.addOption("Leave", LEAVE);
+        optionPanel.setShortcut(LEAVE, Keyboard.KEY_ESCAPE, false, false, false, false);
 
         return;
     }
@@ -241,7 +282,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         // }
     }
 
-    private static boolean isHostileFleetNearbyAndAware() {
+    public static boolean isHostileFleetNearbyAndAware() {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         for (CampaignFleetAPI fleet : playerFleet.getContainingLocation().getFleets()) {
             if (fleet.getAI() == null) continue; // dormant Remnant fleets
@@ -278,7 +319,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         return false;
     }
 
-    private static boolean isFactionFleetNearbyAndAware(String factionId) {
+    public static boolean isFactionFleetNearbyAndAware(String factionId) {
         CampaignFleetAPI playerFleet = Global.getSector().getPlayerFleet();
         for (CampaignFleetAPI fleet : playerFleet.getContainingLocation().getFleets()) {
             if (fleet.getFaction().isPlayerFaction()) continue;

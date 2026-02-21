@@ -27,6 +27,14 @@ public class RotationalTargeter extends BillboardFacingDelegate {
         }
     }
 
+    /** Assumes the orbit and orbit focus of the billboard's entity are non-null */
+    public static final class PointAwayFromOrbitFocus extends BillboardFacingDelegate {
+        @Override
+        public float getAngle(CampaignBillboard billboard) {
+            return angleBetween(billboard.getLocation(), billboard.getBillboardEntity().getOrbit().getFocus().getLocation()) - 270f;
+        }
+    }
+
     protected static final float MAX_STEP = 0.05f;
 
     private float currentAngle = 0f;

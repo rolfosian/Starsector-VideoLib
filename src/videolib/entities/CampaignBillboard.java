@@ -120,6 +120,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         public void execute(InteractionDialogAPI dialog, CampaignBillboard billboard);
     }
 
+    /**Pseudo functional interface for the {@link RotationalTargeter} delegate to acquire its target*/
     public static abstract class TargetDelegate implements Serializable {
         public abstract SectorEntityToken target(CampaignBillboard billboard);
         
@@ -128,6 +129,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         }
     }
 
+    /**Delegate to get the angle at which the billboard will face*/
     public static abstract class BillboardFacingDelegate {
         protected SectorEntityToken currentTarget;
         protected TargetDelegate targeter;
@@ -160,7 +162,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
     private String currSpriteName;
     private Map<String, String> factionSpriteMap;
 
-    public CampaignBillboard(
+    protected CampaignBillboard(
         BaseLocation location,
         String id,
         String name,
@@ -170,7 +172,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this(location, id, name, type, factionId, -1.0f, -1.0f, null);
     }
 
-    public CampaignBillboard(
+    protected CampaignBillboard(
         BaseLocation location,
         String id,
         String name,
@@ -182,7 +184,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this(location, id, name, type, factionId, alphaMult, holoLensStructureScale, null);
     }
 
-    public CampaignBillboard(
+    protected CampaignBillboard(
         BaseLocation location,
         String id,
         String name,
@@ -195,7 +197,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this(location, id, name, type, factionId, -1.0f, -1.0f, null, alphaMult, holoLensStructureScale, angleDelegate, null);
     }
 
-    public CampaignBillboard(
+    protected CampaignBillboard(
         BaseLocation location,
         String id,
         String name,
@@ -211,14 +213,14 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this(location, id, name, type, factionId, spriteWidth, spriteHeight, null, alphaMult, holoLensStructureScale, angleDelegate, interactionDialogDelegate);
     }
 
-    public CampaignBillboard(BaseLocation location,
+    protected CampaignBillboard(BaseLocation location,
         String id,
         String name,
         String type,
         String factionId,
         float spriteWidth,
         float spriteHeight,
-        Map<String, Object> params,
+        CampaignBillboardParams params,
         float alphaMult,
         float holoLensStructureScale,
         BillboardFacingDelegate angleDelegate,
@@ -238,25 +240,83 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this.alphaMult = alphaMult < 0 ? 0.75f : alphaMult;
 
         this.currSpriteName = entity.getCustomEntitySpec().getSpriteName();
-        this.init(params);
+        this.ctorInit();
 
-        // for (String tag : new ArrayList<>(this.entity.getTags())) {
-        //     if (tag.startsWith("{")) {
-        //         this.setContested(true, this.factionSpriteMap = parseMap(tag));
-        //         this.entity.removeTag(tag);
-        //         break;
-        //     }
-        // }
-        
         location.addObject(this);
         location.addObject(this.entity);
+    }
+
+    private void init() {
+        this.ourSprite = new BillboardSprite();
+        transplantSpriteFields(entity.getSprite(), ourSprite);
+        customCampaignEntitySpriteVarHandle.set(entity, ourSprite);
+
+        this.setVFrameSprite(Global.getSettings().getSprite(this.currSpriteName));
+        this.texProjector = VideoPaths.getAutoTexProjectorOverride(this.currSpriteName);
+
+        if (this.getCustomInteractionDialogImageVisual() != null) {
+            InteractionDialogImageVisual orig = this.getCustomInteractionDialogImageVisual();
+            this.entity.setCustomInteractionDialogImageVisual(new InteractionDialogImageVisual(this.currSpriteName, orig.getSubImageDisplayWidth(), orig.getSubImageDisplayHeight()));
+        }
+    }
+
+    private void ctorInit() {
+        this.ourSprite = new BillboardSprite();
+        transplantSpriteFields(this.entity.getSprite(), this.ourSprite);
+        customCampaignEntitySpriteVarHandle.set(this.entity, this.ourSprite);
+
+        if (!(this.getPlugin() instanceof CampaignBillboardPlugin)) {
+            throw new RuntimeException("CustomCampaignEntityPlugin implementation for CampaignBillboard must be, or inherit from the class videolib.entities.CampaignBillboardPlugin. " + "Found: " 
+                + this.getPlugin() == null ? "null" : this.getPlugin().getClass().getCanonicalName());
+        }
+
+        CampaignBillboardPlugin plugin = (CampaignBillboardPlugin) this.getPlugin();
+        plugin.setBillboard(this);
+        this.factionSpriteMap = plugin.getFactionSpriteMap();
+
+        this.setVFrameSprite(Global.getSettings().getSprite(this.currSpriteName));
+        this.texProjector = VideoPaths.getAutoTexProjectorOverride(this.currSpriteName);
+
+        if (this.getCustomInteractionDialogImageVisual() != null) {
+            InteractionDialogImageVisual orig = this.getCustomInteractionDialogImageVisual();
+            this.entity.setCustomInteractionDialogImageVisual(new InteractionDialogImageVisual(currSpriteName, orig.getSubImageDisplayWidth(), orig.getSubImageDisplayHeight()));
+        }
+    }
+
+    protected Object readResolve() {
+        try {
+            readResolveHandle.invoke(this.entity);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+
+        Sprite sprite = this.entity.getSprite();
+        this.specWidth = sprite.getWidth();
+        this.specHeight = sprite.getHeight();
+
+        this.init();
+
+        if (this.texProjector != null && !this.texProjector.runWhilePaused()) {
+            if (this.pts != 0 && this.pts != this.texProjector.getDecoder().getCurrentVideoPts()) {
+                this.texProjector.getDecoder().seek(this.pts);
+                this.texProjector.getDecoder().getCurrentVideoTextureIdDoNotUpdatePts();
+            }
+        }
+        return this;
+    }
+
+    protected Object writeReplace() {
+        if (this.texProjector != null) {
+            this.pts = this.texProjector.getDecoder().getCurrentVideoPts();
+        }
+        return this;
     }
 
     public CustomCampaignEntityAPI getBillboardEntity() {
         return this.entity;
     }
 
-    public CampaignBillboardPlugin getPlugin() {
+    protected CampaignBillboardPlugin getPlugin() {
         return (CampaignBillboardPlugin) entity.getCustomPlugin();
     }
 
@@ -272,7 +332,16 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         return entity.getSprite();
     }
 
+    public String getCurrSpriteName() {
+        return this.currSpriteName;
+    }
+
+    public void setCurrSpriteName(String name) {
+        this.currSpriteName = name;
+    }
+
     public void setVFrameSprite(String spriteName) {
+        this.currSpriteName = spriteName;
         this.setVFrameSprite(Global.getSettings().getSprite(spriteName));
     }
 
@@ -305,7 +374,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
     }
 
     public void remove() {
-        this.location.removeEntity(entity);
+        this.location.removeEntity(this.entity);
         this.location.removeObject(this);
     }
 
@@ -356,69 +425,6 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         this.ourSprite.setNoiseAlphaMult(alphaMult);
     }
 
-    private void init() {
-        this.ourSprite = new BillboardSprite();
-        transplantSpriteFields(entity.getSprite(), ourSprite);
-        customCampaignEntitySpriteVarHandle.set(entity, ourSprite);
-
-        this.setVFrameSprite(Global.getSettings().getSprite(this.currSpriteName));
-        this.texProjector = VideoPaths.getAutoTexProjectorOverride(this.currSpriteName);
-
-        if (this.getCustomInteractionDialogImageVisual() != null) {
-            InteractionDialogImageVisual orig = this.getCustomInteractionDialogImageVisual();
-            this.entity.setCustomInteractionDialogImageVisual(new InteractionDialogImageVisual(currSpriteName, orig.getSubImageDisplayWidth(), orig.getSubImageDisplayHeight()));
-        }
-    }
-
-    private void init(Map<String, Object> params) {
-        this.ourSprite = new BillboardSprite();
-        transplantSpriteFields(entity.getSprite(), ourSprite);
-        customCampaignEntitySpriteVarHandle.set(entity, ourSprite);
-
-        CampaignBillboardPlugin plugin = new CampaignBillboardPlugin();
-        plugin.init(entity, params);
-        customCampaignEntityPluginVarHandle.set(this.entity, plugin);
-        plugin.setBillboard(this);
-        this.factionSpriteMap = plugin.getFactionSpriteMap();
-
-        this.setVFrameSprite(Global.getSettings().getSprite(this.currSpriteName));
-        this.texProjector = VideoPaths.getAutoTexProjectorOverride(this.currSpriteName);
-
-        if (this.getCustomInteractionDialogImageVisual() != null) {
-            InteractionDialogImageVisual orig = this.getCustomInteractionDialogImageVisual();
-            this.entity.setCustomInteractionDialogImageVisual(new InteractionDialogImageVisual(currSpriteName, orig.getSubImageDisplayWidth(), orig.getSubImageDisplayHeight()));
-        }
-    }
-
-    protected Object readResolve() {
-        try {
-            readResolveHandle.invoke(this.entity);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-
-        Sprite sprite = this.entity.getSprite();
-        this.specWidth = sprite.getWidth();
-        this.specHeight = sprite.getHeight();
-
-        this.init();
-
-        if (this.texProjector != null && !this.texProjector.runWhilePaused()) {
-            if (this.pts != 0 && this.pts != this.texProjector.getDecoder().getCurrentVideoPts()) {
-                this.texProjector.getDecoder().seek(this.pts);
-                this.texProjector.getDecoder().getCurrentVideoTextureIdDoNotUpdatePts();
-            }
-        }
-        return this;
-    }
-
-    protected Object writeReplace() {
-        if (this.texProjector != null) {
-            this.pts = this.texProjector.getDecoder().getCurrentVideoPts();
-        }
-        return this;
-    }
-
     @Override
     public void setFaction(String factionId) {
         this.entity.setFaction(factionId);
@@ -429,8 +435,11 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
 
         if (this.isContested) {
             this.currSpriteName = this.factionSpriteMap.get(factionId);
+
             if (this.currSpriteName == null) {
                 this.currSpriteName = Global.getSector().getFaction(factionId).getCrest();
+                this.factionSpriteMap.put(factionId, this.currSpriteName);
+                this.getPlugin().setFactionSpriteMap(this.factionSpriteMap);
             }
 
             this.setVFrameSprite(Global.getSettings().getSprite(this.currSpriteName));
@@ -517,7 +526,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
             float real = realAlpha * brightness;
             this.lensStructure.setAlphaMult(real);
 
-            float minFade = 0.9f; 
+            float minFade = 0.915f; 
             float frequency = 2f; 
             float sineWave = (float) Math.sin(this.phase * frequency);
             float normalizedPulse = (sineWave + 1f) / 2f;
@@ -536,16 +545,15 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
             this.advancePhase(facing);
 
             renderStructure(x, y, facing);
-            renderVframePseudo3DSkewed(x, y, 25f * lensStructureScale, facing, 1.0f);
+            renderVframePseudo3DSkewed(x, y, 25f * lensStructureScale, facing);
         }
 
-        private void renderVframePseudo3DSkewed(float x, float y, float dist, float facingAngle, float perspectiveFactor) {
-            float baseShear = 0.3f;
-            float shear = baseShear * perspectiveFactor;
-            float dynamicHeight = height * perspectiveFactor;
-            float offset = shear * dynamicHeight;
+        private void renderVframePseudo3DSkewed(float x, float y, float dist, float facingAngle) {
+            float baseShear = 0.15f;
+            float offset = baseShear * this.height;
+            float renderHeight = this.height *  0.5f;
 
-            renderHoloNoise(x, y, dist, facingAngle, offset);
+            renderHoloNoise(x, y, renderHeight, dist, facingAngle, offset);
 
             vFrameSprite.bindTexture();
             GL11.glPushMatrix();
@@ -559,7 +567,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
             GL11.glTranslatef(x + getOffsetX(), y + getOffsetY(), 0.0F);
             GL11.glRotatef(facingAngle, 0.0F, 0.0F, 1.0F);
 
-            GL11.glTranslatef(0.0F, -(dist + this.height), 0.0F);
+            GL11.glTranslatef(0.0F, -(dist + renderHeight), 0.0F);
             GL11.glTranslatef(-this.width * 0.5f, 0.0F, 0.0F);
             
             float topWidth = this.width - (offset * 2);
@@ -576,27 +584,28 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
             // Top-Left
             GL11.glTexCoord4f(u0 * q, v0 * q, 0, q);
             GL11.glVertex2f(offset, 0.0F);
-        
+
             // Bottom-Left
             GL11.glTexCoord4f(u0, v1, 0, 1.0f);
-            GL11.glVertex2f(0.0F, this.height);
-        
+            GL11.glVertex2f(0.0F, renderHeight);
+
             // Bottom-Right
             GL11.glTexCoord4f(u1, v1, 0, 1.0f);
-            GL11.glVertex2f(this.width, this.height);
-        
+            GL11.glVertex2f(this.width, renderHeight);
+
             // Top-Right
             GL11.glTexCoord4f(u1 * q, v0 * q, 0, q);
             GL11.glVertex2f(this.width - offset, 0.0F);
-        
+
             GL11.glEnd();
-        
+
             GL11.glPopMatrix();
         }
 
         private void renderHoloNoise(
-            float x, 
-            float y, 
+            float x,
+            float y,
+            float renderHeight,
             float dist,
             float facingAngle,
             float offset
@@ -628,7 +637,7 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
         
             float centerX = -this.width * 0.5f;
             
-            float dY_top = -(dist + this.height);
+            float dY_top = -(dist + renderHeight);
             float dY_bot = -dist;
         
             float dTLx = centerX + offset;

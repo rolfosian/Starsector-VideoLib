@@ -5,25 +5,25 @@ import com.fs.starfarer.api.impl.campaign.BaseCustomEntityPlugin;
 
 import java.util.*;
 
-@SuppressWarnings("unchecked")
 public class CampaignBillboardPlugin extends BaseCustomEntityPlugin {
     private Map<String, String> factionSpriteMap;
 
     protected CampaignBillboard billboard;
-    protected Map<String, Object> params;
+    protected Object[] params;
     
     public CampaignBillboardPlugin() {
         super();
     }
 
     @Override
-   public void init(SectorEntityToken entity, Object pluginParams) {
-      this.entity = entity;
-      this.params = (Map<String, Object>) pluginParams;
-      if (pluginParams != null) {
-            this.factionSpriteMap = (Map<String, String>) this.params.get("factionSpriteMap");
-      }
-   }
+    public final void init(SectorEntityToken entity, Object params) {
+        this.entity = entity;
+        if (params != null) {
+            CampaignBillboardParams pluginParams = (CampaignBillboardParams) params;
+            this.params = pluginParams.params;
+            this.factionSpriteMap = (Map<String, String>) pluginParams.factionSpriteMap;
+        }
+    }
 
     public CampaignBillboard getBillboard() {
         return this.billboard;
@@ -33,7 +33,7 @@ public class CampaignBillboardPlugin extends BaseCustomEntityPlugin {
         this.billboard = billboard;
     }
 
-    public Map<String, Object> getParams() {
+    public Object[] getParams() {
         return this.params;
     }
 
