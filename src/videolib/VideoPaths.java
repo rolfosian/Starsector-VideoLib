@@ -30,7 +30,6 @@ public class VideoPaths {
         logger.info(sb.toString());
     }
 
-
     private static int DECODERS_PER_GROUP;
 
     public static boolean populated = false;

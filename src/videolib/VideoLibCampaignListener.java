@@ -8,31 +8,20 @@ import com.fs.starfarer.api.Global;
 
 import com.fs.starfarer.api.campaign.BaseCampaignEventListener;
 import com.fs.starfarer.api.campaign.BaseCustomUIPanelPlugin;
-import com.fs.starfarer.api.campaign.BattleAPI;
-import com.fs.starfarer.api.campaign.CampaignEventListener;
 import com.fs.starfarer.api.campaign.CampaignFleetAPI;
-import com.fs.starfarer.api.campaign.CargoAPI;
-import com.fs.starfarer.api.campaign.CustomCampaignEntityAPI;
 import com.fs.starfarer.api.campaign.FactionAPI;
-import com.fs.starfarer.api.campaign.FleetEncounterContextPlugin;
 import com.fs.starfarer.api.campaign.InteractionDialogAPI;
-import com.fs.starfarer.api.campaign.JumpPointAPI;
 import com.fs.starfarer.api.campaign.OptionPanelAPI;
-import com.fs.starfarer.api.campaign.PlayerMarketTransaction;
 import com.fs.starfarer.api.campaign.SectorEntityToken;
 import com.fs.starfarer.api.campaign.TextPanelAPI;
 import com.fs.starfarer.api.campaign.SectorEntityToken.VisibilityLevel;
 import com.fs.starfarer.api.campaign.ai.ModularFleetAIAPI;
-import com.fs.starfarer.api.campaign.econ.MarketAPI;
 import com.fs.starfarer.api.campaign.listeners.ObjectiveEventListener;
 
-import com.fs.starfarer.api.characters.AbilityPlugin;
-import com.fs.starfarer.api.characters.PersonAPI;
 import com.fs.starfarer.api.combat.EngagementResultAPI;
 
 import com.fs.starfarer.api.impl.campaign.RuleBasedInteractionDialogPluginImpl;
 import com.fs.starfarer.api.impl.campaign.ids.Factions;
-import com.fs.starfarer.api.impl.campaign.ids.Tags;
 import com.fs.starfarer.api.impl.campaign.rulecmd.salvage.Objectives;
 
 import com.fs.starfarer.api.input.InputEventAPI;
@@ -71,29 +60,41 @@ class Objs extends Objectives {
 }
 
 public class VideoLibCampaignListener extends BaseCampaignEventListener implements ObjectiveEventListener {
-
-    private static final VarHandle[] ruleBasedInteractionDialogPluginImplVarHandles;
+    private static final VarHandle[] ruleBasedPluginVarHandles;
+    private static final VarHandle ruleBasedPluginInitialTriggerVarHandle;
 
     static {
         try {
             List<VarHandle> handles = new ArrayList<>();
             MethodHandles.Lookup lookup = MethodHandles.lookup();
             MethodHandles.Lookup privateLookup = MethodHandles.privateLookupIn(RuleBasedInteractionDialogPluginImpl.class, lookup);
+            VarHandle initialTriggerHandle = null;
 
             for (Object field : RuleBasedInteractionDialogPluginImpl.class.getDeclaredFields()) {
                 int mods = TexReflection.getFieldModifiers(field);
-                if (TexReflection.isStatic(mods) || TexReflection.isFinal(mods)) continue;
+                if (TexReflection.isStatic(mods)) continue;
+                String name = TexReflection.getFieldName(field);
+
+                if (TexReflection.isFinal(mods) && name.equals("initialTrigger")) {
+                    initialTriggerHandle = privateLookup.findVarHandle(
+                        RuleBasedInteractionDialogPluginImpl.class,
+                        name,
+                        TexReflection.getFieldType(field)
+                    );
+                    continue;
+                }
 
                 handles.add(
                     privateLookup.findVarHandle(
                         RuleBasedInteractionDialogPluginImpl.class,
-                        TexReflection.getFieldName(field),
+                        name,
                         TexReflection.getFieldType(field)
                     )
                 );
             }
 
-            ruleBasedInteractionDialogPluginImplVarHandles = handles.toArray(new VarHandle[0]);
+            ruleBasedPluginInitialTriggerVarHandle = initialTriggerHandle;
+            ruleBasedPluginVarHandles = handles.toArray(new VarHandle[0]);
 
         } catch (Throwable e) {
             throw new RuntimeException(e);
@@ -102,7 +103,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
     }
 
     public static void transplant(RuleBasedInteractionDialogPluginImpl original, RuleBasedInteractionDialogPluginImpl destination) {
-        for (VarHandle handle : ruleBasedInteractionDialogPluginImplVarHandles) handle.set(destination, handle.get(original));
+        for (VarHandle handle : ruleBasedPluginVarHandles) handle.set(destination, handle.get(original));
     }
 
     public VideoLibCampaignListener() {
@@ -141,7 +142,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
 
                         if (billboard.getCurrSpriteName().equals(oldCrest)) {
                             billboard.setCurrSpriteName(oldCrest);
-                            billboard.setVFrameSprite(Global.getSettings().getSprite(newCrest));
+                            billboard.setVFrameSprite(newCrest);
                         }
                     }
                 }
@@ -149,10 +150,10 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
         }
     }
 
-    private static final String BACK_HOME = "VL_BACK_HOME";
-    private static final String LEAVE = "VL_LEAVE";
-    private static final String TAKE_CONTROL = "VL_TAKE_CONTROL";
-    private static final String TAKE_CONTROL_CONFIRM = "VL_TAKE_CONTROL_CONFIRM";
+    public static final String BACK_HOME = "VL_BACK_HOME";
+    public static final String LEAVE = "VL_LEAVE";
+    public static final String TAKE_CONTROL = "VL_TAKE_CONTROL";
+    public static final String TAKE_CONTROL_CONFIRM = "VL_TAKE_CONTROL_CONFIRM";
 
     @Override
     public void reportShownInteractionDialog(InteractionDialogAPI dialog) {
@@ -166,8 +167,9 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
 
             if (billboard.isContested()) {
                 handleHome(dialog, billboard, true);
+                RuleBasedInteractionDialogPluginImpl old = (RuleBasedInteractionDialogPluginImpl) dialog.getPlugin();
 
-                RuleBasedInteractionDialogPluginImpl ours = new RuleBasedInteractionDialogPluginImpl() {
+                RuleBasedInteractionDialogPluginImpl ours = new RuleBasedInteractionDialogPluginImpl((String)ruleBasedPluginInitialTriggerVarHandle.get(old)) {
                     @Override
                     public void optionSelected(String text, Object optionData) {
                         OptionPanelAPI optionPanel = dialog.getOptionPanel();
@@ -208,7 +210,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
                         }
                     }
                 };
-                transplant((RuleBasedInteractionDialogPluginImpl)dialog.getPlugin(), ours);
+                transplant(old, ours);
                 dialog.setPlugin(ours);
                 return;
             }
@@ -278,7 +280,7 @@ public class VideoLibCampaignListener extends BaseCampaignEventListener implemen
     @Override
     public void reportObjectiveDestroyed(SectorEntityToken entity, SectorEntityToken stableLocation, FactionAPI to) {
         // if (entity.getCustomPlugin() instanceof CampaignBillboardPlugin plugin) {
-        //     stableLocation.getContainingLocation().removeEntity(stableLocation);
+            // stableLocation.getContainingLocation().removeEntity(stableLocation);
         // }
     }
 

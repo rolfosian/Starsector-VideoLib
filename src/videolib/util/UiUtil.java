@@ -3,7 +3,7 @@ package videolib.util;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.util.*;
-import org.objectweb.asm.*;
+import videolib.org.objectweb.asm.*;
 
 import com.fs.starfarer.api.ui.UIComponentAPI;
 import com.fs.starfarer.api.ui.UIPanelAPI;
@@ -19,6 +19,7 @@ public class UiUtil implements Opcodes {
 
     public static final UtilInterface utils;
 
+    public static void init() {}
     static {
         Class<?> uiPanelClass = null;
         for (Object field : CampaignState.class.getDeclaredFields()) {

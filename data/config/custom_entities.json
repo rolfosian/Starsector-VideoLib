@@ -1,0 +1,31 @@
+{
+    "vl_billboard_example":{
+		"defaultName":"VideoLib Billboard Example",
+		"nameInText":"VideoLib Billboard Example",
+		"aOrAn":"a",
+		"defaultRadius":11,
+		"icon":"graphics/billboards/billboard_icon.png",
+		"iconWidth":15,
+		"iconHeight":15,
+		"sprite":"graphics/billboards/vl_example_100x100.png",
+		"spriteWidth":50,
+		"spriteHeight":50,
+		"renderShadow":false,
+		"useLightColor":true,
+		"showInCampaign":true,
+		"showIconOnMap":true,
+		"showNameOnMap":false,
+		"scaleNameWithZoom":true,
+		"scaleIconWithZoom":true,
+		"nameColor":[70,200,255,255],
+		"nameShadowColor":[0,0,0,255],
+		"renderCircleIndicator":true,
+		"renderCircleIndicatorSelectionFlash":true,
+		"layers":[STATIONS, ABOVE_STATIONS],
+		"tags": [
+			"has_interaction_dialog",
+			"CONTESTED_BILLBOARD" # Mandatory tag if basic contested using faction crests in faction sprite map, used to account for if player changes crest at some point
+		],
+		"pluginClass" : "videolib.entities.CampaignBillboardPlugin" # implementation plugin must use or inherit from this class
+	}
+}

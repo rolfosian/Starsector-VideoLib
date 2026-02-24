@@ -428,7 +428,7 @@ public class CustomCampaignEntityWrapper implements CustomCampaignEntityAPI {
     }
 
     @Override
-    public boolean hasScriptOfClass(Class arg0) {
+    public boolean hasScriptOfClass(@SuppressWarnings("rawtypes") Class arg0) {
         return entity.hasScriptOfClass(arg0);
     }
 
@@ -528,7 +528,7 @@ public class CustomCampaignEntityWrapper implements CustomCampaignEntityAPI {
     }
 
     @Override
-    public void removeScriptsOfClass(Class arg0) {
+    public void removeScriptsOfClass(@SuppressWarnings("rawtypes") Class arg0) {
         entity.removeScriptsOfClass(arg0);
     }
 
