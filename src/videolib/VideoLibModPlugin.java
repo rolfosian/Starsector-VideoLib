@@ -9,6 +9,8 @@ import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 import com.fs.starfarer.api.SettingsAPI;
 import com.fs.starfarer.api.campaign.PlanetAPI;
+import com.fs.starfarer.api.loading.Description;
+import com.fs.starfarer.loading.SpecStore;
 
 import videolib.decoder.grouped.DeltaTimeDelegator;
 import videolib.entities.CampaignBillboard;
@@ -20,8 +22,10 @@ import videolib.projector.PlanetProjector;
 import videolib.projector.Projector;
 import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
 import videolib.util.TexReflection;
+import videolib.util.UiUtil;
 import videolib.util.VideoUtils;
 
+@SuppressWarnings("unchecked")
 public class VideoLibModPlugin extends BaseModPlugin {
     public static final Logger logger = Global.getLogger(VideoLibModPlugin.class);
     public static void print(Object... args) {
@@ -34,6 +38,9 @@ public class VideoLibModPlugin extends BaseModPlugin {
     }
 
     private static Thread mainThread;
+    
+    private static Map<String, Description> DESCRIPTION_MAP;
+    private static Set<String> descKeys = new HashSet<>();
 
     @Override
     public void onApplicationLoad() {
@@ -41,6 +48,7 @@ public class VideoLibModPlugin extends BaseModPlugin {
         TexReflection.init();
         VideoUtils.init();
         AutoTexProjector.init();
+        UiUtil.init();
         VideoPaths.populate();
         CampaignBillboard.initStatic();
 
@@ -52,7 +60,19 @@ public class VideoLibModPlugin extends BaseModPlugin {
             throw new RuntimeException(e);
         }
 
+        for (Object method : SpecStore.class.getDeclaredMethods()) {
+            if (TexReflection.getReturnType(method).equals(Map.class)) {
+                DESCRIPTION_MAP = (Map<String, Description>) TexReflection.invokeMethodDirectly(method, null, Description.class);
+                break;
+            };
+        }
+
         mainThread = Thread.currentThread();
+    }
+
+    public static void addToDescriptionMap(String key, Description desc) {
+        DESCRIPTION_MAP.put(key + "_CUSTOM", desc);
+        descKeys.add(key);
     }
 
     private static List<PlanetProjector> planetProjectors = new ArrayList<>();
@@ -126,6 +146,24 @@ public class VideoLibModPlugin extends BaseModPlugin {
 
     @Override
     public void onGameLoad(boolean newGame) {
+        // This really isn't needed but I don't like potential loose ends no matter how insignificant
+        Set<String> relevantIds = (Set<String>) Global.getSector().getPersistentData().get("vlBillboardDescriptions");
+        if (relevantIds != null) {
+            Iterator<String> it = descKeys.iterator();
+            while (it.hasNext()) {
+                String id = it.next();
+                if (!relevantIds.contains(id)) {
+                    DESCRIPTION_MAP.remove(id + "_CUSTOM");
+                    it.remove();
+                }
+            }
+            descKeys.addAll(relevantIds);
+            
+        } else {
+            for (String id : descKeys) DESCRIPTION_MAP.remove(id);
+            descKeys.clear();
+        }
+
         Global.getSector().addTransientScript(new VideoLibEveryFrame());
         Global.getSector().addTransientListener(new PlanetProjectorListener(false));
 

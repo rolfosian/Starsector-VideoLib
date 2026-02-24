@@ -174,6 +174,14 @@ public class TexReflection {
 
     }
 
+    public static Object invokeMethodDirectly(Object method, Object instance, Object... arguments) {
+        try {
+            return invokeMethodHandle.invoke(method, instance, arguments);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Object getMethod(String methodName, Class<?> cls) {
         for (Object method : cls.getMethods()) {
             try {

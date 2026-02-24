@@ -17,7 +17,6 @@ import com.fs.starfarer.api.campaign.StarSystemAPI;
 import com.fs.starfarer.campaign.BaseLocation;
 
 import videolib.entities.CampaignBillboard;
-import videolib.entities.CampaignBillboardFactory;
 import videolib.entities.CampaignBillboardParams;
 import videolib.entities.RotationalTargeter;
 import videolib.entities.CampaignBillboard.TargetDelegate;
@@ -48,18 +47,20 @@ public class VideoLibBillboardTest implements BaseCommand {
         boolean noOrbit = args.contains("noorbit");
         boolean contested = args.contains("contested");
         
-        CampaignBillboardParams params = new CampaignBillboardParams(new HashMap<>());
-        // factionSpriteMap.put("hegemony", "graphics/billboards/vl_example_360p.png");
+        Map<String, String> factionSpriteMap = new HashMap<>();
+        for (FactionAPI f : Global.getSector().getAllFactions()) {
+            factionSpriteMap.put(f.getId(), f.getCrest());
+        }
 
-        CampaignBillboard testBillboard = CampaignBillboardFactory.addCampaignBillboard(
+        CampaignBillboard testBillboard = new CampaignBillboard(
             (BaseLocation)location,
             null,
             name,
             type,
-            faction, // holo uses faction color by default, can be set manually
+            faction, // 'holo' uses faction color by default, can be set manually
             100f,
             100f,
-            params,
+            new CampaignBillboardParams(factionSpriteMap),
             -1f,
             0.5f,
             null,
@@ -109,6 +110,8 @@ public class VideoLibBillboardTest implements BaseCommand {
         if (contested) {
             testBillboard.setContested(true);
         }
+
+        testBillboard.setDescription("Test");
 
         Console.showMessage("Billboard of type " + type + " added to player location.");
         return CommandResult.SUCCESS;
