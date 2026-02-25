@@ -52,6 +52,7 @@ public class AutoTexProjector implements Opcodes {
 
         public void timeout();
         public void unTimeOut();
+        public boolean isTimedOut();
 
         public void setOriginalTexture(String texturePath, Object texture);
         public Object getOriginalTexture();
@@ -657,6 +658,18 @@ public class AutoTexProjector implements Opcodes {
         }
 
         {
+            MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "isTimedOut", "()Z", null, null);
+            mv.visitCode();
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "timedOut", "Z");
+
+            mv.visitInsn(IRETURN);
+            mv.visitMaxs(0, 0);
+            mv.visitEnd();
+        }
+
+        {
             MethodVisitor mv = cw.visitMethod(ACC_PUBLIC, "timeout", "()V", null, null);
             mv.visitCode();
 
@@ -1246,16 +1259,37 @@ public class AutoTexProjector implements Opcodes {
 
             mv.visitLabel(skipKillDecoderLabel);
 
-            mv.visitVarInsn(ALOAD, 0);
-            mv.visitVarInsn(ALOAD, 1);
-            mv.visitFieldInsn(PUTFIELD, className, "decoder", decoderDesc);
-
+            Label containsDecoderLabel = new Label();
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
             mv.visitVarInsn(ALOAD, 0);
             mv.visitFieldInsn(GETFIELD, className, "decoder", decoderDesc);
-            mv.visitMethodInsn(INVOKEVIRTUAL, decoderGroupName, "add", "(Ljava/lang/Object;)Z", false);
+            mv.visitMethodInsn(
+                INVOKEVIRTUAL,
+                decoderGroupName,
+                "contains",
+                "(Ljava/lang/Object;)Z",
+                false
+            );
+            mv.visitJumpInsn(IFNE, containsDecoderLabel);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitFieldInsn(GETFIELD, className, "decoderGroup", decoderGroupDesc);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitMethodInsn(
+                INVOKEVIRTUAL,
+                decoderGroupName,
+                "add",
+                "(Ljava/lang/Object;)Z",
+                false
+            );
             mv.visitInsn(POP);
+
+            mv.visitLabel(containsDecoderLabel);
+
+            mv.visitVarInsn(ALOAD, 0);
+            mv.visitVarInsn(ALOAD, 1);
+            mv.visitFieldInsn(PUTFIELD, className, "decoder", decoderDesc);
     
             mv.visitVarInsn(ALOAD, 0);
             mv.visitVarInsn(ALOAD, 0);
@@ -1504,6 +1538,11 @@ public class AutoTexProjector implements Opcodes {
 //     }
 
 //     @Override
+//     public boolean isTimedOut() {
+//         return this.timedout;
+//     }
+
+//     @Override
 //     public void timeout() {
 //         timedOut = true;
 //         isDone = true;
@@ -1617,6 +1656,11 @@ public class AutoTexProjector implements Opcodes {
 //         if (!keepOldDecoderAlive) {
 //             this.decoderGroup.remove(this.decoder);
 //         }
+
+//         if (!this.decoderGroup.contains(decoder)) {
+//             this.decoderGroup.add(decoder);
+//         }
+
 //         this.decoder = decoder;
 //         this.currentTextureId = decoder.getCurrentVideoTextureId();
 //     }
