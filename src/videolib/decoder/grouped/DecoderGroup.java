@@ -12,7 +12,8 @@ import videolib.ffmpeg.VideoFrame;
 
 public abstract class DecoderGroup extends ArrayList<Decoder> {
     protected volatile boolean running = false;
-    private final Thread decodeThread;
+    private Thread decodeThread;
+    private final Set<Decoder> decoderSet = new HashSet<>();
 
     public DecoderGroup() {
         super();
@@ -25,6 +26,8 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized boolean add(Decoder decoder) {
+        if (this.decoderSet.contains(decoder)) throw new IllegalArgumentException("Duplicates are not allowed for DecoderGroup");
+        this.decoderSet.add(decoder);
         return super.add(decoder);
     }
 
@@ -53,11 +56,12 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
                 }
             }
         }
+        this.decoderSet.remove(decoder);
         return super.remove(decoder);
     }
 
     @Override
-    public synchronized Decoder remove(int index) {
+    public synchronized final Decoder remove(int index) {
         Decoder decoder = super.get(index);
         synchronized(decoder) {
             synchronized(decoder.getTextureBuffer()) {
@@ -70,7 +74,9 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
                 }
             }
         }
-        return super.remove(index);
+        Decoder removed = super.remove(index);
+        this.decoderSet.remove(removed);
+        return removed;
     }
 
     protected final boolean read(TexBuffer textureBuffer, long ptr) {
@@ -119,7 +125,7 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized boolean contains(Object o) {
-        return super.contains(o);
+        return this.decoderSet.contains(o);
     }
 
     @Override
@@ -139,12 +145,13 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized boolean containsAll(Collection<?> c) {
-        return super.containsAll(c);
+        return this.decoderSet.containsAll(c);
     }
 
     @Override
     public synchronized void clear() {
         this.finish();
+        this.decoderSet.clear();
         super.clear();
     }
 
@@ -174,7 +181,7 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     @Override
     public synchronized List<Decoder> subList(int fromIndex, int toIndex) {
-        return super.subList(fromIndex, toIndex);
+        throw new UnsupportedOperationException("Unsupported operation for DecoderGroup");
     }
 
     @Override
