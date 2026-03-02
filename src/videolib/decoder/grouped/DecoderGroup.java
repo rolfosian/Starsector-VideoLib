@@ -12,7 +12,7 @@ import videolib.ffmpeg.VideoFrame;
 
 public abstract class DecoderGroup extends ArrayList<Decoder> {
     protected volatile boolean running = false;
-    private Thread decodeThread;
+    protected Thread decodeThread;
     private final Set<Decoder> decoderSet = new HashSet<>();
 
     public DecoderGroup() {
@@ -24,18 +24,43 @@ public abstract class DecoderGroup extends ArrayList<Decoder> {
 
     protected abstract void decodeLoop();
 
+    public abstract void restart();
+
+    protected synchronized final void restart(Decoder[] decoders) {
+        this.decodeThread = new Thread(this::decodeLoop, "DecoderGroup");
+        this.running = true;
+        this.decodeThread.start();
+
+        for (Decoder decoder : decoders) {
+            this.add(decoder);
+        }
+    }
+
+    protected final synchronized Decoder[] finish() {
+        Decoder[] decoders = new Decoder[this.size()];
+        int i = 0;
+        for (Decoder decoder : new ArrayList<>(this)) {
+            decoders[i++] = decoder;
+            this.remove(decoder);
+        }
+        this.running = false;
+        return decoders;
+    }
+
+    public final synchronized void destroy() {
+        running = false;
+        while (this.decodeThread.isAlive()) continue;
+
+        for (Decoder decoder : new ArrayList<>(this)) {
+            this.remove(decoder);
+        }
+    }
+
     @Override
     public synchronized boolean add(Decoder decoder) {
         if (this.decoderSet.contains(decoder)) throw new IllegalArgumentException("Duplicates are not allowed for DecoderGroup");
         this.decoderSet.add(decoder);
         return super.add(decoder);
-    }
-
-    public final synchronized void finish() {
-        for (Decoder decoder : new ArrayList<>(this)) {
-            this.remove(decoder);
-        }
-        this.running = false;
     }
 
     protected synchronized final List<Decoder> getTmpDecoderList() {

@@ -45,6 +45,18 @@ public class DecoderWithSoundGroup extends DecoderGroup {
         }
     }
     
+    @Override
+    public synchronized void restart() {
+        Decoder[] decoders = super.finish();
+        while (decodeThread.isAlive()) continue;
+
+        for (Decoder decoder : decoders) {
+            decoder.start(decoder.getCurrentVideoPts());
+            this.read(decoder.getTextureBuffer(), decoder.getAudioBuffer(), decoder.getFFmpegCtxPtr());
+        }
+        
+        super.restart(decoders);
+    }
 
     @Override
     public boolean add(Decoder decoder) {

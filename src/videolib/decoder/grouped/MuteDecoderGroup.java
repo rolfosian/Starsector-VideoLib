@@ -43,6 +43,19 @@ public class MuteDecoderGroup extends DecoderGroup {
     }
 
     @Override
+    public synchronized void restart() {
+        Decoder[] decoders = super.finish();
+        while (decodeThread.isAlive()) continue;
+        
+        for (Decoder decoder : decoders) {
+            decoder.start(decoder.getCurrentVideoPts());
+            this.read(decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
+        }
+        
+        super.restart(decoders);
+    }
+
+    @Override
     public boolean add(Decoder decoder) {
         decoder.start(0);
         read(decoder.getTextureBuffer(), decoder.getFFmpegCtxPtr());
