@@ -1,19 +1,9 @@
 package videolib;
 
 import com.fs.starfarer.api.Global;
-import com.fs.starfarer.api.campaign.CustomCampaignEntityAPI;
-import com.fs.starfarer.api.campaign.LocationAPI;
 import com.fs.starfarer.api.ui.CustomPanelAPI;
-import com.fs.starfarer.campaign.BaseLocation;
-import com.fs.starfarer.campaign.CustomCampaignEntity;
-
 import videolib.VideoModes.EOFMode;
 import videolib.VideoModes.PlayMode;
-
-import videolib.entities.CampaignBillboard;
-import videolib.entities.CampaignBillboard.BillboardFacingDelegate;
-import videolib.entities.CampaignBillboard.BillboardDialogDelegate;
-import videolib.entities.RotationalTargeter;
 
 import videolib.playerui.AudioVideoPlayer;
 import videolib.playerui.MuteVideoPlayer;
@@ -27,12 +17,9 @@ import videolib.projector.AudioVideoProjector;
 import videolib.projector.ImagePlugin;
 import videolib.projector.MuteVideoProjector;
 import videolib.projector.VideoProjector;
-import videolib.projector.AutoTexProjector.AutoTexProjectorAPI;
-
 import videolib.speakers.Speakers;
 
 import java.awt.Color;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 //

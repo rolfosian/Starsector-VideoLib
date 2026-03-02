@@ -80,12 +80,14 @@ public final class CampaignBillboard extends CustomCampaignEntityWrapper impleme
             for (Object field : Sprite.class.getDeclaredFields()) {
                 String name = TexReflection.getFieldName(field);
                 Class<?> type = TexReflection.getFieldType(field);
-                VarHandle handle = privateLookup.findVarHandle(
-                    Sprite.class,
-                    name, 
-                    type
+
+                handles.add(
+                    privateLookup.findVarHandle(
+                        Sprite.class,
+                        name, 
+                        type
+                    )
                 );
-                handles.add(handle);
             };
             spriteVarHandles = handles.toArray(new VarHandle[0]);
 
