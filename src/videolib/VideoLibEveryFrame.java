@@ -4,14 +4,12 @@ import com.fs.starfarer.api.EveryFrameScript;
 import com.fs.starfarer.api.Global;
 
 public final class VideoLibEveryFrame implements EveryFrameScript {
-    public static float campaignSpeedupMult = Global.getSettings().getFloat("campaignSpeedupMult");
-    
     public static float campaignDt;
     public static float phaseDelta;
 
     @Override
     public void advance(float dt) {
-        campaignDt = Global.getSector().getCampaignUI().isFastForward() ? dt * campaignSpeedupMult : dt;
+        campaignDt = Global.getSector().getCampaignUI().isFastForward() ? dt * Global.getSettings().getFloat("campaignSpeedupMult") : dt;
         phaseDelta = campaignDt * 10f;
     }
 
